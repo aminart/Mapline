@@ -29,7 +29,7 @@ Latest release: **v1.1.0** · [All releases](https://github.com/aminart/Mapline/
 ## Why Mapline?
 
 ### 100% offline & private
-No account, no cloud. Mapline makes zero network requests: your projects are simple files stored on your drive, and they stay there.
+No account, no cloud. Mapline makes zero network requests: your projects are simple files stored on your device, and they stay there.
 
 ### Built for complex UX deliverables
 Not an empty whiteboard, but a structured tool for the deliverables you actually ship:
