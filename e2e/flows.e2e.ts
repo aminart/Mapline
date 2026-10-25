@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { arrowsOverCards, startProject } from './helpers';
+import { arrowsOverCards, startProject, openProjects } from './helpers';
 
 const CARDS = '.flow [data-node]';
 
@@ -145,7 +145,8 @@ test('a flow inside a map project, saved and opened again', async ({ page }, inf
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Ouvrir', exact: true }).click();
   await (await chooser).setFiles(file);
-  await expect(page.locator('.tab')).toHaveCount(2);
+  await expect(await openProjects(page)).toHaveCount(2);
+  await page.keyboard.press('Escape');
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Flow · Connexion']);
 });
 
@@ -163,4 +164,36 @@ test('exports a flow as PNG and PDF', async ({ page }) => {
     const bytes = await readFile(await (await download).path());
     expect(bytes.subarray(format === 'png' ? 1 : 0, 4).toString()).toBe(magic);
   }
+});
+
+test('a card grows with its text: its row follows, arrows stay clear of every card', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const activity = cards(page).nth(1);
+  const choice = cards(page).nth(2);
+  await texts(page).nth(1).fill('Une activité avec beaucoup de texte, pour voir la carte grandir quand on écrit plusieurs lignes de description.');
+  await expect.poll(async () => (await activity.boundingBox())!.height).toBeGreaterThan(130);
+  const a = (await activity.boundingBox())!;
+  const c = (await choice.boundingBox())!;
+  // Centred in the same row: the arrow between them stays straight.
+  expect(Math.abs(a.y + a.height / 2 - (c.y + c.height / 2))).toBeLessThan(1.5);
+  expect(c.height).toBeLessThan(a.height);
+  expect(await arrowsOverCards(page, CARDS)).toEqual([]);
+});
+
+test('adds tags and a note on a flow card, as on map activities', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const card = cards(page).nth(1);
+  await card.hover();
+  await card.getByRole('button', { name: 'Ajouter un tag' }).click();
+  await page.keyboard.type('irritant');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Escape');
+  await expect(card.locator('.tag')).toHaveText(['irritant']);
+  await card.hover();
+  await card.getByRole('button', { name: 'Ajouter une note' }).click();
+  await page.getByRole('dialog', { name: 'Note' }).locator('textarea').fill('À valider avec le support');
+  await page.mouse.click(5, 300);
+  await expect(card.locator('.note')).toHaveClass(/has-note/);
+  await page.locator('.toolbar summary').filter({ hasText: 'Tags' }).click();
+  await expect(page.locator('.tag-list li')).toHaveCount(1);
 });

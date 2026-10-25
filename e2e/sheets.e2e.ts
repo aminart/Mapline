@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { startProject } from './helpers';
+import { startProject, openProjects } from './helpers';
 
 /** Creates the sheet of the first persona of the map, from its button. */
 async function createFirstSheet(page: Page) {
@@ -98,7 +98,8 @@ test('a persona sheet project, saved and opened again', async ({ page }, info) =
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Ouvrir', exact: true }).click();
   await (await chooser).setFiles(file);
-  await expect(page.locator('.tab')).toHaveCount(2);
+  await expect(await openProjects(page)).toHaveCount(2);
+  await page.keyboard.press('Escape');
   await expect(page.locator('.sheet').getByRole('textbox', { name: 'Nom du persona' })).toHaveValue('Camille');
   await expect(page.getByRole('textbox', { name: 'Ligne de Frustrations' }).first()).toHaveValue('Trop d’appels');
 });
@@ -147,4 +148,56 @@ test('asks before deleting a sheet', async ({ page }) => {
   await page.locator('.doc-tab').nth(1).getByRole('button', { name: /^Supprimer/ }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(1);
   await expect(page.locator('.board')).toBeVisible();
+});
+
+test('picks the persona of a new sheet from a list', async ({ page }) => {
+  await startProject(page);
+  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle fiche persona' }).click();
+  const target = page.getByRole('combobox', { name: 'Pour quel persona ?' });
+  await expect(target).toHaveValue(/\|/);
+  await target.selectOption({ label: 'Front office' });
+  await page.locator('dialog[open]').getByRole('button', { name: 'Créer la fiche' }).click();
+  await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Fiche · Front office']);
+});
+
+/** A small PNG, drawn in the page. */
+async function pngFile(page: Page): Promise<{ name: string; mimeType: string; buffer: Buffer }> {
+  const b64 = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#C2410C';
+    ctx.fillRect(0, 0, 64, 64);
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  return { name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from(b64, 'base64') };
+}
+
+test('a sheet photo shows on the persona everywhere in the project', async ({ page }) => {
+  await startProject(page);
+  await createFirstSheet(page);
+  await expect(page.locator('.sheet-avatar')).toHaveCSS('cursor', 'pointer');
+  await page.locator('.sheet-avatar input[type=file]').setInputFiles(await pngFile(page));
+  await expect(page.locator('.sheet-avatar img')).toBeVisible();
+  await expect(page.locator('.busy')).toHaveCount(0);
+  await docTab(page, 'Map').click();
+  await expect(page.locator('.persona').first().locator('.avatar img')).toBeVisible();
+  // A flow card done by this persona shows the photo too.
+  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
+  await page.locator('.flow [data-node]').nth(1).locator('textarea').click();
+  await page.getByRole('combobox', { name: 'Persona' }).selectOption({ index: 1 });
+  await expect(page.locator('.flow [data-node]').nth(1).locator('.flow-persona img')).toBeVisible();
+});
+
+test('gives the sheet tags a colour of their choice', async ({ page }) => {
+  await startProject(page);
+  await createFirstSheet(page);
+  const chips = page.locator('.sheet-identity .sheet-chips');
+  await chips.getByRole('textbox', { name: 'Ajouter un tag' }).fill('Senior');
+  await page.keyboard.press('Enter');
+  await chips.getByRole('button', { name: 'Couleur de « Senior »' }).click();
+  await chips.getByRole('button', { name: 'Couleur de « Senior » 5' }).click();
+  await expect(chips.locator('.tag').filter({ hasText: 'Senior' })).toHaveCSS('background-color', 'rgb(255, 241, 191)');
+  await expect(chips.locator('.tag-palette')).toHaveCount(0);
 });

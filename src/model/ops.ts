@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Blueprint, BoxKey, BoxStyle, Id, Link, Phase, Scene } from './types';
+import type { Activity, Blueprint, BoxKey, BoxStyle, Id, Link, Phase, Scene } from './types';
 import { PERSONA_PALETTE } from './theme';
 
 export function uid(): Id {
@@ -208,9 +208,10 @@ export function setPersona(doc: Blueprint, personaId: Id, patch: { name?: string
 
 // Activities
 
-export function createActivity(doc: Blueprint, personaId: Id, slotId: Id): { doc: Blueprint; activityId: Id } {
+export function createActivity(doc: Blueprint, personaId: Id, slotId: Id, kind: 'activity' | 'choice' = 'activity'): { doc: Blueprint; activityId: Id } {
   const activityId = uid();
-  const activities = { ...doc.activities, [activityKey(personaId, slotId)]: { id: activityId, text: '' } };
+  const card: Activity = kind === 'choice' ? { id: activityId, text: '', kind } : { id: activityId, text: '' };
+  const activities = { ...doc.activities, [activityKey(personaId, slotId)]: card };
   return { doc: { ...doc, activities }, activityId };
 }
 
@@ -232,6 +233,19 @@ export function setActivityText(doc: Blueprint, key: string, text: string): Blue
   const act = doc.activities[key];
   if (!act) return doc;
   return { ...doc, activities: { ...doc.activities, [key]: { ...act, text } } };
+}
+
+/** The key of the card whose id is `id`. */
+export function activityKeyOf(doc: Blueprint, id: Id): string | undefined {
+  return Object.keys(doc.activities).find((k) => doc.activities[k].id === id);
+}
+
+/** Makes a card a choice (a decision point) or an activity again. */
+export function setActivityKind(doc: Blueprint, key: string, kind: 'activity' | 'choice'): Blueprint {
+  const act = doc.activities[key];
+  if (!act || (act.kind ?? 'activity') === kind) return doc;
+  const { kind: _old, ...rest } = act;
+  return { ...doc, activities: { ...doc.activities, [key]: kind === 'choice' ? { ...rest, kind } : rest } };
 }
 
 export function setActivityNote(doc: Blueprint, key: string, note: string): Blueprint {
@@ -270,14 +284,19 @@ export function collectNotes(doc: Blueprint): NoteEntry[] {
 
 export const MAX_TAG_LENGTH = 30;
 
+/** `tags` with `tag` added, or null when it is blank or already there (case-insensitive). */
+export function withTag(tags: string[], tag: string): string[] | null {
+  const clean = tag.trim().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
+  if (!clean || tags.some((x) => x.toLowerCase() === clean.toLowerCase())) return null;
+  return tags.concat([clean]);
+}
+
 /** Adds a tag to an activity, ignoring blanks and duplicates (case-insensitive). */
 export function addTag(doc: Blueprint, key: string, tag: string): Blueprint {
   const act = doc.activities[key];
-  const clean = tag.trim().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
-  if (!act || !clean) return doc;
-  const tags = act.tags ?? [];
-  if (tags.some((x) => x.toLowerCase() === clean.toLowerCase())) return doc;
-  return { ...doc, activities: { ...doc.activities, [key]: { ...act, tags: tags.concat([clean]) } } };
+  const tags = act ? withTag(act.tags ?? [], tag) : null;
+  if (!act || !tags) return doc;
+  return { ...doc, activities: { ...doc.activities, [key]: { ...act, tags } } };
 }
 
 export function removeTag(doc: Blueprint, key: string, tag: string): Blueprint {

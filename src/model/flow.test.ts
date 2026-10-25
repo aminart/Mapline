@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as fo from './flow';
-import { nodeBox } from './flowLayout';
+import { FLOW, cellBox, flowLayout, nodeBox } from './flowLayout';
 import { routeFlow } from '../lib/flowRoute';
 import type { Flow, FlowNode } from './types';
 
@@ -169,6 +169,60 @@ describe('arrow routes', () => {
   });
 });
 
+describe('cards that grow with their text', () => {
+  const flow = fo.templateFlow('user', labels);
+  const [, act, choice, yes] = flow.nodes;
+  const layout = flowLayout(flow, { [act.id]: 180, [yes.id]: 40 });
+
+  it('makes a row as tall as its tallest card, the others keeping their height', () => {
+    expect(layout.rows[act.row]).toBe(180);
+    expect(layout.rows[yes.row]).toBe(FLOW.cellH);
+    expect(nodeBox(act, layout).h).toBe(180);
+    expect(nodeBox(choice, layout).h).toBe(FLOW.cellH);
+    // Centred in the row, so cards side by side keep their arrows level.
+    expect(nodeBox(choice, layout).y + FLOW.cellH / 2).toBe(nodeBox(act, layout).y + 90);
+  });
+
+  it('moves the rows below down', () => {
+    expect(cellBox(0, act.row + 1, layout).y).toBe(cellBox(0, act.row, layout).y + 180 + FLOW.gapY);
+  });
+
+  it('routes arrows clear of the taller cards', () => {
+    const kinds = ['activity', 'choice', 'start', 'end'] as const;
+    const nodes: FlowNode[] = [];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if ((c * 7 + r * 3) % 5 !== 0) nodes.push({ id: `${c}-${r}`, kind: kinds[(c + r) % 4], col: c, row: r, text: '' });
+    const links = nodes.flatMap((a) => nodes.filter((b) => b !== a).map((b) => ({ id: `${a.id}>${b.id}`, from: a.id, to: b.id })));
+    const grid = { nodes, links, styles: {} };
+    const tall = flowLayout(grid, Object.fromEntries(nodes.map((n, i) => [n.id, 96 + (i % 3) * 70])));
+    for (const { link, points } of routeFlow(grid, tall)) {
+      for (const n of nodes) expect(crosses(points, nodeBox(n, tall)), `${link.id} crosses ${n.id}`).toBe(false);
+      expect(onEdge(points[0], nodeBox(nodes.find((n) => n.id === link.from)!, tall))).toBe(true);
+      expect(onEdge(points[points.length - 1], nodeBox(nodes.find((n) => n.id === link.to)!, tall))).toBe(true);
+    }
+  });
+});
+
+describe('tags and notes on flow cards', () => {
+  it('adds tags once, colours and deletes them across the flow, and keeps notes', () => {
+    let flow = fo.templateFlow('user', labels);
+    const [, a, b] = flow.nodes;
+    flow = fo.addNodeTag(flow, a.id, ' Irritant ');
+    flow = fo.addNodeTag(flow, a.id, 'irritant');
+    flow = fo.addNodeTag(flow, b.id, 'Irritant');
+    expect(fo.findNode(flow, a.id)!.tags).toEqual(['Irritant']);
+    expect(fo.flowTagCounts(flow)).toEqual([{ tag: 'Irritant', count: 2 }]);
+    flow = fo.setFlowTagColor(flow, 'Irritant', 3);
+    expect(flow.tagColors).toEqual({ irritant: 3 });
+    flow = fo.setNodeNote(flow, a.id, 'À vérifier');
+    expect(fo.findNode(flow, a.id)!.note).toBe('À vérifier');
+    flow = fo.deleteFlowTag(flow, 'irritant');
+    expect(fo.flowTagCounts(flow)).toEqual([]);
+    expect(flow.tagColors).toEqual({});
+    flow = fo.setNodeNote(flow, a.id, '  ');
+    expect('note' in fo.findNode(flow, a.id)!).toBe(false);
+  });
+});
+
 describe('flows in project files', () => {
   it('round-trip, and drop what a damaged file gets wrong', async () => {
     const { parse, serialize } = await import('./serialize');
@@ -186,5 +240,34 @@ describe('flows in project files', () => {
     if (back.kind !== 'flow') throw new Error('not a flow');
     expect(back.flow.nodes.map((n) => n.id)).toEqual([a.id]);
     expect(back.flow.links).toEqual([]);
+  });
+});
+
+describe('tags and notes in project files', () => {
+  it('keep flow card tags, notes and tag colours, map choice cards and sheet tag colours', async () => {
+    const { parse, serialize } = await import('./serialize');
+    const { createFlowProject, createFromTemplate, createSheet, sheetDoc } = await import('./templates');
+    const { addDoc } = await import('./project');
+    const ops = await import('./ops');
+    const { setSheetTagColor, addSheetTag } = await import('./sheet');
+    let project = createFlowProject('user', 'fr');
+    const doc = project.docs[0];
+    if (doc.kind !== 'flow') throw new Error('not a flow');
+    const node = doc.flow.nodes[1];
+    let flow = fo.addNodeTag(doc.flow, node.id, 'email');
+    flow = fo.setNodeNote(flow, node.id, 'Une note');
+    flow = fo.setFlowTagColor(flow, 'email', 2);
+    project = { ...project, docs: [{ ...doc, flow }] };
+    const map = createFromTemplate('mission-map', 'fr').docs[0];
+    if (map.kind !== 'mission-map') throw new Error('not a map');
+    const p0 = map.map.personas[0];
+    const choice = ops.createActivity(map.map, p0.id, map.map.steps[0].slots[0], 'choice');
+    project = addDoc(project, { ...map, map: choice.doc });
+    project = addDoc(project, sheetDoc(setSheetTagColor(addSheetTag(createSheet('blank', 'fr'), 'Senior'), 'senior', 4)));
+    const back = parse(serialize(project));
+    expect(back).toEqual(project);
+    const backMap = back.docs.find((d) => d.kind === 'mission-map');
+    if (backMap?.kind !== 'mission-map') throw new Error('no map');
+    expect(Object.values(backMap.map.activities).map((a) => a.kind)).toEqual(['choice']);
   });
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { Flow, FlowLink, FlowNode, Id } from '../model/types';
-import { FLOW, cellBox, nodeBox } from '../model/flowLayout';
+import { FLOW, cellBox, nodeBox, type FlowLayout } from '../model/flowLayout';
 
 export type Point = [number, number];
 type Side = 'top' | 'right' | 'bottom' | 'left';
@@ -22,8 +22,8 @@ function sides(a: FlowNode, b: FlowNode): [Side, Side] {
 }
 
 /** The point on a card's side, `offset` along it from the middle. */
-function port(node: FlowNode, side: Side, wanted: number): Point {
-  const b = nodeBox(node);
+function port(node: FlowNode, side: Side, wanted: number, layout?: FlowLayout): Point {
+  const b = nodeBox(node, layout);
   // Kept on the card, away from its corners.
   const half = (horizontal(side) ? b.h : b.w) / 2 - 8;
   const offset = Math.max(-half, Math.min(half, wanted));
@@ -40,8 +40,8 @@ function port(node: FlowNode, side: Side, wanted: number): Point {
 }
 
 /** The gap just outside a cell's side: x of a column gap, or y of a row gap. */
-function gapBeside(node: FlowNode, side: Side): number {
-  const c = cellBox(node.col, node.row);
+function gapBeside(node: FlowNode, side: Side, layout?: FlowLayout): number {
+  const c = cellBox(node.col, node.row, layout);
   switch (side) {
     case 'top':
       return c.y - FLOW.gapY / 2;
@@ -81,12 +81,14 @@ export function routeFlowLink(
   a: FlowNode,
   b: FlowNode,
   occupied: (col: number, row: number) => boolean,
-  opts: { lane?: number; fromOffset?: number; toOffset?: number } = {},
+  opts: { lane?: number; fromOffset?: number; toOffset?: number; layout?: FlowLayout } = {},
 ): Point[] {
+  const { layout } = opts;
+  const beside = (node: FlowNode, side: Side) => gapBeside(node, side, layout);
   const lane = LANES[(opts.lane ?? 0) % LANES.length];
   const [out, into] = sides(a, b);
-  const p0 = port(a, out, opts.fromOffset ?? 0);
-  const q0 = port(b, into, opts.toOffset ?? 0);
+  const p0 = port(a, out, opts.fromOffset ?? 0, layout);
+  const q0 = port(b, into, opts.toOffset ?? 0, layout);
   const clearRow = (row: number, from: number, to: number) => {
     for (let c = Math.min(from, to) + 1; c < Math.max(from, to); c++) if (occupied(c, row)) return false;
     return true;
@@ -101,37 +103,37 @@ export function routeFlowLink(
     if (a.row === b.row && clearRow(a.row, a.col, b.col)) {
       if (Math.abs(p0[1] - q0[1]) < 0.5) return [p0, q0];
       // Ports at different heights: a step in the gap before `b`.
-      const g = gapBeside(b, 'left') + lane;
+      const g = beside(b, 'left') + lane;
       return simplify([p0, [g, p0[1]], [g, q0[1]], q0]);
     }
     if (a.row !== b.row) {
-      const beforeB = gapBeside(b, 'left') + lane;
+      const beforeB = beside(b, 'left') + lane;
       if (clearRow(a.row, a.col, b.col) && b.col > a.col) return simplify([p0, [beforeB, p0[1]], [beforeB, q0[1]], q0]);
-      const afterA = gapBeside(a, 'right') + lane;
+      const afterA = beside(a, 'right') + lane;
       if (clearRow(b.row, a.col, b.col)) return simplify([p0, [afterA, p0[1]], [afterA, q0[1]], q0]);
     }
   }
   if (a.col === b.col && clearCol(a.col, a.row, b.row)) {
     if (Math.abs(p0[0] - q0[0]) < 0.5) return [p0, q0];
-    const g = gapBeside(b, b.row > a.row ? 'top' : 'bottom') + lane;
+    const g = beside(b, b.row > a.row ? 'top' : 'bottom') + lane;
     return simplify([p0, [p0[0], g], [q0[0], g], q0]);
   }
 
   // Through the gaps: out into the gap beside `a`, along gaps, into the gap beside `b`.
-  const g1 = gapBeside(a, out) + lane;
-  const g2 = gapBeside(b, into) + lane;
+  const g1 = beside(a, out) + lane;
+  const g2 = beside(b, into) + lane;
   const p1: Point = horizontal(out) ? [g1, p0[1]] : [p0[0], g1];
   const q1: Point = horizontal(into) ? [g2, q0[1]] : [q0[0], g2];
   let middle: Point[];
   if (horizontal(out) && horizontal(into)) {
     // Both in column gaps: cross over along the row gap next to `b`, on `a`'s side.
-    const y = (b.row > a.row ? gapBeside(b, 'top') : b.row < a.row ? gapBeside(b, 'bottom') : gapBeside(b, 'top')) + lane;
+    const y = (b.row > a.row ? beside(b, 'top') : b.row < a.row ? beside(b, 'bottom') : beside(b, 'top')) + lane;
     middle = p1[0] === q1[0] ? [] : [[p1[0], y], [q1[0], y]];
   } else if (!horizontal(out) && !horizontal(into)) {
     // Both in row gaps: cross over along a column gap beside `a`.
     if (Math.abs(p1[1] - q1[1]) < 0.5) middle = [];
     else {
-      const x = (b.col < a.col ? gapBeside(a, 'left') : gapBeside(a, 'right')) + lane;
+      const x = (b.col < a.col ? beside(a, 'left') : beside(a, 'right')) + lane;
       middle = [[x, p1[1]], [x, q1[1]]];
     }
   } else if (horizontal(out)) {
@@ -148,7 +150,7 @@ export interface RoutedLink {
 }
 
 /** Routes every arrow of a flow, spreading arrows that share a card's side. */
-export function routeFlow(flow: Flow): RoutedLink[] {
+export function routeFlow(flow: Flow, layout?: FlowLayout): RoutedLink[] {
   const byId = new Map<Id, FlowNode>(flow.nodes.map((n) => [n.id, n]));
   const cells = new Set(flow.nodes.map((n) => `${n.col}:${n.row}`));
   const occupied = (c: number, r: number) => cells.has(`${c}:${r}`);
@@ -174,6 +176,6 @@ export function routeFlow(flow: Flow): RoutedLink[] {
     const a = byId.get(l.from)!;
     const b = byId.get(l.to)!;
     const [out, into] = sides(a, b);
-    return { link: l, points: routeFlowLink(a, b, occupied, { lane: i, fromOffset: offset(l.from, out, l.id), toOffset: offset(l.to, into, l.id) }) };
+    return { link: l, points: routeFlowLink(a, b, occupied, { lane: i, fromOffset: offset(l.from, out, l.id), toOffset: offset(l.to, into, l.id), layout }) };
   });
 }

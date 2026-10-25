@@ -57,9 +57,12 @@ interface State extends DocState {
   presentStep: number | null;
   /** Sheet shown in the side panel over the mission map. */
   sheetPreview: Id | null;
-  /** New sheet dialog: closed, or open with a persona already picked (or none). */
-  newSheet: { personaId: Id | null } | null;
+  /** New sheet dialog: closed, or open with a persona (of the map `mapDocId`) already picked, or none. */
+  newSheet: { personaId: Id | null; mapDocId?: Id } | null;
   newFlowOpen: boolean;
+  newMapOpen: boolean;
+  /** Something slow under way (an image import, an export): shown as a spinner. */
+  busy: string | null;
 
   /** Changes the mission map shown, as one undo step (or merged into the last with the same `coalesce`). */
   apply: (fn: (map: Blueprint) => Blueprint, opts?: { coalesce?: string }) => void;
@@ -72,8 +75,12 @@ interface State extends DocState {
   /** Shows another document of the project. */
   setDoc: (docId: Id) => void;
   setSheetPreview: (docId: Id | null) => void;
-  setNewSheet: (open: { personaId: Id | null } | null) => void;
+  setNewSheet: (open: { personaId: Id | null; mapDocId?: Id } | null) => void;
   setNewFlowOpen: (open: boolean) => void;
+  setNewMapOpen: (open: boolean) => void;
+  setBusy: (busy: string | null) => void;
+  /** Presentation: shows `step` (-1: the whole document) of another document. */
+  presentAt: (docId: Id, step: number) => void;
   undo: () => void;
   redo: () => void;
   openTab: (project: Project, filePath: string | null, dirty?: boolean) => void;
@@ -194,6 +201,8 @@ export const useStore = create<State>((set, get) => ({
   sheetPreview: null,
   newSheet: null,
   newFlowOpen: false,
+  newMapOpen: false,
+  busy: null,
 
   apply: (fn, opts) => {
     const { docId, applyProject } = get();
@@ -218,6 +227,12 @@ export const useStore = create<State>((set, get) => ({
   setSheetPreview: (sheetPreview) => set({ sheetPreview }),
   setNewSheet: (newSheet) => set({ newSheet }),
   setNewFlowOpen: (newFlowOpen) => set({ newFlowOpen }),
+  setNewMapOpen: (newMapOpen) => set({ newMapOpen }),
+  setBusy: (busy) => set({ busy }),
+  presentAt: (docId, step) => {
+    if (!findDoc(get().project, docId)) return;
+    set({ docId, presentStep: step, sel: null, linkFrom: null, sheetPreview: null, tagFilter: [] });
+  },
 
   applyProject: (fn, opts) => {
     const { project, past, lastCoalesce, activeId, docId } = get();

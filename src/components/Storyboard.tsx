@@ -6,6 +6,7 @@ import { useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
 import type { Step } from '../model/types';
 import { readImage } from '../lib/image';
+import { withBusy } from '../actions';
 import { useBox } from './useBox';
 import { CloseIcon, ImageIcon } from './Icons';
 import { cls } from './cls';
@@ -42,7 +43,7 @@ function SceneCell({ step }: { step: Step }) {
   async function load(file: File | undefined) {
     setError(null);
     if (!file) return;
-    const img = await readImage(file).catch(() => null);
+    const img = await withBusy(t('busy.image'), () => readImage(file).catch(() => null));
     if (!img) {
       setError(t('sb.badImage'));
       return;

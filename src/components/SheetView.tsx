@@ -1,13 +1,14 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { activeSheet, useStore, useT } from '../store';
 import * as so from '../model/sheet';
 import { setSheetIdentity, sheetIdentity } from '../model/project';
-import { BLOCK_ACCENTS, PERSONA_PALETTE, personaAccent, tagColor } from '../model/theme';
+import { BLOCK_ACCENTS, PERSONA_PALETTE, TAG_PALETTE, personaAccent, tagColor } from '../model/theme';
 import type { BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
 import { readImage } from '../lib/image';
+import { withBusy } from '../actions';
 import { boardRef } from './Board';
 import { useBox } from './useBox';
 import { useFitText } from './useFitText';
@@ -132,7 +133,8 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
         onAdd={(tag) => applySheet((s) => so.addSheetTag(s, tag))}
         onRemove={(tag) => applySheet((s) => so.removeSheetTag(s, tag))}
         onFocus={b.onFocus}
-        colorOf={(tag) => tagColor(tag, {})}
+        colorOf={(tag) => tagColor(tag, sheet.tagColors)}
+        onColor={(tag, color) => applySheet((s) => so.setSheetTagColor(s, tag, color))}
       />
     </section>
   );
@@ -141,19 +143,29 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
 function Avatar({ sheet, name, accent, onAccent }: { sheet: PersonaSheet; name: string; accent: string; onAccent: string }) {
   const t = useT();
   const applySheet = useStore((s) => s.applySheet);
+  const input = useRef<HTMLInputElement>(null);
   return (
-    <div className="sheet-avatar" style={{ background: accent, color: onAccent }}>
-      {sheet.photo ? <img src={sheet.photo} alt={name} /> : <span aria-hidden="true">{(name || '?').charAt(0).toUpperCase()}</span>}
+    <div
+      className="sheet-avatar"
+      style={{ background: accent, color: onAccent }}
+      title={t(sheet.photo ? 'sheet.photoChange' : 'sheet.photo')}
+      // The whole circle picks a photo, not just the camera button.
+      onClick={(e) => {
+        if (e.target === e.currentTarget || (e.target as Element).closest('img, .sheet-avatar-initial')) input.current?.click();
+      }}
+    >
+      {sheet.photo ? <img src={sheet.photo} alt={name} /> : <span className="sheet-avatar-initial" aria-hidden="true">{(name || '?').charAt(0).toUpperCase()}</span>}
       <label className="sheet-photo-btn no-export" title={t(sheet.photo ? 'sheet.photoChange' : 'sheet.photo')}>
         <CameraIcon size={14} />
         <input
+          ref={input}
           type="file"
           accept="image/*"
           aria-label={t(sheet.photo ? 'sheet.photoChange' : 'sheet.photo')}
           onChange={async (e) => {
             const file = e.target.files?.[0];
             e.target.value = '';
-            const photo = file ? await readImage(file).catch(() => null) : null;
+            const photo = file ? await withBusy(t('busy.image'), () => readImage(file).catch(() => null)) : null;
             if (photo) applySheet((s) => so.setIdentity(s, { photo }));
           }}
         />
@@ -168,20 +180,59 @@ function Avatar({ sheet, name, accent, onAccent }: { sheet: PersonaSheet; name: 
 }
 
 /** Tag chips with an input to add one (Enter). */
-function Chips(props: { tags: string[]; onAdd: (tag: string) => void; onRemove: (tag: string) => void; onFocus: () => void; colorOf: (tag: string) => { bg: string; fg: string } }) {
+function Chips(props: {
+  tags: string[];
+  onAdd: (tag: string) => void;
+  onRemove: (tag: string) => void;
+  onFocus: () => void;
+  colorOf: (tag: string) => { bg: string; fg: string };
+  /** When given, clicking a tag offers the tag colours. */
+  onColor?: (tag: string, color: number) => void;
+}) {
   const t = useT();
-  const { tags, onAdd, onRemove, onFocus, colorOf } = props;
+  const { tags, onAdd, onRemove, onFocus, colorOf, onColor } = props;
   const [draft, setDraft] = useState('');
+  const [picking, setPicking] = useState<string | null>(null);
+  useEffect(() => {
+    if (!picking) return;
+    const onDown = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.tag-pickable')) setPicking(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [picking]);
   return (
     <div className="sheet-chips">
       {tags.map((tag) => {
         const c = colorOf(tag);
         return (
-          <span key={tag} className="tag" style={{ background: c.bg, color: c.fg }}>
-            {tag}
+          <span key={tag} className={cls('tag', onColor && 'tag-pickable')} style={{ background: c.bg, color: c.fg }}>
+            {onColor ? (
+              <button className="tag-name" aria-label={t('tags.color', { tag })} title={t('tags.color', { tag })} aria-expanded={picking === tag} onClick={() => setPicking(picking === tag ? null : tag)}>
+                {tag}
+              </button>
+            ) : (
+              tag
+            )}
             <button className="tag-x no-export" aria-label={t('board.removeTag', { tag })} onClick={() => onRemove(tag)}>
               <CloseIcon size={9} />
             </button>
+            {onColor && picking === tag && (
+              <span className="tag-palette no-export" role="group" aria-label={t('tags.color', { tag })}>
+                {TAG_PALETTE.map((p, i) => (
+                  <button
+                    key={i}
+                    className={cls('swatch swatch-xs', p.bg === c.bg && 'is-on')}
+                    style={{ background: p.bg, borderColor: p.fg }}
+                    aria-label={`${t('tags.color', { tag })} ${i + 1}`}
+                    onClick={() => {
+                      onColor(tag, i);
+                      setPicking(null);
+                    }}
+                  />
+                ))}
+              </span>
+            )}
           </span>
         );
       })}

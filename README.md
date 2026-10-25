@@ -16,13 +16,13 @@
 
 ## Quick Download
 
-Latest release: **v1.0.0** · [All releases](https://github.com/aminart/Mapline/releases)
+Latest release: **v1.1.0** · [All releases](https://github.com/aminart/Mapline/releases)
 
 | Platform | Installer |
 | --- | --- |
-| macOS (Apple Silicon & Intel, universal) | [`Mapline_1.0.0_universal.dmg`](https://github.com/aminart/Mapline/releases/download/v1.0.0/Mapline_1.0.0_universal.dmg) |
-| Windows 10/11 (x64) | [`Mapline_1.0.0_x64-setup.exe`](https://github.com/aminart/Mapline/releases/download/v1.0.0/Mapline_1.0.0_x64-setup.exe) · [`.msi`](https://github.com/aminart/Mapline/releases/download/v1.0.0/Mapline_1.0.0_x64_en-US.msi) |
-| Linux (x64) | [`.AppImage`](https://github.com/aminart/Mapline/releases/download/v1.0.0/Mapline_1.0.0_amd64.AppImage) · [`.deb`](https://github.com/aminart/Mapline/releases/download/v1.0.0/Mapline_1.0.0_amd64.deb) |
+| macOS (Apple Silicon & Intel, universal) | [`Mapline_1.1.0_universal.dmg`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_universal.dmg) |
+| Windows 10/11 (x64) | [`Mapline_1.1.0_x64-setup.exe`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_x64-setup.exe) · [`.msi`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_x64_en-US.msi) |
+| Linux (x64) | [`.AppImage`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_amd64.AppImage) · [`.deb`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_amd64.deb) |
 
 > Builds are not yet code-signed. On macOS, right-click the app and choose **Open** the first time; on Windows, choose **More info → Run anyway**.
 
@@ -34,17 +34,17 @@ No account, no cloud. Mapline makes zero network requests: your projects are sim
 ### Built for complex UX deliverables
 Not an empty whiteboard, but a structured tool for the deliverables you actually ship:
 
-**Map your user journeys** — phases, steps, persona swimlanes, lines of visibility, alternate paths, storyboard and notes rows, smart routed arrows that never cross a card, and a presentation mode.
+**Map your user journeys** — phases, steps, persona swimlanes, activity and decision cards, lines of visibility, alternate paths, storyboard and notes rows, smart routed arrows that never cross a card. A project holds as many maps, flows and personas as you need, and presents them all in one go.
 
-**User flows** — activity and decision cards on a grid, branches, loops, and return links; add a card in any direction and the flow automatically reflows around it.
+**User flows** — activity and decision cards on a grid that grow with their text, with tags and comments; branches, loops, and return links; add a card in any direction and the flow automatically reflows around it.
 
-**Personas** — ready-to-use sheets with lists, gauges, tags, and free-form text, seamlessly synced with your journey personas.
+**Personas** — ready-to-use sheets with lists, gauges, colour-coded tags, and free-form text, seamlessly synced with your journey personas — photo included.
 
 ### Ultra-lightweight, native performance
 Built with Tauri v2 and Rust leveraging the system webview: a lightweight installer, fast startup. Undo/redo, multi-project tabs, and session restore are natively built in.
 
 ### Multiple built-in export formats
-Projects are JSON files (.mapline). Export to high-resolution PNG (up to 3x, transparent background), JPEG, multi-page PDF (paginated by step or phase), and CSV, or copy directly to the clipboard to paste into Figma or other tools.
+Projects are JSON files (.mapline). Export to high-resolution PNG (up to 3x, transparent background), JPEG, multi-page A4 PDF (paginated by step or phase), and CSV, or copy directly to the clipboard to paste into Figma or other tools.
 
 ## Run from source
 

@@ -1,13 +1,14 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
 import type { Divider, Id, Persona } from '../model/types';
-import { LINK_COLORS, LINK_DASH, personaAccent, tagColor } from '../model/theme';
+import { CHOICE_STYLE, LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
 import { useBox } from './useBox';
-import { CloseIcon, GripIcon, LineAboveIcon, LineIcon, NoteIcon, PersonIcon, PlusIcon, SplitIcon } from './Icons';
+import { CloseIcon, DiamondIcon, GripIcon, LineAboveIcon, LineIcon, PersonIcon, PlusIcon, SplitIcon } from './Icons';
+import { NoteButton, TagRow, TagSuggestions as TagList } from './CardExtras';
 import { sheetFor } from '../model/project';
 import { cls } from './cls';
 import { GAP, ROW_GAP } from './layout';
@@ -46,6 +47,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
   const { accent, onAccent } = personaAccent(persona.color, custom);
   const boxRef = useRef<HTMLDivElement>(null);
   const drop = useDropTarget('persona', (d) => apply((doc) => ops.movePersona(doc, d.index, index)));
+  const docId = useStore((s) => s.docId);
   const sheet = useStore((s) => sheetFor(s.project, s.docId, persona.id));
   const setSheetPreview = useStore((s) => s.setSheetPreview);
   const setNewSheet = useStore((s) => s.setNewSheet);
@@ -66,8 +68,9 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
         >
           <GripIcon />
         </span>
+        {/* The photo of the persona's sheet, when it has one. */}
         <div className="avatar" aria-hidden="true" style={{ background: accent, color: onAccent }}>
-          {(persona.name || '?').charAt(0).toUpperCase()}
+          {sheet?.sheet.photo ? <img src={sheet.sheet.photo} alt="" /> : (persona.name || '?').charAt(0).toUpperCase()}
         </div>
         <div className="persona-fields">
           <input
@@ -104,7 +107,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
             style={sheet ? { color: accent } : undefined}
             title={sheet ? t('board.openSheetLabel', { name }) : t('board.createSheet')}
             aria-label={sheet ? t('board.openSheetLabel', { name }) : t('board.createSheet')}
-            onClick={() => (sheet ? setSheetPreview(sheet.id) : setNewSheet({ personaId: persona.id }))}
+            onClick={() => (sheet ? setSheetPreview(sheet.id) : setNewSheet({ personaId: persona.id, mapDocId: docId }))}
           >
             <PersonIcon />
           </button>
@@ -172,35 +175,37 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
   const apply = useStore((s) => s.apply);
   const focusLater = useStore((s) => s.focusLater);
   const drop = useDropTarget('act', (d) => apply((doc) => ops.moveActivity(doc, d.key, key)));
+  const create = (kind: 'activity' | 'choice') => {
+    let id = '';
+    apply((d) => {
+      const r = ops.createActivity(d, personaId, slotId, kind);
+      id = r.activityId;
+      return r.doc;
+    });
+    focusLater(`act:${id}`);
+  };
 
   return (
     <div className={cls('cell', drop.over && 'is-drop-target', alt && 'has-alt')} data-step={stepId} {...drop.props}>
       {act ? (
         <>
-          <ActivityCard {...props} activityKey={key} activityId={act.id} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} canAddAlt={!alt} />
+          <ActivityCard {...props} activityKey={key} activityId={act.id} choice={act.kind === 'choice'} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} canAddAlt={!alt} />
           {alt && (
             <>
               <JoinerInput activityKey={ops.altKey(key)} joiner={alt.joiner} />
-              <ActivityCard {...props} activityKey={ops.altKey(key)} activityId={alt.id} text={alt.text} tags={alt.tags ?? []} note={alt.note ?? ''} canAddAlt={false} />
+              <ActivityCard {...props} activityKey={ops.altKey(key)} activityId={alt.id} choice={alt.kind === 'choice'} text={alt.text} tags={alt.tags ?? []} note={alt.note ?? ''} canAddAlt={false} />
             </>
           )}
         </>
       ) : (
-        <button
-          className="ghost no-export"
-          aria-label={t('board.addActivityHere')}
-          onClick={() => {
-            let id = '';
-            apply((d) => {
-              const r = ops.createActivity(d, personaId, slotId);
-              id = r.activityId;
-              return r.doc;
-            });
-            focusLater(`act:${id}`);
-          }}
-        >
-          <PlusIcon size={18} />
-        </button>
+        <>
+          <button className="ghost no-export" aria-label={t('board.addActivityHere')} onClick={() => create('activity')}>
+            <PlusIcon size={18} />
+          </button>
+          <button className="ghost-choice no-export" aria-label={t('board.addChoiceHere')} title={t('board.addChoiceHere')} onClick={() => create('choice')}>
+            <DiamondIcon size={12} />
+          </button>
+        </>
       )}
     </div>
   );
@@ -213,6 +218,8 @@ function ActivityCard(props: {
   slotId: Id;
   activityKey: string;
   activityId: Id;
+  /** A decision point rather than an activity. */
+  choice: boolean;
   text: string;
   tags: string[];
   note: string;
@@ -220,13 +227,14 @@ function ActivityCard(props: {
   canAddAlt: boolean;
 }) {
   const t = useT();
-  const { personaId, personaColor, stepId, slotId, activityKey, activityId, text, tags, note, canAddAlt } = props;
+  const { personaId, personaColor, stepId, slotId, activityKey, activityId, choice, text, tags, note, canAddAlt } = props;
   const apply = useStore((s) => s.apply);
   const focusLater = useStore((s) => s.focusLater);
   const tool = useStore((s) => s.tool);
   const linkFrom = useStore((s) => s.linkFrom);
   const setLinkFrom = useStore((s) => s.setLinkFrom);
   const tagFilter = useStore((s) => s.tagFilter);
+  const tagColors = useMap((m) => m.tagColors);
   const b = useBox<HTMLTextAreaElement>(`act:${activityId}`, 'act');
   const personaStyle = useMap((m) => m.styles[`persona:${personaId}`]);
   // Cards follow their persona's colour unless given a border of their own.
@@ -270,16 +278,27 @@ function ActivityCard(props: {
   return (
     <div
       ref={cardRef}
-      className={cls('box card', b.selected && 'is-selected', dimmed && 'is-dimmed')}
+      className={cls('box card', choice && 'card-choice', b.selected && 'is-selected', dimmed && 'is-dimmed')}
       data-act={activityId}
-      style={{ ...b.box, borderTopColor: b.hasCustomBorder ? b.style.bc : accent }}
+      style={{
+        ...b.box,
+        // Choices are amber unless given a fill or border of their own.
+        ...(choice && !b.hasCustomFill ? { background: CHOICE_STYLE.bg } : {}),
+        ...(choice && !b.hasCustomBorder ? { borderColor: CHOICE_STYLE.bc } : {}),
+        borderTopColor: b.hasCustomBorder ? b.style.bc : accent,
+      }}
     >
+      {choice && (
+        <span className="choice-tag" aria-hidden="true">
+          <DiamondIcon size={10} /> {t('flow.kind.choice')}
+        </span>
+      )}
       <textarea
         ref={b.ref}
         rows={1}
         aria-label={t('board.activity')}
         value={text}
-        placeholder={t('board.activityPlaceholder')}
+        placeholder={t(choice ? 'flow.choicePlaceholder' : 'board.activityPlaceholder')}
         onFocus={b.onFocus}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -293,7 +312,13 @@ function ActivityCard(props: {
         }}
         style={b.text}
       />
-      <TagRow activityKey={activityKey} tags={tags} />
+      <TagRow
+        tags={tags}
+        colors={tagColors}
+        listId={TAG_LIST_ID}
+        onAdd={(tag) => apply((d) => ops.addTag(d, activityKey, tag))}
+        onRemove={(tag) => apply((d) => ops.removeTag(d, activityKey, tag))}
+      />
       <span
         className="grip grip-card card-btn no-export"
         title={t('board.dragActivity')}
@@ -302,7 +327,7 @@ function ActivityCard(props: {
       >
         <GripIcon size={12} />
       </span>
-      <NoteButton activityKey={activityKey} note={note} />
+      <NoteButton note={note} onChange={(v, live) => apply((d) => ops.setActivityNote(d, activityKey, v), live ? { coalesce: `note:${activityKey}` } : undefined)} />
       <button className="card-btn card-del no-export" aria-label={t('board.removeActivity')} onClick={() => apply((d) => ops.removeActivity(d, activityKey))}>
         <CloseIcon size={12} />
       </button>
@@ -346,151 +371,10 @@ function JoinerInput({ activityKey, joiner }: { activityKey: string; joiner: str
   );
 }
 
-/** A note kept off the board: a small marker on the card, the text in a bubble. */
-function NoteButton({ activityKey, note }: { activityKey: string; note: string }) {
-  const t = useT();
-  const apply = useStore((s) => s.apply);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
-
-  const has = note.trim().length > 0;
-  return (
-    <div ref={ref} className={cls('note no-export', has && 'has-note', open && 'is-open')}>
-      <button
-        className="note-btn"
-        aria-label={has ? t('note.edit', { note }) : t('note.add')}
-        title={has ? t('note.edit', { note }) : t('note.add')}
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <NoteIcon size={12} />
-      </button>
-      {open && (
-        <div className="note-panel" role="dialog" aria-label={t('note.title')}>
-          <div className="note-head">
-            <span>{t('note.title')}</span>
-            <button className="icon-btn" aria-label={t('note.close')} onClick={() => setOpen(false)}>
-              <CloseIcon size={12} />
-            </button>
-          </div>
-          <textarea
-            autoFocus
-            rows={5}
-            value={note}
-            placeholder={t('note.placeholder')}
-            onChange={(e) => {
-              const v = e.target.value;
-              apply((d) => ops.setActivityNote(d, activityKey, v), { coalesce: `note:${activityKey}` });
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.stopPropagation();
-                setOpen(false);
-              }
-            }}
-          />
-          {has && (
-            <button
-              className="text-btn"
-              onClick={() => {
-                apply((d) => ops.setActivityNote(d, activityKey, ''));
-                setOpen(false);
-              }}
-            >
-              {t('note.delete')}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TagRow({ activityKey, tags }: { activityKey: string; tags: string[] }) {
-  const t = useT();
-  const apply = useStore((s) => s.apply);
-  const chosen = useMap((m) => m.tagColors);
-  const [draft, setDraft] = useState<string | null>(null);
-
-  const commit = (keepOpen: boolean) => {
-    if (draft?.trim()) apply((d) => ops.addTag(d, activityKey, draft));
-    setDraft(keepOpen ? '' : null);
-  };
-
-  if (tags.length === 0 && draft === null) {
-    return (
-      <div className="tags tags-empty no-export">
-        <button className="tag-add" aria-label={t('board.addTagLabel')} onClick={() => setDraft('')}>
-          <PlusIcon size={10} /> {t('board.addTag')}
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="tags">
-      {tags.map((tag) => {
-        const c = tagColor(tag, chosen);
-        return (
-          <span key={tag} className="tag" style={{ background: c.bg, color: c.fg }}>
-            {tag}
-            <button className="tag-x no-export" aria-label={t('board.removeTag', { tag })} onClick={() => apply((d) => ops.removeTag(d, activityKey, tag))}>
-              <CloseIcon size={9} />
-            </button>
-          </span>
-        );
-      })}
-      {draft === null ? (
-        <button className="tag-add tag-add-icon no-export" aria-label={t('board.addTagLabel')} title={t('board.addTagLabel')} onClick={() => setDraft('')}>
-          <PlusIcon size={10} />
-        </button>
-      ) : (
-        <input
-          className="tag-input no-export"
-          list={TAG_LIST_ID}
-          autoFocus
-          maxLength={ops.MAX_TAG_LENGTH}
-          aria-label={t('board.addTagLabel')}
-          placeholder={t('board.tagPlaceholder')}
-          value={draft}
-          size={Math.max(8, draft.length + 1)}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              commit(true);
-            } else if (e.key === 'Escape') {
-              e.stopPropagation();
-              setDraft(null);
-            } else if (e.key === 'Backspace' && draft === '' && tags.length > 0) {
-              apply((d) => ops.removeTag(d, activityKey, tags[tags.length - 1]));
-            }
-          }}
-          onBlur={() => commit(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-/** Suggestions for the tag inputs: every tag already used in the project. */
+/** Suggestions for the tag inputs: every tag already used in the map. */
 export function TagSuggestions() {
   const doc = useMap((m) => m);
-  return (
-    <datalist id={TAG_LIST_ID}>
-      {ops.allTags(doc).map((tag) => (
-        <option key={tag} value={tag} />
-      ))}
-    </datalist>
-  );
+  return <TagList id={TAG_LIST_ID} tags={ops.allTags(doc)} />;
 }
 
 const TAG_LIST_ID = 'mm-tag-list';

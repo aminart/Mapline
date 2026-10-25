@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { Flow, FlowLink, FlowNode, FlowNodeKind, Id, LinkStyle } from './types';
-import { uid } from './ops';
+import { uid, withTag } from './ops';
 
 export type Direction = 'up' | 'right' | 'down' | 'left';
 
@@ -154,6 +154,57 @@ export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink,
 
 export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind' | 'personaId'>>): Flow {
   return { ...flow, nodes: flow.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) };
+}
+
+export function addNodeTag(flow: Flow, id: Id, tag: string): Flow {
+  const node = findNode(flow, id);
+  const tags = node ? withTag(node.tags ?? [], tag) : null;
+  if (!node || !tags) return flow;
+  return { ...flow, nodes: flow.nodes.map((n) => (n.id === id ? { ...n, tags } : n)) };
+}
+
+export function removeNodeTag(flow: Flow, id: Id, tag: string): Flow {
+  return { ...flow, nodes: flow.nodes.map((n) => (n.id === id && n.tags?.includes(tag) ? { ...n, tags: n.tags.filter((x) => x !== tag) } : n)) };
+}
+
+export function setNodeNote(flow: Flow, id: Id, note: string): Flow {
+  return {
+    ...flow,
+    nodes: flow.nodes.map((n) => {
+      if (n.id !== id) return n;
+      const { note: _old, ...rest } = n;
+      return note.trim() ? { ...rest, note } : rest;
+    }),
+  };
+}
+
+/** How many cards carry each tag (keyed by the tag as first written). */
+export function flowTagCounts(flow: Flow): { tag: string; count: number }[] {
+  const counts = new Map<string, { tag: string; count: number }>();
+  for (const n of flow.nodes) {
+    for (const tag of n.tags ?? []) {
+      const entry = counts.get(tag.toLowerCase()) ?? { tag, count: 0 };
+      entry.count++;
+      counts.set(tag.toLowerCase(), entry);
+    }
+  }
+  return [...counts.values()].sort((a, b) => a.tag.localeCompare(b.tag));
+}
+
+export function setFlowTagColor(flow: Flow, tag: string, color: number): Flow {
+  return { ...flow, tagColors: { ...flow.tagColors, [tag.toLowerCase()]: color } };
+}
+
+/** Removes a tag from every card. */
+export function deleteFlowTag(flow: Flow, tag: string): Flow {
+  const key = tag.toLowerCase();
+  const tagColors = { ...flow.tagColors };
+  delete tagColors[key];
+  return {
+    ...flow,
+    tagColors,
+    nodes: flow.nodes.map((n) => (n.tags?.some((x) => x.toLowerCase() === key) ? { ...n, tags: n.tags.filter((x) => x.toLowerCase() !== key) } : n)),
+  };
 }
 
 export function setNodeStyle(flow: Flow, id: Id, patch: Flow['styles'][string]): Flow {

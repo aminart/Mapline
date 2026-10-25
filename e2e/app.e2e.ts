@@ -3,8 +3,8 @@
 
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
-import { addActivity, arrowsOverCards, cell, link, personaRows, startProject } from './helpers';
+import { expect, test, type Page } from '@playwright/test';
+import { addActivity, arrowsOverCards, cell, link, personaRows, startProject, openProjects } from './helpers';
 
 const legacyFile = fileURLToPath(new URL('./fixtures/projet-v0.9.missionmap', import.meta.url));
 
@@ -92,7 +92,7 @@ test('undo and redo', async ({ page }) => {
 
 test('saves a project and opens it again, unchanged', async ({ page }, info) => {
   await startProject(page);
-  await page.getByRole('tab', { name: 'Nom du projet' }).fill('Projet test');
+  await page.getByRole('textbox', { name: 'Nom du projet' }).fill('Projet test');
   await page.getByPlaceholder('Quel est l’objectif de ce parcours ?').fill('Un objectif enregistré');
   await addActivity(page, 0, 0, 'Une activité enregistrée');
 
@@ -110,8 +110,9 @@ test('saves a project and opens it again, unchanged', async ({ page }, info) => 
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Ouvrir', exact: true }).click();
   await (await chooser).setFiles(file);
-  await expect(page.locator('.tab')).toHaveCount(2);
-  await expect(page.getByRole('tab', { name: 'Nom du projet' })).toHaveValue('Projet test');
+  await expect(await openProjects(page)).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('textbox', { name: 'Nom du projet' })).toHaveValue('Projet test');
   await expect(page.getByPlaceholder('Quel est l’objectif de ce parcours ?')).toHaveValue('Un objectif enregistré');
   await expect(cell(page, 0, 0).getByRole('textbox', { name: 'Activité' })).toHaveValue('Une activité enregistrée');
 });
@@ -121,7 +122,7 @@ test('opens a file saved before version 0.10', async ({ page }) => {
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Ouvrir un projet…' }).click();
   await (await chooser).setFiles(legacyFile);
-  await expect(page.getByRole('tab', { name: 'Nom du projet' })).toHaveValue('Projet 0.9');
+  await expect(page.getByRole('textbox', { name: 'Nom du projet' })).toHaveValue('Projet 0.9');
   await expect(page.getByPlaceholder('Quel est l’objectif de ce parcours ?')).toHaveValue('Objectif d’un ancien projet');
   await expect(page.locator('.step').getByRole('textbox', { name: 'Nom de l’étape' }).first()).toHaveValue('Étape héritée');
   await expect(cell(page, 0, 0).getByRole('textbox', { name: 'Activité' })).toHaveValue('Activité héritée');
@@ -166,6 +167,85 @@ test('asks before closing a tab with unsaved changes', async ({ page }) => {
   await startProject(page);
   await addActivity(page, 0, 0, 'Pas encore enregistrée');
   page.once('dialog', (dialog) => dialog.dismiss());
-  await page.locator('.tab').getByRole('button', { name: /Fermer/ }).click();
-  await expect(page.locator('.tab')).toHaveCount(1);
+  await (await openProjects(page)).getByRole('button', { name: /Fermer/ }).click();
+  await expect(page.locator('.project-item')).toHaveCount(1);
+});
+
+test('shows the project in the main bar, its documents as tabs, and adds a second map', async ({ page }) => {
+  await startProject(page);
+  await expect(page.locator('.topbar').getByRole('textbox', { name: 'Nom du projet' })).toHaveValue('Nouvelle map');
+  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Map vide' }).click();
+  await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Map 2']);
+  await expect(page.locator('.persona-row')).toHaveCount(1);
+});
+
+test('adds a choice card in a map and turns it into an activity', async ({ page }) => {
+  await startProject(page);
+  await cell(page, 0, 1).hover();
+  await cell(page, 0, 1).getByRole('button', { name: 'Ajouter une carte choix ici' }).click();
+  await page.keyboard.type('Compte existant ?');
+  const card = cell(page, 0, 1).locator('.card');
+  await expect(card).toHaveClass(/card-choice/);
+  await expect(card.locator('.choice-tag')).toHaveText('Choix');
+  const kind = page.getByRole('group', { name: 'Type' });
+  await expect(kind.getByRole('button', { name: 'Choix' })).toHaveAttribute('aria-pressed', 'true');
+  await kind.getByRole('button', { name: 'Activité' }).click();
+  await expect(card).not.toHaveClass(/card-choice/);
+  await expect(card.getByRole('textbox', { name: 'Activité' })).toHaveValue('Compte existant ?');
+});
+
+test('presents every document of the project in turn', async ({ page }) => {
+  await startProject(page);
+  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
+  await page.locator('.doc-tab').filter({ hasText: 'Map' }).locator('.doc-tab-btn').click();
+  await page.getByRole('button', { name: 'Présenter', exact: true }).click();
+  const kicker = page.locator('.present-kicker');
+  await expect(kicker).toHaveText('Map · 1/2 · Vue d’ensemble');
+  // The map's five steps, then the flow.
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await expect(kicker).toHaveText('Flow · 2/2');
+  await expect(page.locator('.flow')).toBeVisible();
+  await expect(page.locator('.flow .flow-handle')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Suivant' })).toBeDisabled();
+  await page.keyboard.press('ArrowLeft');
+  await expect(kicker).toHaveText('Map · Étape 5 / 5 · Après');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.present-bar')).toHaveCount(0);
+});
+
+/** The alpha of a few pixels of a downloaded PNG: a corner, and the middle. */
+async function pngAlpha(page: Page, path: string): Promise<{ corner: number; middle: number }> {
+  const b64 = (await readFile(path)).toString('base64');
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    return { corner: ctx.getImageData(1, 1, 1, 1).data[3], middle: ctx.getImageData(img.width >> 1, img.height >> 1, 1, 1).data[3] };
+  }, b64);
+}
+
+test('exports a PNG with nothing behind its rounded corners, and a PDF on A4 by default', async ({ page }) => {
+  await startProject(page);
+  await page.keyboard.press('ControlOrMeta+e');
+  await page.locator('input[name=export-format][value=png]').check({ force: true });
+  let download = page.waitForEvent('download');
+  await page.locator('dialog[open] .btn-primary').click();
+  const alpha = await pngAlpha(page, await (await download).path());
+  expect(alpha).toEqual({ corner: 0, middle: 255 });
+  await expect(page.locator('.busy')).toHaveCount(0);
+
+  await page.keyboard.press('ControlOrMeta+e');
+  await page.locator('input[name=export-format][value=pdf]').check({ force: true });
+  await expect(page.getByRole('button', { name: 'Pages A4' })).toHaveAttribute('aria-pressed', 'true');
+  download = page.waitForEvent('download');
+  await page.locator('dialog[open] .btn-primary').click();
+  const pdf = (await readFile(await (await download).path())).toString('latin1');
+  expect(pdf).toMatch(/\/MediaBox \[0 0 842\.?0* 595\.?0*\]/);
 });

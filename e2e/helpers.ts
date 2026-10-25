@@ -10,6 +10,12 @@ export async function startProject(page: Page) {
   await expect(page.locator('.board')).toBeVisible();
 }
 
+/** Opens the menu of open projects in the main bar; returns its entries. */
+export async function openProjects(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: 'Projets ouverts' }).click();
+  return page.locator('.project-item');
+}
+
 /** The cell of persona row `row` (0-based) in activity column `col`. */
 export function cell(page: Page, row: number, col: number): Locator {
   return page.locator('.persona-row').nth(row).locator('.cell').nth(col);

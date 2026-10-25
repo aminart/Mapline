@@ -284,61 +284,6 @@ select:focus-visible,
 
 /* Tabs */
 
-.tabbar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 6px 12px 0;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-}
-.tab {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 36px;
-  padding: 0 6px 0 12px;
-  border: 1px solid transparent;
-  border-bottom: 0;
-  border-radius: 8px 8px 0 0;
-  color: var(--muted);
-  flex-shrink: 0;
-  max-width: 320px;
-}
-.tab:hover {
-  background: rgba(20, 24, 32, 0.04);
-}
-.tab.is-active {
-  background: var(--surface);
-  border-color: var(--line);
-  color: var(--ink);
-  margin-bottom: -1px;
-  height: 37px;
-}
-.tab-title {
-  border: 0;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 4px 2px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: inherit;
-  text-align: left;
-}
-input.tab-title {
-  font-weight: 600;
-  border-radius: 4px;
-}
-input.tab-title:hover,
-input.tab-title:focus {
-  background: var(--surface-2);
-}
 .tab-dirty {
   width: 7px;
   height: 7px;
@@ -346,9 +291,109 @@ input.tab-title:focus {
   background: var(--accent);
   flex-shrink: 0;
 }
-.tab-close {
-  width: 24px;
-  height: 24px;
+
+/* The open project, in the main bar */
+
+.project {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.project-title {
+  min-width: 0;
+  max-width: 320px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-overflow: ellipsis;
+}
+.project-title:hover {
+  border-color: var(--line);
+}
+.project-title:focus {
+  border-color: var(--accent);
+  outline: none;
+  background: var(--surface);
+}
+.project-menu-btn {
+  gap: 4px;
+  width: auto;
+  min-width: 30px;
+  padding: 0 6px;
+}
+.project-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+  padding: 12px;
+}
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.project-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+.project-item.is-active {
+  background: var(--accent-soft);
+}
+.project-item-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-item:not(.is-active) .project-item-btn:hover {
+  background: var(--surface-2);
+}
+.project-item.is-active .project-item-btn {
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+.project-menu-action {
+  align-self: flex-start;
+  padding-top: 8px;
+}
+/* Narrow windows: New project and Open keep their icons only. */
+@media (max-width: 1360px) {
+  .topbar .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
 }
 
 /* Toolbar */
@@ -585,8 +630,10 @@ input.tab-title:focus {
 }
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 16px;
 }
 .start {
   max-width: 760px;
@@ -623,7 +670,8 @@ input.tab-title:focus {
   flex-direction: column;
   gap: 8px;
 }
-.field-group legend {
+.field-group legend,
+.field-group .field-legend {
   padding: 0;
   margin-bottom: 8px;
   font-size: 12px;
@@ -631,6 +679,14 @@ input.tab-title:focus {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
 }
 .format-grid {
   display: grid;
@@ -1020,12 +1076,18 @@ input.tab-title:focus {
   width: 34px;
   height: 34px;
   border-radius: 17px;
+  overflow: hidden;
   color: #fff;
   font-weight: 700;
   font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .persona-fields {
   display: flex;
@@ -1062,6 +1124,45 @@ input.tab-title:focus {
   opacity: 1;
   border-color: var(--accent);
   color: var(--accent);
+}
+.ghost-choice {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #e9d38f;
+  border-radius: 7px;
+  background: #fffbeb;
+  color: #a16207;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cell:hover .ghost-choice,
+.ghost-choice:focus-visible {
+  opacity: 1;
+}
+.ghost-choice:hover {
+  border-color: #a16207;
+}
+.choice-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #854d0e;
+}
+.card-choice textarea {
+  font-weight: 600;
 }
 .card {
   position: relative;
@@ -1344,6 +1445,9 @@ input.tab-title:focus {
 .is-exporting * {
   box-shadow: none !important;
 }
+.export-flat {
+  border-radius: 0 !important;
+}
 .export-transparent {
   background: transparent;
   border-color: transparent;
@@ -1569,6 +1673,30 @@ body.is-dragging {
   accent-color: var(--accent);
   margin: 0;
 }
+.tag-pickable {
+  position: relative;
+}
+.tag-name {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.tag-palette {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(20, 24, 32, 0.14);
+}
 .tag-colors {
   display: flex;
   gap: 3px;
@@ -1619,6 +1747,14 @@ body.is-dragging {
 
 .app.is-presenting .canvas {
   padding-bottom: 120px;
+}
+/* Presenting a sheet or a flow: no editing controls. */
+.app.is-presenting .canvas .no-export,
+.app.is-presenting .canvas .card-btn {
+  display: none !important;
+}
+.app.is-presenting .canvas ::placeholder {
+  color: transparent;
 }
 .board.presenting {
   pointer-events: none;
@@ -1775,29 +1911,41 @@ body.is-dragging {
 .docbar {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line-soft);
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 12px 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
   overflow-x: auto;
 }
 .doc-tab {
   position: relative;
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  flex-shrink: 0;
+  height: 36px;
+  padding-right: 4px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+.doc-tab.is-active {
+  height: 37px;
+  margin-bottom: -1px;
+  background: var(--surface);
+  border-color: var(--line);
 }
 .doc-tab-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
-  padding: 0 12px;
+  height: 100%;
+  padding: 0 10px 0 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   background: transparent;
   font-size: 13px;
+  font-weight: 500;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -1805,9 +1953,14 @@ body.is-dragging {
   background: var(--surface-2);
   color: var(--ink);
 }
+.doc-tab-btn:hover {
+  background: transparent;
+}
+.doc-tab:not(.is-active):hover {
+  background: rgba(20, 24, 32, 0.04);
+}
 .doc-tab.is-active .doc-tab-btn {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  color: var(--ink);
   font-weight: 600;
 }
 .doc-tab-close {
@@ -1821,8 +1974,10 @@ body.is-dragging {
 .doc-add {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 6px;
-  height: 30px;
+  height: 28px;
+  margin: 0 0 4px 4px;
   padding: 0 12px;
   border: 1px dashed var(--line);
   border-radius: 8px;
@@ -1845,29 +2000,6 @@ body.is-dragging {
 .tpl-card.is-on {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
-}
-.persona-pick {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.persona-pick-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.persona-pick-row:hover {
-  background: var(--surface-2);
-}
-.persona-pick-row.is-disabled {
-  color: var(--muted);
-}
-.persona-pick-row input {
-  accent-color: var(--accent);
 }
 
 /* Persona sheet */
@@ -1904,6 +2036,7 @@ body.is-dragging {
 }
 .sheet-avatar {
   position: relative;
+  cursor: pointer;
   width: 96px;
   height: 96px;
   border-radius: 48px;
@@ -1935,10 +2068,16 @@ body.is-dragging {
   cursor: pointer;
 }
 .sheet-photo-btn input {
+  /* Kept focusable but out of sight: browsers ignore the cursor over a file button. */
   position: absolute;
-  inset: 0;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  cursor: pointer;
+  pointer-events: none;
+}
+.sheet-photo-btn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .sheet-photo-remove {
   position: absolute;
@@ -2349,16 +2488,55 @@ body.is-dragging {
   border-top-width: 3px;
   border-radius: 10px;
 }
+.flow-card-content {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
 .flow-card .flow-text {
-  flex: 1;
-  min-height: 0;
+  flex: none;
   width: 100%;
   padding: 10px 28px 8px 12px;
   border: 0;
   background: transparent;
   resize: none;
   line-height: 1.4;
-  overflow: auto;
+  overflow: hidden;
+}
+.flow-card .tags {
+  padding: 0 30px 8px 10px;
+}
+.flow-card:hover .tags-empty,
+.flow-card:focus-within .tags-empty,
+.flow-card:hover .note-btn,
+.flow-card:focus-within .note-btn {
+  opacity: 1;
+}
+.flow-card.is-dimmed {
+  opacity: 0.25;
+}
+/* The persona doing it: their photo or initial, on the card's corner. */
+.flow-persona {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.flow-persona img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .flow-choice {
   background: #fffbeb;
@@ -2534,4 +2712,39 @@ body.is-dragging .flow-drop {
 .flow-card.is-selected {
   /* Its + handles above neighbouring arrows' ⊕. */
   z-index: 8;
+}
+
+/* Busy spinner: image import, export */
+.busy {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 24, 32, 0.18);
+  cursor: progress;
+}
+.busy-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgba(20, 24, 32, 0.18);
+  font-weight: 600;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--accent-soft);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

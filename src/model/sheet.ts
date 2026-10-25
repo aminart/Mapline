@@ -32,6 +32,10 @@ export function addSheetTag(sheet: PersonaSheet, tag: string): PersonaSheet {
   return { ...sheet, tags: sheet.tags.concat([clean]) };
 }
 
+export function setSheetTagColor(sheet: PersonaSheet, tag: string, color: number): PersonaSheet {
+  return { ...sheet, tagColors: { ...sheet.tagColors, [tag.toLowerCase()]: color } };
+}
+
 export function removeSheetTag(sheet: PersonaSheet, tag: string): PersonaSheet {
   return { ...sheet, tags: sheet.tags.filter((t) => t !== tag) };
 }

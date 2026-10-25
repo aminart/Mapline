@@ -4,6 +4,9 @@
 import { useEffect } from 'react';
 import { activeMap, useMap, useStore, useT } from '../store';
 import { normalizePhases, phaseIndexOf } from '../model/ops';
+import { findDoc } from '../model/project';
+import type { Project } from '../model/types';
+import { docLabel } from '../actions';
 import { boardRef } from './Board';
 import { isDesktop } from '../lib/fileio';
 import { ChevronLeft, ChevronRight, CloseIcon } from './Icons';
@@ -81,13 +84,34 @@ export function stopPresentation() {
   setFullscreen(false);
 }
 
-/** Moves through the presentation: -1 is the overview, then each step. */
+/** The last position in a document: a map's last step; -1 (the whole page) for the others. */
+function lastStep(project: Project, docId: string): number {
+  const doc = findDoc(project, docId);
+  return doc?.kind === 'mission-map' ? doc.map.steps.length - 1 : -1;
+}
+
+/**
+ * Moves through the presentation, which covers the whole project: each
+ * document in turn, a map as its overview (-1) and then each step, a sheet
+ * or a flow as one page.
+ */
 export function presentGo(delta: number | 'overview') {
   const s = useStore.getState();
   if (s.presentStep === null) return;
-  const last = activeMap(s).steps.length - 1;
-  const next = delta === 'overview' ? -1 : Math.min(last, Math.max(-1, s.presentStep + delta));
-  s.setPresentStep(next);
+  if (delta === 'overview') {
+    s.setPresentStep(-1);
+    return;
+  }
+  const docs = s.project.docs;
+  const at = docs.findIndex((d) => d.id === s.docId);
+  const next = s.presentStep + delta;
+  if (next > lastStep(s.project, s.docId)) {
+    if (at < docs.length - 1) s.presentAt(docs[at + 1].id, -1);
+  } else if (next < -1) {
+    if (at > 0) s.presentAt(docs[at - 1].id, lastStep(s.project, docs[at - 1].id));
+  } else {
+    s.setPresentStep(next);
+  }
 }
 
 /** Fits the whole board in the window. */
@@ -105,14 +129,20 @@ export function PresentationBar() {
   const t = useT();
   const step = useStore((s) => s.presentStep);
   const doc = useMap((m) => m);
-  const title = useStore((s) => s.project.title);
+  const project = useStore((s) => s.project);
+  const docId = useStore((s) => s.docId);
   const setZoom = useStore((s) => s.setZoom);
+  useStore((s) => s.lang);
 
-  // Overview fits the board; a step is shown at full size and centred.
+  // A whole document fits the window; a map's step is shown at full size and centred.
   useEffect(() => {
     if (step === null) return;
     if (step < 0) {
-      setZoom(fitZoom());
+      // Measured once the document shown has been drawn.
+      requestAnimationFrame(() => {
+        setZoom(fitZoom());
+        boardRef.current?.closest('.canvas')?.scrollTo({ left: 0, top: 0 });
+      });
       return;
     }
     setZoom(1);
@@ -122,24 +152,30 @@ export function PresentationBar() {
         ?.querySelector(`.step[data-step="${CSS.escape(id ?? '')}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     });
-    // Only when the step changes, not on every edit.
+    // Only when the step or document changes, not on every edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, docId]);
 
   if (step === null) return null;
-  const total = doc.steps.length;
-  const current = step >= 0 ? doc.steps[step] : null;
+  const isMap = findDoc(project, docId)?.kind === 'mission-map';
+  const total = isMap ? doc.steps.length : 0;
+  const current = isMap && step >= 0 ? doc.steps[step] : null;
   const phases = normalizePhases(doc.phases, total);
   const phase = current ? phases[phaseIndexOf(phases, step)]?.title : '';
+  const at = project.docs.findIndex((d) => d.id === docId);
+  const label = docLabel(project, docId);
+  // Which document, when the project has several.
+  const where = project.docs.length > 1 ? `${label} · ${at + 1}/${project.docs.length}` : label;
   return (
     <div className="present-bar" role="toolbar" aria-label={t('present.start')}>
-      <button className="present-btn" aria-label={t('present.prev')} disabled={step < 0} onClick={() => presentGo(-1)}>
+      <button className="present-btn" aria-label={t('present.prev')} disabled={at <= 0 && step < 0} onClick={() => presentGo(-1)}>
         <ChevronLeft size={18} />
       </button>
       <div className="present-title" aria-live="polite">
         {current ? (
           <>
             <span className="present-kicker">
+              {project.docs.length > 1 ? `${label} · ` : ''}
               {t('present.step', { n: step + 1, total })}
               {phase ? ` · ${phase}` : ''}
             </span>
@@ -147,12 +183,12 @@ export function PresentationBar() {
           </>
         ) : (
           <>
-            <span className="present-kicker">{t('present.overview')}</span>
-            <span className="present-name">{title || t('app.untitled')}</span>
+            <span className="present-kicker">{isMap ? `${where} · ${t('present.overview')}` : where}</span>
+            <span className="present-name">{project.title || t('app.untitled')}</span>
           </>
         )}
       </div>
-      <button className="present-btn" aria-label={t('present.next')} disabled={step >= total - 1} onClick={() => presentGo(1)}>
+      <button className="present-btn" aria-label={t('present.next')} disabled={at >= project.docs.length - 1 && step >= lastStep(project, docId)} onClick={() => presentGo(1)}>
         <ChevronRight size={18} />
       </button>
       <span className="present-hint">{t('present.hint')}</span>

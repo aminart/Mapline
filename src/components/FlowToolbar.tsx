@@ -6,7 +6,7 @@ import * as fo from '../model/flow';
 import { findDoc, projectPersonas, renameDoc } from '../model/project';
 import { FILL_SWATCHES, LINK_COLORS } from '../model/theme';
 import type { Flow, LinkStyle } from '../model/types';
-import { Swatches } from './FormatToolbar';
+import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
 import { cls } from './cls';
 
@@ -21,6 +21,7 @@ export function FlowToolbar() {
   const setTool = useStore((s) => s.setTool);
   const linkFrom = useStore((s) => s.linkFrom);
   const applyProject = useStore((s) => s.applyProject);
+  const applyFlow = useStore((s) => s.applyFlow);
   if (!flow) return null;
   return (
     <div className="toolbar" role="toolbar" aria-label={t('tool.label')}>
@@ -45,6 +46,12 @@ export function FlowToolbar() {
           }}
         />
       </label>
+      <TagManager
+        tags={fo.flowTagCounts(flow)}
+        colors={flow.tagColors}
+        setColor={(tag, i) => applyFlow((f) => fo.setFlowTagColor(f, tag, i))}
+        deleteTag={(tag) => applyFlow((f) => fo.deleteFlowTag(f, tag))}
+      />
       <div className="divider" />
       {tool === 'link' ? (
         <span className="hint">{t(linkFrom ? 'flow.linkHintTarget' : 'flow.linkHintStart')}</span>

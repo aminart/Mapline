@@ -51,7 +51,7 @@ export function FormatToolbar() {
         />
         <span>{t('tool.infoRow')}</span>
       </label>
-      <TagManager />
+      <MapTagManager />
       <div className="divider" />
       {tool === 'link' && !selIsLink ? (
         <span className="hint">
@@ -125,14 +125,31 @@ function LinkControls() {
   );
 }
 
-/** Project tags: colour, highlight and delete them. */
-function TagManager() {
-  const t = useT();
+function MapTagManager() {
   const doc = useMap((m) => m);
+  const apply = useStore((s) => s.apply);
+  return (
+    <TagManager
+      tags={ops.tagCounts(doc)}
+      colors={doc.tagColors}
+      setColor={(tag, i) => apply((d) => ops.setTagColor(d, tag, i))}
+      deleteTag={(tag) => apply((d) => ops.deleteTagEverywhere(d, tag))}
+    />
+  );
+}
+
+/** A document's tags (a map's, a flow's): colour, highlight and delete them. */
+export function TagManager(props: {
+  tags: { tag: string; count: number }[];
+  colors: Record<string, number> | undefined;
+  setColor: (tag: string, color: number) => void;
+  deleteTag: (tag: string) => void;
+}) {
+  const t = useT();
+  const { tags, colors, setColor, deleteTag } = props;
   const filter = useStore((s) => s.tagFilter);
   const toggle = useStore((s) => s.toggleTagFilter);
   const clear = useStore((s) => s.clearTagFilter);
-  const apply = useStore((s) => s.apply);
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -141,7 +158,6 @@ function TagManager() {
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
-  const tags = ops.tagCounts(doc);
   const active = tags.filter((x) => filter.includes(x.tag.toLowerCase()));
   return (
     <>
@@ -159,7 +175,7 @@ function TagManager() {
               <p className="muted-sm">{t('tags.filterHint')}</p>
               <ul className="tag-list">
                 {tags.map(({ tag, count }) => {
-                  const c = tagColor(tag, doc.tagColors);
+                  const c = tagColor(tag, colors);
                   const on = filter.includes(tag.toLowerCase());
                   return (
                     <li key={tag}>
@@ -177,7 +193,7 @@ function TagManager() {
                             className={cls('swatch swatch-xs', p.bg === c.bg && 'is-on')}
                             style={{ background: p.bg, borderColor: p.fg }}
                             aria-label={`${t('tags.color', { tag })} ${i + 1}`}
-                            onClick={() => apply((d) => ops.setTagColor(d, tag, i))}
+                            onClick={() => setColor(tag, i)}
                           />
                         ))}
                       </span>
@@ -188,7 +204,7 @@ function TagManager() {
                         onClick={() => {
                           if (window.confirm(t('tags.confirmDelete', { tag, n: count }))) {
                             if (on) toggle(tag);
-                            apply((d) => ops.deleteTagEverywhere(d, tag));
+                            deleteTag(tag);
                           }
                         }}
                       >
@@ -224,6 +240,8 @@ function StyleControls() {
     return activeMap(s).personas.find((p) => p.id === id)?.color;
   });
   const apply = useStore((s) => s.apply);
+  const cardKey = useStore((s) => (s.sel?.startsWith('act:') ? ops.activityKeyOf(activeMap(s), s.sel.slice('act:'.length)) : undefined));
+  const cardKind = useMap((m) => (cardKey ? (m.activities[cardKey]?.kind ?? 'activity') : undefined));
 
   if (!sel) {
     return <span className="hint">{t('tool.noSelection')}</span>;
@@ -236,7 +254,19 @@ function StyleControls() {
 
   return (
     <div className="style-controls">
-      <span className="badge">{t(`kind.${kind}`)}</span>
+      <span className="badge">{t(cardKind === 'choice' ? 'flow.kind.choice' : `kind.${kind}`)}</span>
+      {cardKey && cardKind && (
+        <div className="swatches" role="group" aria-label={t('tool.cardKind')}>
+          <span className="swatches-label">{t('tool.cardKind')}</span>
+          <div className="segmented segmented-sm">
+            {(['activity', 'choice'] as const).map((k) => (
+              <button key={k} className={cls(cardKind === k && 'is-on')} aria-pressed={cardKind === k} onClick={() => apply((d) => ops.setActivityKind(d, cardKey, k))}>
+                {t(`flow.kind.${k}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={cur.bg} onPick={(bg, live) => set({ bg }, live)} variant="fill" />
       <Swatches label={t('tool.border')} list={BORDER_SWATCHES} value={cur.bc} onPick={(bc, live) => set({ bc }, live)} variant="border" />
       <Swatches label={t('tool.text')} list={TEXT_SWATCHES} value={cur.color} onPick={(color, live) => set({ color }, live)} variant="text" />

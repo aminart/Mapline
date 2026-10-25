@@ -1,9 +1,9 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
-import { addFlow, newFlowProject, newProject, newSheetProject, open } from '../actions';
+import { addFlow, addMap, newFlowProject, newProject, newSheetProject, open } from '../actions';
 import { FLOW_TEMPLATES, SHEET_TEMPLATES, TEMPLATES, flowTemplateLabel, sheetTemplateLabel, templateLabel, type FlowTemplateId, type SheetTemplateId, type TemplateId } from '../model/templates';
 import { cls } from './cls';
 import { FolderIcon } from './Icons';
@@ -144,11 +144,9 @@ export function FlowTemplateList({ onPick }: { onPick: (id: FlowTemplateId) => v
   );
 }
 
-/** "New flow" in the open project. */
-export function NewFlowDialog() {
+/** A dialog adding a document to the open project from a list of templates. */
+function AddDocDialog({ id, title, isOpen, setOpen, children }: { id: string; title: string; isOpen: boolean; setOpen: (open: boolean) => void; children: ReactNode }) {
   const t = useT();
-  const isOpen = useStore((s) => s.newFlowOpen);
-  const setOpen = useStore((s) => s.setNewFlowOpen);
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -160,15 +158,15 @@ export function NewFlowDialog() {
     <dialog
       ref={ref}
       className="dialog"
-      aria-labelledby="new-flow-title"
+      aria-labelledby={id}
       onClose={() => setOpen(false)}
       onClick={(e) => {
         if (e.target === ref.current) setOpen(false);
       }}
     >
       <div className="dialog-body">
-        <h2 id="new-flow-title">{t('flow.new.title')}</h2>
-        <FlowTemplateList onPick={addFlow} />
+        <h2 id={id}>{title}</h2>
+        {children}
         <div className="dialog-actions">
           <button className="btn" onClick={() => setOpen(false)}>
             {t('new.cancel')}
@@ -176,6 +174,30 @@ export function NewFlowDialog() {
         </div>
       </div>
     </dialog>
+  );
+}
+
+/** "New flow" in the open project. */
+export function NewFlowDialog() {
+  const t = useT();
+  const isOpen = useStore((s) => s.newFlowOpen);
+  const setOpen = useStore((s) => s.setNewFlowOpen);
+  return (
+    <AddDocDialog id="new-flow-title" title={t('flow.new.title')} isOpen={isOpen} setOpen={setOpen}>
+      <FlowTemplateList onPick={addFlow} />
+    </AddDocDialog>
+  );
+}
+
+/** "New map" in the open project. */
+export function NewMapDialog() {
+  const t = useT();
+  const isOpen = useStore((s) => s.newMapOpen);
+  const setOpen = useStore((s) => s.setNewMapOpen);
+  return (
+    <AddDocDialog id="new-map-title" title={t('map.new.title')} isOpen={isOpen} setOpen={setOpen}>
+      <TemplateList onPick={addMap} />
+    </AddDocDialog>
   );
 }
 

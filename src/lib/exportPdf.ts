@@ -4,7 +4,8 @@
 import type { BoardLayout } from './exportImage';
 import type { NoteEntry } from '../model/ops';
 
-export type PdfLayout = 'single' | 'a4' | 'a3' | 'phases';
+/** `fit`: the whole board scaled onto one A4 page (sheets and flows). */
+export type PdfLayout = 'single' | 'a4' | 'a3' | 'phases' | 'fit';
 
 /** Landscape page sizes in points. */
 const PAPER: Record<'a4' | 'a3', { w: number; h: number }> = {
@@ -138,6 +139,22 @@ export async function pdfDocument(args: {
   }
 
   if (mode === 'phases') return phasesDocument(jsPDF, args);
+
+  if (mode === 'fit') {
+    // One A4 page, turned to suit the board's shape, the board scaled to fit under the title.
+    const landscape = layout.width >= layout.height;
+    const paper = landscape ? PAPER.a4 : { w: PAPER.a4.h, h: PAPER.a4.w };
+    const pdf = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'pt', format: [paper.w, paper.h], compress: true });
+    pdf.setProperties({ title });
+    drawHeader(pdf, paper, title, '', '');
+    const availW = paper.w - 2 * MARGIN;
+    const availH = paper.h - 2 * MARGIN - HEADER;
+    const k = Math.min(availW / layout.width, availH / layout.height);
+    const w = layout.width * k;
+    const h = layout.height * k;
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN + (availW - w) / 2, MARGIN + HEADER, w, h, undefined, 'FAST');
+    return pdf.output('blob');
+  }
 
   const paper = PAPER[mode];
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [paper.w, paper.h], compress: true });

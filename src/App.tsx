@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import { useStore, useT } from './store';
 import { closeTab, open, save } from './actions';
 import { TopBar } from './components/TopBar';
-import { TabBar } from './components/TabBar';
 import { FormatToolbar } from './components/FormatToolbar';
 import { SheetToolbar } from './components/SheetToolbar';
 import { SheetView } from './components/SheetView';
@@ -15,7 +14,8 @@ import { SheetPreview } from './components/SheetPreview';
 import { DocBar } from './components/DocBar';
 import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
-import { NewFlowDialog, NewProjectDialog, StartScreen } from './components/Templates';
+import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
+import { BusyOverlay } from './components/BusyOverlay';
 import { ExportDialog } from './components/ExportDialog';
 import { PresentationBar, presentGo, startPresentation, stopPresentation } from './components/Presentation';
 import { removeLink } from './model/ops';
@@ -89,7 +89,7 @@ export function App() {
         }
         return;
       }
-      if (e.key === 'F5' && s.activeId && findDoc(s.project, s.docId)?.kind === 'mission-map') {
+      if (e.key === 'F5' && s.activeId) {
         e.preventDefault();
         startPresentation();
         return;
@@ -138,7 +138,6 @@ export function App() {
   return (
     <div className={cls('app', presenting && 'is-presenting', previewing && 'has-preview')}>
       {!presenting && <TopBar />}
-      {!presenting && <TabBar />}
       {activeId && !presenting && <DocBar />}
       {activeId && !presenting && (kind === 'persona' ? <SheetToolbar /> : kind === 'flow' ? <FlowToolbar /> : <FormatToolbar />)}
       <div className="workspace">
@@ -164,6 +163,8 @@ export function App() {
       <NewProjectDialog />
       {activeId && <NewSheetDialog />}
       {activeId && <NewFlowDialog />}
+      {activeId && <NewMapDialog />}
+      <BusyOverlay />
       {activeId && <ExportDialog />}
     </div>
   );

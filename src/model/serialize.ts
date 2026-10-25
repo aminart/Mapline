@@ -96,6 +96,14 @@ function parseMap(input: unknown): Blueprint {
   };
 }
 
+/** A tag colour map, when the file has one: index per lower-cased tag. */
+function tagColorsOf(v: unknown): { tagColors?: Record<string, number> } {
+  if (!isObject(v)) return {};
+  const out: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v)) if (typeof n === 'number' && Number.isInteger(n) && n >= 0) out[k] = n;
+  return { tagColors: out };
+}
+
 const VIEWS: BlockView[] = ['list', 'gauges', 'tags', 'text'];
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const id = (v: unknown) => (typeof v === 'string' && v ? v : uid());
@@ -114,6 +122,7 @@ function parseSheet(input: unknown): PersonaSheet {
     fields: (Array.isArray(raw.fields) ? raw.fields : []).filter(isObject).map((f) => ({ id: id(f.id), label: str(f.label), value: str(f.value) })),
     quote: str(raw.quote),
     tags: (Array.isArray(raw.tags) ? raw.tags : []).filter((t): t is string => typeof t === 'string'),
+    ...tagColorsOf(raw.tagColors),
     blocks: (Array.isArray(raw.blocks) ? raw.blocks : []).filter(isObject).map(parseBlock),
     styles: isObject(raw.styles) ? (raw.styles as PersonaSheet['styles']) : {},
     link,
@@ -153,6 +162,8 @@ function parseFlow(input: unknown): Flow {
       row: cellIndex(n.row),
       text: str(n.text),
       ...(typeof n.personaId === 'string' ? { personaId: n.personaId } : {}),
+      ...(Array.isArray(n.tags) ? { tags: n.tags.filter((t): t is string => typeof t === 'string') } : {}),
+      ...(typeof n.note === 'string' && n.note ? { note: n.note } : {}),
     };
     // Two cards in one cell can't be shown: the later one is dropped.
     const cell = `${node.col}:${node.row}`;
@@ -172,5 +183,5 @@ function parseFlow(input: unknown): Flow {
       ...(LINK_STYLES.includes(l.style as LinkStyle) ? { style: l.style as LinkStyle } : {}),
       ...(typeof l.color === 'string' && /^#[0-9a-f]{6}$/i.test(l.color) ? { color: l.color } : {}),
     }));
-  return { nodes, links, styles: isObject(input.styles) ? (input.styles as Flow['styles']) : {} };
+  return { nodes, links, styles: isObject(input.styles) ? (input.styles as Flow['styles']) : {}, ...tagColorsOf(input.tagColors) };
 }

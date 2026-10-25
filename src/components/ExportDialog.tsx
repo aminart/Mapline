@@ -11,7 +11,7 @@ import { findDoc } from '../model/project';
 import type { MessageKey } from '../i18n';
 import { cls } from './cls';
 
-const OPTIONS_KEY = 'missionmap:export';
+const OPTIONS_KEY = 'mapline:export';
 const FORMATS: ExportFormat[] = ['png', 'jpeg', 'pdf', 'csv'];
 const SCALES = [1, 2, 3];
 
@@ -49,7 +49,7 @@ export function ExportDialog() {
   const isSheet = useStore((s) => findDoc(s.project, s.docId)?.kind !== 'mission-map');
   // A sheet has no table to export, and fits on one page.
   const formats = isSheet ? FORMATS.filter((f) => f !== 'csv') : FORMATS;
-  const shown: ExportOptions = isSheet ? { ...opts, format: opts.format === 'csv' ? 'png' : opts.format, pdfLayout: 'single' } : opts;
+  const shown: ExportOptions = isSheet ? { ...opts, format: opts.format === 'csv' ? 'png' : opts.format, pdfLayout: 'fit' } : opts;
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -75,24 +75,30 @@ export function ExportDialog() {
 
   const isImage = shown.format !== 'csv';
   const render = { scale: opts.scale, transparent: shown.format === 'png' && opts.transparent, storyboard: opts.storyboard, info: opts.info };
+  // JPEG and PDF have no transparency: square corners on white.
+  const flat = shown.format === 'jpeg' || shown.format === 'pdf';
 
   const onExport = async () => {
     setBusy(true);
     setStatus(t('export.working'));
     // Close first so the dialog isn't over the board while it is captured.
     setOpen(false);
-    await exportBoard({ ...shown, ...render });
+    await exportBoard({ ...shown, ...render, flat });
     setBusy(false);
   };
 
   const onCopy = () => {
     setBusy(true);
     setStatus(t('export.working'));
+    useStore.getState().setBusy(t('export.working'));
     // Called straight from the click so the clipboard accepts it.
     copyBoard(render)
       .then(() => setStatus(t('export.copied')))
       .catch((err: unknown) => setStatus(t('export.copyFailed', { msg: err instanceof Error ? err.message : String(err) })))
-      .finally(() => setBusy(false));
+      .finally(() => {
+        setBusy(false);
+        useStore.getState().setBusy(null);
+      });
   };
 
   return (

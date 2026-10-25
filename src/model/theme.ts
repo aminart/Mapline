@@ -82,6 +82,9 @@ export function boxStyle(s: ResolvedStyle): CSSProperties {
   return { background: s.bg, borderColor: s.bc };
 }
 
+/** Choice cards (decision points), in maps and flows: amber unless restyled. */
+export const CHOICE_STYLE = { bg: '#FFFBEB', bc: '#D9A93B', ink: '#854D0E' };
+
 const TAG_COLORS = [
   { bg: '#E3ECFF', fg: '#1E3A9E' },
   { bg: '#FDE4D8', fg: '#9A3412' },

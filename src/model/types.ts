@@ -37,6 +37,8 @@ export interface Activity {
   note?: string;
   /** On an alternative card: the word shown above it ("or" when unset). */
   joiner?: string;
+  /** A decision point rather than an activity, drawn like a flow's choice card. */
+  kind?: 'choice';
 }
 
 export interface Scene {
@@ -154,6 +156,8 @@ export interface PersonaSheet {
   fields: SheetField[];
   quote: string;
   tags: string[];
+  /** Chosen colour (index into the tag palette) per lower-cased tag. */
+  tagColors?: Record<string, number>;
   blocks: SheetBlock[];
   /** Keyed 'identity' or 'block:<id>'. */
   styles: Record<string, BoxStyle>;
@@ -183,6 +187,10 @@ export interface FlowNode {
   text: string;
   /** The mission map persona doing it, whose colour tops the card. */
   personaId?: Id | null;
+  /** Labels under the text, as on mission map activities. */
+  tags?: string[];
+  /** Longer comment, kept off the card (shown on demand). */
+  note?: string;
 }
 
 /** An arrow between two cards; choices label theirs ("Yes", "No"…). */
@@ -201,6 +209,8 @@ export interface Flow {
   links: FlowLink[];
   /** Keyed 'node:<id>'. */
   styles: Record<string, BoxStyle>;
+  /** Chosen colour (index into the tag palette) per lower-cased tag. */
+  tagColors?: Record<string, number>;
 }
 
 export interface FlowDoc {

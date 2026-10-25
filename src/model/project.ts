@@ -160,7 +160,11 @@ export function renameDoc(project: Project, docId: Id, name: string): Project {
   return { ...project, docs: project.docs.map((d) => (d.id === docId ? { ...d, name } : d)) };
 }
 
-/** The personas of the project's mission maps, for colouring flow cards. */
-export function projectPersonas(project: Project): { persona: Persona; style: BoxStyle | undefined }[] {
-  return project.docs.flatMap((d) => (d.kind === 'mission-map' ? d.map.personas.map((persona) => ({ persona, style: d.map.styles[`persona:${persona.id}`] })) : []));
+/** The personas of the project's mission maps, for colouring flow cards and showing their photo. */
+export function projectPersonas(project: Project): { persona: Persona; style: BoxStyle | undefined; photo: string | null }[] {
+  return project.docs.flatMap((d) =>
+    d.kind === 'mission-map'
+      ? d.map.personas.map((persona) => ({ persona, style: d.map.styles[`persona:${persona.id}`], photo: sheetFor(project, d.id, persona.id)?.sheet.photo ?? null }))
+      : [],
+  );
 }

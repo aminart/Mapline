@@ -6,7 +6,7 @@ import { docLabel, removeDocument } from '../actions';
 import { CloseIcon, FlowIcon, MapIcon, PersonIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
 
-/** The documents of the active project: its mission map and persona sheets. */
+/** The documents of the active project, as tabs: its maps, persona sheets and flows. */
 export function DocBar() {
   const t = useT();
   const project = useStore((s) => s.project);
@@ -14,6 +14,7 @@ export function DocBar() {
   const setDoc = useStore((s) => s.setDoc);
   const setNewSheet = useStore((s) => s.setNewSheet);
   const setNewFlowOpen = useStore((s) => s.setNewFlowOpen);
+  const setNewMapOpen = useStore((s) => s.setNewMapOpen);
   // Shown once a lang change re-renders; labels come from the store's language.
   useStore((s) => s.lang);
   const removable = project.docs.length > 1;
@@ -36,6 +37,9 @@ export function DocBar() {
           </div>
         );
       })}
+      <button className="doc-add" onClick={() => setNewMapOpen(true)}>
+        <PlusIcon size={12} /> {t('doc.addMap')}
+      </button>
       <button className="doc-add" onClick={() => setNewSheet({ personaId: null })}>
         <PlusIcon size={12} /> {t('doc.add')}
       </button>

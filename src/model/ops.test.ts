@@ -320,3 +320,21 @@ describe('additional information row', () => {
     expect([renamed.infoTitle, renamed.infoText]).toEqual(['Canaux', 'Par où passe le client']);
   });
 });
+
+describe('choice cards in a map', () => {
+  it('creates a choice, finds it by id and turns it back into an activity', async () => {
+    const { createFromTemplate } = await import('./templates');
+    const doc0 = createFromTemplate('mission-map', 'fr').docs[0];
+    if (doc0.kind !== 'mission-map') throw new Error('not a map');
+    const map = doc0.map;
+    const persona = map.personas[0];
+    const slot = map.steps[1].slots[0];
+    const { doc, activityId } = ops.createActivity(map, persona.id, slot, 'choice');
+    const key = ops.activityKeyOf(doc, activityId)!;
+    expect(key).toBe(ops.activityKey(persona.id, slot));
+    expect(doc.activities[key].kind).toBe('choice');
+    const back = ops.setActivityKind(doc, key, 'activity');
+    expect('kind' in back.activities[key]).toBe(false);
+    expect(ops.setActivityKind(back, key, 'activity')).toBe(back);
+  });
+});

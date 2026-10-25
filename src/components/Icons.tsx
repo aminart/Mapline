@@ -48,6 +48,17 @@ export const ChevronRight = ({ size = 14 }: P) => (
     <path d="m9 6 6 6-6 6" />
   </Svg>
 );
+export const ChevronDown = ({ size = 14 }: P) => (
+  <Svg size={size} width={2.4}>
+    <path d="m6 9 6 6 6-6" />
+  </Svg>
+);
+/** A decision point, as on choice cards. */
+export const DiamondIcon = ({ size = 14 }: P) => (
+  <Svg size={size}>
+    <path d="M12 3l9 9-9 9-9-9z" />
+  </Svg>
+);
 export const UndoIcon = ({ size = 18 }: P) => (
   <Svg size={size}>
     <path d="M9 14 4 9l5-5" />

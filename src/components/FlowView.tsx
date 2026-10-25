@@ -1,11 +1,14 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { activeFlow, useStore, useT } from '../store';
 import * as fo from '../model/flow';
-import { cellBox, flowSize, nodeBox } from '../model/flowLayout';
+import { cellBox, flowLayout, flowSize, nodeBox, type FlowLayout } from '../model/flowLayout';
 import { projectPersonas } from '../model/project';
+import type { Id } from '../model/types';
+import { NoteButton, TagRow, TagSuggestions } from './CardExtras';
+import { useFitText } from './useFitText';
 import { LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
 import type { Flow, FlowNode, FlowNodeKind } from '../model/types';
 import { routeFlow, type RoutedLink } from '../lib/flowRoute';
@@ -22,23 +25,28 @@ const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
 export function FlowView() {
   const zoom = useStore((s) => s.zoom);
   const flow = useStore((s) => activeFlow(s));
+  // Height each card's text needs, measured once drawn: rows grow to fit.
+  const [measured, setMeasured] = useState<Record<Id, number>>({});
+  const onMeasure = useCallback((id: Id, h: number) => setMeasured((m) => (Math.abs((m[id] ?? 0) - h) < 1 ? m : { ...m, [id]: h })), []);
   if (!flow) return null;
+  const layout = flowLayout(flow, measured);
   const { cols, rows } = fo.extent(flow);
   // One spare column and row, to drop a card past the edge.
-  const size = flowSize(cols + 1, rows + 1);
-  const routed = routeFlow(flow);
+  const size = flowSize(cols + 1, rows + 1, layout);
+  const routed = routeFlow(flow, layout);
   const empty: [number, number][] = [];
   for (let r = 0; r <= rows; r++) for (let c = 0; c <= cols; c++) if (!fo.nodeAt(flow, c, r)) empty.push([c, r]);
   return (
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="flow" ref={boardRef} style={{ width: size.w, height: size.h }}>
         {empty.map(([c, r]) => (
-          <DropCell key={`${c}:${r}`} col={c} row={r} />
+          <DropCell key={`${c}:${r}`} col={c} row={r} layout={layout} />
         ))}
         <Arrows routed={routed} width={size.w} height={size.h} />
         {flow.nodes.map((node) => (
-          <FlowCard key={node.id} node={node} />
+          <FlowCard key={node.id} node={node} layout={layout} onMeasure={onMeasure} />
         ))}
+        <TagSuggestions id={FLOW_TAG_LIST} tags={fo.flowTagCounts(flow).map((x) => x.tag)} />
         {routed.map((r) => (
           <ArrowExtras key={r.link.id} routed={r} />
         ))}
@@ -48,10 +56,12 @@ export function FlowView() {
 }
 
 /** An empty cell a dragged card can be dropped on (shown while dragging). */
-function DropCell({ col, row }: { col: number; row: number }) {
+const FLOW_TAG_LIST = 'mm-flow-tag-list';
+
+function DropCell({ col, row, layout }: { col: number; row: number; layout: FlowLayout }) {
   const applyFlow = useStore((s) => s.applyFlow);
   const drop = useDropTarget('fnode', (d) => applyFlow((f) => fo.moveNode(f, d.id, col, row)));
-  const box = cellBox(col, row);
+  const box = cellBox(col, row, layout);
   return <div className={cls('flow-drop no-export', drop.over && 'is-drop-target')} style={{ left: box.x, top: box.y, width: box.w, height: box.h }} {...drop.props} />;
 }
 
@@ -144,7 +154,7 @@ function ArrowExtras({ routed }: { routed: RoutedLink }) {
   );
 }
 
-function FlowCard({ node }: { node: FlowNode }) {
+function FlowCard({ node, layout, onMeasure }: { node: FlowNode; layout: FlowLayout; onMeasure: (id: Id, h: number) => void }) {
   const t = useT();
   const applyFlow = useStore((s) => s.applyFlow);
   const focusLater = useStore((s) => s.focusLater);
@@ -155,8 +165,13 @@ function FlowCard({ node }: { node: FlowNode }) {
   const b = useBox<HTMLTextAreaElement & HTMLInputElement>(`node:${node.id}`, 'node');
   const ref = useRef<HTMLDivElement>(null);
   const drop = useDropTarget('fnode', (d) => applyFlow((f) => fo.moveNode(f, d.id, node.col, node.row)));
-  const box = nodeBox(node);
+  const tagFilter = useStore((s) => s.tagFilter);
+  const tagColors = useStore((s) => activeFlow(s)?.tagColors);
+  const content = useRef<HTMLDivElement>(null);
+  const box = nodeBox(node, layout);
   const persona = node.personaId ? projectPersonas(project).find((p) => p.persona.id === node.personaId) : undefined;
+  const tags = node.tags ?? [];
+  const dimmed = tagFilter.length > 0 && !tags.some((tag) => tagFilter.includes(tag.toLowerCase()));
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
   const pill = node.kind === 'start' || node.kind === 'end';
 
@@ -180,10 +195,23 @@ function FlowCard({ node }: { node: FlowNode }) {
   const setText = (text: string) => applyFlow((f) => fo.setNode(f, node.id, { text }), { coalesce: `node:${node.id}` });
   const isSource = linkFrom === node.id;
 
+  // The text area grows with its text; the card reports the height it needs.
+  const noText = useRef<HTMLTextAreaElement>(null);
+  useFitText(pill ? noText : b.ref, [node.text, b.text.fontFamily, b.text.fontSize, b.text.fontWeight]);
+  useLayoutEffect(() => {
+    const el = content.current;
+    if (!el || pill) return;
+    const report = () => onMeasure(node.id, el.offsetHeight);
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [node.id, pill, onMeasure]);
+
   return (
     <div
       ref={ref}
-      className={cls('box flow-card', `flow-${node.kind}`, b.selected && 'is-selected', drop.over && 'is-drop-target')}
+      className={cls('box flow-card', `flow-${node.kind}`, b.selected && 'is-selected', drop.over && 'is-drop-target', dimmed && 'is-dimmed')}
       style={{
         left: box.x,
         top: box.y,
@@ -194,29 +222,49 @@ function FlowCard({ node }: { node: FlowNode }) {
       }}
       data-node={node.id}
       {...drop.props}
+      onClick={(e) => {
+        // A click in the card's empty space edits its text.
+        if (e.target === e.currentTarget || e.target === content.current) b.ref.current?.focus();
+      }}
     >
-      {node.kind === 'choice' && (
+      {pill ? (
+        <input ref={b.ref} className="flow-pill-text" aria-label={t('flow.cardText')} value={node.text} placeholder={t(`flow.kind.${node.kind}`)} onFocus={b.onFocus} onChange={(e) => setText(e.target.value)} />
+      ) : (
+        <div className="flow-card-content" ref={content}>
+          {node.kind === 'choice' && (
         <span className="flow-choice-tag" aria-hidden="true">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 2l10 10-10 10L2 12z" />
           </svg>
           {t('flow.kind.choice')}
-        </span>
+            </span>
+          )}
+          {persona && (
+            <span className="flow-persona" style={{ background: accent }} title={persona.persona.name} aria-label={persona.persona.name}>
+              {persona.photo ? <img src={persona.photo} alt="" /> : (persona.persona.name || '?').charAt(0).toUpperCase()}
+            </span>
+          )}
+          <textarea
+            ref={b.ref}
+            rows={1}
+            className="flow-text"
+            aria-label={t('flow.cardText')}
+            value={node.text}
+            placeholder={t(node.kind === 'choice' ? 'flow.choicePlaceholder' : 'flow.activityPlaceholder')}
+            onFocus={b.onFocus}
+            onChange={(e) => setText(e.target.value)}
+            style={b.text}
+          />
+          <TagRow
+            tags={tags}
+            colors={tagColors}
+            listId={FLOW_TAG_LIST}
+            onAdd={(tag) => applyFlow((f) => fo.addNodeTag(f, node.id, tag))}
+            onRemove={(tag) => applyFlow((f) => fo.removeNodeTag(f, node.id, tag))}
+          />
+        </div>
       )}
-      {pill ? (
-        <input ref={b.ref} className="flow-pill-text" aria-label={t('flow.cardText')} value={node.text} placeholder={t(`flow.kind.${node.kind}`)} onFocus={b.onFocus} onChange={(e) => setText(e.target.value)} />
-      ) : (
-        <textarea
-          ref={b.ref}
-          className="flow-text"
-          aria-label={t('flow.cardText')}
-          value={node.text}
-          placeholder={t(node.kind === 'choice' ? 'flow.choicePlaceholder' : 'flow.activityPlaceholder')}
-          onFocus={b.onFocus}
-          onChange={(e) => setText(e.target.value)}
-          style={b.text}
-        />
-      )}
+      {!pill && <NoteButton note={node.note ?? ''} onChange={(v, live) => applyFlow((f) => fo.setNodeNote(f, node.id, v), live ? { coalesce: `fnote:${node.id}` } : undefined)} />}
       <span className="grip flow-grip card-btn no-export" title={t('flow.drag')} aria-hidden="true" onPointerDown={(e) => startDrag(e, { kind: 'fnode', id: node.id }, ref.current)}>
         <GripIcon size={12} />
       </span>

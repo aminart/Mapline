@@ -29,6 +29,11 @@ export interface RenderOptions {
   scale: number;
   /** Leave the background transparent instead of white. */
   transparent: boolean;
+  /**
+   * Square corners on white, for formats without transparency (JPEG, PDF).
+   * Otherwise the board keeps its rounded corners, with nothing behind them.
+   */
+  flat?: boolean;
   /** Include the storyboard row, when the project shows it. */
   storyboard: boolean;
   /** Include the additional information row, when the project shows it. */
@@ -61,7 +66,7 @@ export interface BoardLayout {
 export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions): Promise<{ canvas: HTMLCanvasElement; layout: BoardLayout }> {
   const { toCanvas } = await import('html-to-image');
 
-  const modes = ['is-exporting', opts.transparent && 'export-transparent', !opts.storyboard && 'export-no-storyboard', !opts.info && 'export-no-info'].filter(
+  const modes = ['is-exporting', opts.transparent && 'export-transparent', opts.flat && 'export-flat', !opts.storyboard && 'export-no-storyboard', !opts.info && 'export-no-info'].filter(
     (c): c is string => Boolean(c),
   );
   board.classList.add(...modes);
@@ -78,7 +83,8 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
     await nextFrame();
     canvas = await toCanvas(board, {
       pixelRatio: opts.scale,
-      backgroundColor: opts.transparent ? undefined : '#FFFFFF',
+      // Only flat exports are laid on white: elsewhere the rounded corners stay clear.
+      backgroundColor: opts.flat ? '#FFFFFF' : undefined,
       // Arrows and their labels are drawn afterwards, labels over the lines.
       filter: (el) => !(el instanceof Element && (el.classList.contains('no-export') || el.classList.contains('links') || el.classList.contains('link-label'))),
     });

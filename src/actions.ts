@@ -9,9 +9,10 @@ import { pdfDocument, type PdfLayout } from './lib/exportPdf';
 import { copyPng, jpegBlob, pngBlob, type ExportFormat } from './lib/exportFormats';
 import { buildCsv } from './lib/exportCsv';
 import { ProjectFileError } from './model/serialize';
-import { createFlowDoc, createFlowProject, createFromTemplate, createSheet, createSheetProject, sheetDoc, type FlowTemplateId, type SheetTemplateId, type TemplateId } from './model/templates';
+import { createFlowDoc, createFlowProject, createFromTemplate, createMap, createSheet, createSheetProject, sheetDoc, type FlowTemplateId, type SheetTemplateId, type TemplateId } from './model/templates';
 import { addDoc, findDoc, missionMapOf, removeDoc, sheetIdentity } from './model/project';
-import type { Id, Project } from './model/types';
+import type { Id, MissionMapDoc, Project } from './model/types';
+import { uid } from './model/ops';
 import { collectNotes } from './model/ops';
 
 function report(err: unknown) {
@@ -72,6 +73,33 @@ export function addFlow(template: FlowTemplateId) {
   applyProject((p) => addDoc(p, doc));
   setNewFlowOpen(false);
   setDoc(doc.id);
+}
+
+/** Adds a map to the active project and shows it. */
+export function addMap(template: TemplateId) {
+  const { applyProject, setDoc, setNewMapOpen, lang, project } = useStore.getState();
+  const count = project.docs.filter((d) => d.kind === 'mission-map').length;
+  // A second map gets a number, so the tabs tell them apart.
+  const doc: MissionMapDoc = { id: uid(), kind: 'mission-map', name: count ? `${t('doc.missionMap')} ${count + 1}` : '', map: createMap(template, lang) };
+  applyProject((p) => addDoc(p, doc));
+  setNewMapOpen(false);
+  setDoc(doc.id);
+}
+
+/**
+ * Runs `fn` with the spinner up, labelled `label`: for an image being read
+ * or an export, which can take a moment, save dialog included.
+ */
+export async function withBusy<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const { setBusy } = useStore.getState();
+  setBusy(label);
+  // Let the spinner paint before the work blocks the page.
+  await nextFrame();
+  try {
+    return await fn();
+  } finally {
+    setBusy(null);
+  }
 }
 
 /** The name a document's tab shows. */
@@ -158,7 +186,11 @@ async function renderForExport(opts: RenderOptions): Promise<{ canvas: HTMLCanva
 }
 
 /** Exports the active project; returns false if it failed. */
-export async function exportBoard(opts: ExportOptions): Promise<boolean> {
+export function exportBoard(opts: ExportOptions): Promise<boolean> {
+  return withBusy(t('export.working'), () => exportNow(opts));
+}
+
+async function exportNow(opts: ExportOptions): Promise<boolean> {
   const state = useStore.getState();
   const doc = activeMap(state);
   const { lang } = state;
@@ -182,7 +214,7 @@ export async function exportBoard(opts: ExportOptions): Promise<boolean> {
         scale: opts.scale,
         layout,
         title,
-        mode: single ? 'single' : opts.pdfLayout,
+        mode: single ? 'fit' : opts.pdfLayout,
         overview: opts.overview,
         notes: opts.notes && !single ? collectNotes(doc) : [],
         labels: {

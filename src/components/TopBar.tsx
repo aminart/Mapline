@@ -4,18 +4,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore, useT } from '../store';
 import { open, save } from '../actions';
-import { isDesktop } from '../lib/fileio';
 import type { Lang } from '../i18n';
 import { CheckIcon, DownloadIcon, FolderIcon, LogoIcon, PlayIcon, PlusIcon, RedoIcon, UndoIcon } from './Icons';
 import { startPresentation } from './Presentation';
-import { findDoc } from '../model/project';
 import { AboutDialog } from './About';
+import { ProjectSwitcher } from './ProjectSwitcher';
 import { cls } from './cls';
 
 export function TopBar() {
   const t = useT();
   const hasProject = useStore((s) => s.activeId !== null);
-  const isMap = useStore((s) => findDoc(s.project, s.docId)?.kind === 'mission-map');
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
   const undo = useStore((s) => s.undo);
@@ -30,11 +28,12 @@ export function TopBar() {
         <span>Mapline</span>
       </div>
       <div className="divider" />
-      <button className="btn btn-primary" onClick={() => setNewProjectOpen(true)} title={`${t('top.newProject')} (Ctrl+N)`}>
-        <PlusIcon /> {t('top.newProject')}
+      <ProjectSwitcher />
+      <button className="btn btn-primary" onClick={() => setNewProjectOpen(true)} title={`${t('top.newProject')} (Ctrl+N)`} aria-label={t('top.newProject')}>
+        <PlusIcon /> <span className="btn-label">{t('top.newProject')}</span>
       </button>
-      <button className="btn" onClick={open} title={`${t('top.open')} (Ctrl+O)`}>
-        <FolderIcon /> {t('top.open')}
+      <button className="btn" onClick={open} title={`${t('top.open')} (Ctrl+O)`} aria-label={t('top.open')}>
+        <FolderIcon /> <span className="btn-label">{t('top.open')}</span>
       </button>
       <div className="spacer" />
       {hasProject && (
@@ -45,17 +44,12 @@ export function TopBar() {
           <button className="icon-btn icon-btn-lg" aria-label={t('top.redo')} title={`${t('top.redo')} (Ctrl+Shift+Z)`} disabled={!canRedo} onClick={redo}>
             <RedoIcon />
           </button>
-          {isMap && <button className="btn" onClick={startPresentation} title={`${t('present.start')} (F5)`}>
+          <button className="btn" onClick={startPresentation} title={`${t('present.start')} (F5)`}>
             <PlayIcon size={14} /> {t('present.start')}
-          </button>}
+          </button>
           <button className="btn" onClick={() => setExportOpen(true)} title={`${t('top.export')} (Ctrl+E)`}>
             <DownloadIcon /> {t('top.export')}
           </button>
-          {isDesktop && (
-            <button className="btn" onClick={() => save(true)}>
-              {t('top.saveAs')}
-            </button>
-          )}
           <SaveButton />
         </>
       )}
