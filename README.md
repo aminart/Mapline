@@ -16,13 +16,13 @@
 
 ## Quick Download
 
-Latest release: **v1.1.0** · [All releases](https://github.com/aminart/Mapline/releases)
+Latest release: **v1.1.1** · [All releases](https://github.com/aminart/Mapline/releases)
 
 | Platform | Installer |
 | --- | --- |
-| macOS (Apple Silicon & Intel, universal) | [`Mapline_1.1.0_universal.dmg`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_universal.dmg) |
-| Windows 10/11 (x64) | [`Mapline_1.1.0_x64-setup.exe`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_x64-setup.exe) · [`.msi`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_x64_en-US.msi) |
-| Linux (x64) | [`.AppImage`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_amd64.AppImage) · [`.deb`](https://github.com/aminart/Mapline/releases/download/v1.1.0/Mapline_1.1.0_amd64.deb) |
+| macOS (Apple Silicon & Intel, universal) | [`Mapline_1.1.1_universal.dmg`](https://github.com/aminart/Mapline/releases/download/v1.1.1/Mapline_1.1.1_universal.dmg) |
+| Windows 10/11 (x64) | [`Mapline_1.1.1_x64-setup.exe`](https://github.com/aminart/Mapline/releases/download/v1.1.1/Mapline_1.1.1_x64-setup.exe) · [`.msi`](https://github.com/aminart/Mapline/releases/download/v1.1.1/Mapline_1.1.1_x64_en-US.msi) |
+| Linux (x64) | [`.AppImage`](https://github.com/aminart/Mapline/releases/download/v1.1.1/Mapline_1.1.1_amd64.AppImage) · [`.deb`](https://github.com/aminart/Mapline/releases/download/v1.1.1/Mapline_1.1.1_amd64.deb) |
 
 > Builds are not yet code-signed. On macOS, right-click the app and choose **Open** the first time; on Windows, choose **More info → Run anyway**.
 
