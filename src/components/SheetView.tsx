@@ -12,6 +12,7 @@ import { withBusy } from '../actions';
 import { boardRef } from './Board';
 import { useBox } from './useBox';
 import { useFitText } from './useFitText';
+import { FitText } from './FitText';
 import { focusSoon, useFocusKey } from './useFocusKey';
 import { startDrag, useDropTarget } from './dnd';
 import { CameraIcon, CloseIcon, GripIcon, PlusIcon } from './Icons';
@@ -45,7 +46,7 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
   const docId = useStore((s) => s.docId);
   const applyProject = useStore((s) => s.applyProject);
   const applySheet = useStore((s) => s.applySheet);
-  const b = useBox<HTMLInputElement>('identity', 'identity');
+  const b = useBox<HTMLTextAreaElement>('identity', 'identity');
   const custom = sheet.styles.identity;
   const identity = sheetIdentity(project, sheet);
   const { accent, onAccent } = personaAccent(identity.color, identity.style);
@@ -63,7 +64,8 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
   return (
     <section className={cls('box sheet-identity', b.selected && 'is-selected')} style={{ background: bg, borderColor: custom?.bc ?? bg, color }}>
       <Avatar sheet={sheet} name={identity.name} accent={accent} onAccent={onAccent} />
-      <input
+      <FitText
+        singleLine
         ref={b.ref}
         className="sheet-name"
         aria-label={t('sheet.name')}
@@ -85,7 +87,8 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
       <div className="sheet-fields">
         {sheet.fields.map((f) => (
           <div key={f.id} className={cls('sheet-field', !f.label.trim() && !f.value.trim() && 'is-empty')}>
-            <input
+            <FitText
+              singleLine
               className="sheet-field-label"
               aria-label={t('sheet.fieldLabel')}
               placeholder={t('sheet.fieldLabel')}
@@ -96,7 +99,8 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
                 applySheet((s) => so.setField(s, f.id, { label: v }), { coalesce: `field-label:${f.id}` });
               }}
             />
-            <input
+            <FitText
+              singleLine
               className="sheet-field-value"
               aria-label={t('sheet.fieldValue', { name: f.label })}
               value={f.value}
@@ -266,7 +270,7 @@ function Chips(props: {
 function BlockCard({ block, index }: { block: SheetBlock; index: number }) {
   const t = useT();
   const applySheet = useStore((s) => s.applySheet);
-  const b = useBox<HTMLInputElement>(`block:${block.id}`, 'block');
+  const b = useBox<HTMLTextAreaElement>(`block:${block.id}`, 'block');
   const ref = useRef<HTMLElement>(null);
   const drop = useDropTarget('block', (d) => applySheet((s) => so.moveBlock(s, d.index, index)));
   return (
@@ -281,7 +285,8 @@ function BlockCard({ block, index }: { block: SheetBlock; index: number }) {
         <span className="grip no-export" title={t('sheet.dragBlock')} aria-hidden="true" onPointerDown={(e) => startDrag(e, { kind: 'block', index }, ref.current)}>
           <GripIcon size={12} />
         </span>
-        <input
+        <FitText
+          singleLine
           ref={b.ref}
           className="sheet-block-title"
           aria-label={t('sheet.blockTitle')}
@@ -413,12 +418,13 @@ function Gauges({ block, onFocus }: { block: SheetBlock; onFocus: () => void }) 
 function GaugeRow({ block, item, onFocus }: { block: SheetBlock; item: SheetItem; onFocus: () => void }) {
   const t = useT();
   const applySheet = useStore((s) => s.applySheet);
-  const ref = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
   useFocusKey(`gauge:${item.id}`, ref);
   return (
     <div className={cls('sheet-gauge', !item.text.trim() && 'is-empty')}>
       <div className="sheet-gauge-head">
-        <input
+        <FitText
+          singleLine
           ref={ref}
           aria-label={t('sheet.item', { name: block.title })}
           placeholder={t('sheet.gaugePlaceholder')}

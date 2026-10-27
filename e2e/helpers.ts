@@ -94,3 +94,35 @@ export async function personaRows(page: Page): Promise<{ row: Box; cards: Box[] 
     }));
   });
 }
+
+/** A long text, to fill fields with in the tests that check nothing is cut off. */
+export const LONG_TEXT = 'Un texte bien plus long que la carte, qui doit passer à la ligne sans jamais être coupé';
+
+/** Fills every text field inside `root` with a long text (tag inputs aside). */
+export async function fillWithLongText(page: Page, root: string) {
+  const fields = page.locator(`${root} textarea:visible, ${root} input:not([type]):visible`);
+  for (let i = 0; i < (await fields.count()); i++) {
+    const field = fields.nth(i);
+    if (await field.evaluate((el) => el.matches('.tag-input, .sheet-chip-input, .alt-or'))) continue;
+    const max = Number((await field.getAttribute('maxlength')) ?? Infinity);
+    await field.fill(LONG_TEXT.slice(0, max));
+  }
+  // Out of the last field, so its focus styles don't count.
+  await page.mouse.click(1, 1);
+}
+
+/**
+ * The text fields inside `root` that hide part of their text: cut off on the
+ * right, or scrolled inside their box.
+ */
+export async function clippedFields(page: Page, root: string): Promise<string[]> {
+  return page.evaluate((root) => {
+    const clipped: string[] = [];
+    for (const el of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`${root} textarea, ${root} input:not([type])`)) {
+      if (!el.offsetParent) continue;
+      const name = el.getAttribute('aria-label') ?? el.className;
+      if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) clipped.push(name);
+    }
+    return clipped;
+  }, root);
+}

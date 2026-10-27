@@ -856,7 +856,6 @@ select:focus-visible,
   margin-bottom: 8px;
 }
 .objective textarea {
-  field-sizing: content;
   min-height: 1.4em;
 }
 
@@ -867,6 +866,9 @@ select:focus-visible,
   min-height: 44px;
   padding: 6px 8px 6px 14px;
   border-radius: 10px;
+}
+.phase textarea {
+  flex: 1;
 }
 .box-actions {
   display: flex;
@@ -1048,6 +1050,8 @@ select:focus-visible,
   color: var(--accent);
 }
 .scene textarea {
+  /* Room for three lines at least; longer text makes the box taller. */
+  height: calc(4.2em + 8px);
   padding: 4px;
   line-height: 1.4;
 }
@@ -1397,9 +1401,10 @@ select:focus-visible,
   font-size: 11px;
   font-weight: 600;
   line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Long labels wrap rather than being cut off. */
+  width: max-content;
+  text-align: center;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 .link-label.is-selected {
@@ -1563,7 +1568,7 @@ body.is-dragging {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 28px;
+  min-height: 28px;
   margin: -6px 0;
 }
 .divider-label {
@@ -1571,6 +1576,9 @@ body.is-dragging {
   flex-shrink: 0;
   border: 0;
   background: transparent;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.35;
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 12px;
@@ -2100,6 +2108,7 @@ body.is-dragging {
 .sheet-identity .sheet-name {
   font-size: 24px;
   font-weight: 700;
+  line-height: 1.25;
   padding: 0;
 }
 .sheet-identity .sheet-role {
@@ -2124,12 +2133,14 @@ body.is-dragging {
 .sheet-identity .sheet-field-label {
   flex: 0 0 96px;
   font-size: 13px;
+  line-height: 1.35;
   opacity: 0.7;
   padding: 0;
 }
 .sheet-identity .sheet-field-value {
   flex: 1;
   font-size: 13px;
+  line-height: 1.35;
   font-weight: 500;
   text-align: right;
   padding: 0;
@@ -2204,6 +2215,7 @@ body.is-dragging {
 .sheet-block .sheet-block-title {
   flex: 1;
   padding: 0;
+  line-height: 1.4;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -2249,10 +2261,11 @@ body.is-dragging {
   align-items: center;
   gap: 4px;
 }
-.sheet-block .sheet-gauge-head input {
+.sheet-block .sheet-gauge-head textarea {
   flex: 1;
   padding: 0;
   font-size: 13px;
+  line-height: 1.4;
 }
 .sheet-gauge-track {
   height: 8px;
@@ -2567,10 +2580,14 @@ body.is-dragging {
 }
 .flow-start .flow-pill-text,
 .flow-end .flow-pill-text {
+  display: block;
   width: 100%;
-  padding: 0 10px;
+  padding: 12px 10px;
   border: 0;
   background: transparent;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.35;
   text-align: center;
   font-weight: 600;
   font-size: 13px;

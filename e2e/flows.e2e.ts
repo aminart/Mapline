@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { arrowsOverCards, startProject, openProjects } from './helpers';
+import { arrowsOverCards, clippedFields, fillWithLongText, startProject, openProjects } from './helpers';
 
 const CARDS = '.flow [data-node]';
 
@@ -44,7 +44,7 @@ test('adds cards on all four sides, moving the rest of the flow along', async ({
   const start = await card(page, 'Début');
   const end = await card(page, 'Fin');
   const endLeft = await left(end);
-  await start.locator('input').click();
+  await start.locator('textarea').click();
   // Right of the start is taken by the end: it moves one column right.
   await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
   await page.keyboard.type('Ouvre l’app');
@@ -196,4 +196,14 @@ test('adds tags and a note on a flow card, as on map activities', async ({ page 
   await expect(card.locator('.note')).toHaveClass(/has-note/);
   await page.locator('.toolbar summary').filter({ hasText: 'Tags' }).click();
   await expect(page.locator('.tag-list li')).toHaveCount(1);
+});
+
+test('shows every text of a flow in full, start and end pills widening with theirs', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const start = await card(page, 'Début');
+  const width = (await start.boundingBox())!.width;
+  await fillWithLongText(page, '.flow');
+  expect(await clippedFields(page, '.flow')).toEqual([]);
+  expect((await start.boundingBox())!.width).toBeGreaterThan(width);
+  expect(await arrowsOverCards(page, CARDS)).toEqual([]);
 });

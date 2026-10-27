@@ -271,3 +271,24 @@ describe('tags and notes in project files', () => {
     expect(Object.values(backMap.map.activities).map((a) => a.kind)).toEqual(['choice']);
   });
 });
+
+describe('start and end pills that grow with their text', () => {
+  const flow = fo.templateFlow('user', labels);
+  const start = flow.nodes.find((n) => n.kind === 'start')!;
+
+  it('keeps the pill size for a short text', () => {
+    const box = nodeBox(start, flowLayout(flow, {}, { [start.id]: 50 }));
+    expect([box.w, box.h]).toEqual([FLOW.pillW, FLOW.pillH]);
+  });
+
+  it('widens up to the cell, then grows in height, centred in its cell', () => {
+    const wide = nodeBox(start, flowLayout(flow, {}, { [start.id]: 150 }));
+    expect(wide.w).toBe(150);
+    const layout = flowLayout(flow, { [start.id]: 80 }, { [start.id]: 600 });
+    const box = nodeBox(start, layout);
+    const cell = cellBox(start.col, start.row, layout);
+    expect([box.w, box.h]).toEqual([FLOW.cellW, 80]);
+    expect(box.x).toBe(cell.x);
+    expect(box.y + box.h / 2).toBe(cell.y + cell.h / 2);
+  });
+});

@@ -4,7 +4,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
-import { addActivity, arrowsOverCards, cell, link, personaRows, startProject, openProjects } from './helpers';
+import { addActivity, arrowsOverCards, cell, clippedFields, fillWithLongText, link, personaRows, startProject, openProjects } from './helpers';
 
 const legacyFile = fileURLToPath(new URL('./fixtures/projet-v0.9.missionmap', import.meta.url));
 
@@ -248,4 +248,19 @@ test('exports a PNG with nothing behind its rounded corners, and a PDF on A4 by 
   await page.locator('dialog[open] .btn-primary').click();
   const pdf = (await readFile(await (await download).path())).toString('latin1');
   expect(pdf).toMatch(/\/MediaBox \[0 0 842\.?0* 595\.?0*\]/);
+});
+
+test('shows every text of the map in full: phases, steps, personas and rows grow with it', async ({ page }) => {
+  await startProject(page);
+  const tools = page.getByRole('toolbar', { name: 'Outils et mise en forme' });
+  await tools.getByText('Storyboard', { exact: true }).click();
+  await tools.getByText('Infos complémentaires', { exact: true }).click();
+  await addActivity(page, 0, 0, 'Une activité');
+  await fillWithLongText(page, '.board');
+  expect(await clippedFields(page, '.board')).toEqual([]);
+  // A name or title stays on one line of text: Enter adds no line break.
+  const step = page.locator('.step').first().getByRole('textbox', { name: 'Nom de l’étape' });
+  await step.press('End');
+  await step.press('Enter');
+  await expect(step).not.toHaveValue(/\n/);
 });

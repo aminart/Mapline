@@ -11,6 +11,7 @@ import { startDrag, useDropTarget } from './dnd';
 import { PresentationFocus } from './Presentation';
 import { StoryboardRow } from './Storyboard';
 import { InfoRow } from './InfoRow';
+import { FitText } from './FitText';
 import { PersonaGrid, TagSuggestions } from './PersonaGrid';
 import { cls } from './cls';
 import { ACTIVITY_COL, END_COL, GAP, PERSONA_COL, ROW_GAP } from './layout';
@@ -61,9 +62,8 @@ function Objective() {
       <span className="eyebrow" style={{ color: b.style.color }}>
         {t('board.objective')}
       </span>
-      <textarea
+      <FitText
         ref={b.ref}
-        rows={1}
         value={objective}
         placeholder={t('board.objectivePlaceholder')}
         onFocus={b.onFocus}
@@ -112,11 +112,12 @@ function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: bo
   const t = useT();
   const { phase, index, span, isLast, canRemove } = props;
   const apply = useStore((s) => s.apply);
-  const b = useBox<HTMLInputElement>(`phase:${phase.id}`, 'phase');
+  const b = useBox<HTMLTextAreaElement>(`phase:${phase.id}`, 'phase');
   return (
     <div className={cls('box phase', b.selected && 'is-selected')} style={{ ...b.box, gridColumn: `span ${span}` }}>
-      <input
+      <FitText
         ref={b.ref}
+        singleLine
         aria-label={t('board.phaseName')}
         value={phase.title}
         placeholder={t('board.phasePlaceholder')}
@@ -178,7 +179,7 @@ function StepRow() {
 function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number; onInsertBefore: () => void }) {
   const t = useT();
   const apply = useStore((s) => s.apply);
-  const b = useBox<HTMLInputElement>(`step:${step.id}`, 'step');
+  const b = useBox<HTMLTextAreaElement>(`step:${step.id}`, 'step');
   const slots = step.slots.length;
   const boxRef = useRef<HTMLDivElement>(null);
   const drop = useDropTarget('step', (d) => apply((doc) => ops.moveStep(doc, d.index, index)));
@@ -209,8 +210,9 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
           <CloseIcon />
         </button>
       </div>
-      <input
+      <FitText
         ref={b.ref}
+        singleLine
         aria-label={t('board.stepName')}
         value={step.title}
         placeholder={t('board.stepPlaceholder')}

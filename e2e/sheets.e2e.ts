@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { startProject, openProjects } from './helpers';
+import { clippedFields, fillWithLongText, startProject, openProjects } from './helpers';
 
 /** Creates the sheet of the first persona of the map, from its button. */
 async function createFirstSheet(page: Page) {
@@ -60,7 +60,7 @@ test('opens a sheet from the map', async ({ page }) => {
   await createFirstSheet(page);
   await page.getByPlaceholder('« Une phrase qui résume ce persona »').fill('« Vite et bien »');
   await page.getByRole('textbox', { name: 'Ligne de Motivations' }).first().fill('Autonomie');
-  await page.locator('.sheet-block').filter({ has: page.locator('input[value="Canaux et outils"]') }).getByRole('textbox', { name: 'Ajouter un tag' }).fill('Téléphone');
+  await page.locator('.sheet-block').getByRole('textbox', { name: 'Ajouter un tag' }).fill('Téléphone');
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Ajouter un bloc' }).click();
   await page.getByRole('group', { name: 'Ajouter un bloc' }).getByRole('button', { name: 'Liste' }).click();
@@ -200,4 +200,11 @@ test('gives the sheet tags a colour of their choice', async ({ page }) => {
   await chips.getByRole('button', { name: 'Couleur de « Senior » 5' }).click();
   await expect(chips.locator('.tag').filter({ hasText: 'Senior' })).toHaveCSS('background-color', 'rgb(255, 241, 191)');
   await expect(chips.locator('.tag-palette')).toHaveCount(0);
+});
+
+test('shows every text of a sheet in full, the persona name included', async ({ page }) => {
+  await startProject(page);
+  await createFirstSheet(page);
+  await fillWithLongText(page, '.sheet');
+  expect(await clippedFields(page, '.sheet')).toEqual([]);
 });

@@ -11,7 +11,7 @@ export const FLOW = {
   gapX: 64,
   gapY: 56,
   pad: 48,
-  /** Start and end cards are pills, smaller than their cell. */
+  /** Start and end cards are pills, smaller than their cell; they widen up to the cell for a longer text. */
   pillW: 96,
   pillH: 44,
 } as const;
@@ -30,21 +30,30 @@ export interface Box {
 export interface FlowLayout {
   rows: number[];
   nodes: Record<Id, number>;
+  /** Width of each start and end pill. */
+  pills: Record<Id, number>;
 }
+
+const isPill = (n: Pick<FlowNode, 'kind'>) => n.kind === 'start' || n.kind === 'end';
 
 const rowHeight = (row: number, layout?: FlowLayout) => layout?.rows[row] ?? FLOW.cellH;
 
-/** Each row as tall as its tallest card. */
-export function flowLayout(flow: Flow, measured: Record<Id, number>): FlowLayout {
+/**
+ * Each row as tall as its tallest card. `widths` is the width a pill's text
+ * needs on one line: the pill widens up to its cell, then its text wraps.
+ */
+export function flowLayout(flow: Flow, measured: Record<Id, number>, widths: Record<Id, number> = {}): FlowLayout {
   const rows: number[] = [];
   const nodes: Record<Id, number> = {};
+  const pills: Record<Id, number> = {};
   for (const n of flow.nodes) {
-    if (n.kind === 'start' || n.kind === 'end') continue;
-    const h = Math.max(FLOW.cellH, Math.ceil(measured[n.id] ?? 0));
+    const pill = isPill(n);
+    const h = Math.max(pill ? FLOW.pillH : FLOW.cellH, Math.ceil(measured[n.id] ?? 0));
     nodes[n.id] = h;
+    if (pill) pills[n.id] = Math.min(FLOW.cellW, Math.max(FLOW.pillW, Math.ceil(widths[n.id] ?? 0)));
     rows[n.row] = Math.max(rows[n.row] ?? FLOW.cellH, h);
   }
-  return { rows: Array.from(rows, (h) => h ?? FLOW.cellH), nodes };
+  return { rows: Array.from(rows, (h) => h ?? FLOW.cellH), nodes, pills };
 }
 
 /** The cell at (col, row). */
@@ -57,9 +66,9 @@ export function cellBox(col: number, row: number, layout?: FlowLayout): Box {
 /** Where a card is drawn: centred in its cell, as tall as its text needs; start and end are pills. */
 export function nodeBox(node: Pick<FlowNode, 'id' | 'col' | 'row' | 'kind'>, layout?: FlowLayout): Box {
   const cell = cellBox(node.col, node.row, layout);
-  const pill = node.kind === 'start' || node.kind === 'end';
-  const w = pill ? FLOW.pillW : cell.w;
-  const h = pill ? FLOW.pillH : Math.min(cell.h, layout?.nodes[node.id] ?? FLOW.cellH);
+  const pill = isPill(node);
+  const w = pill ? (layout?.pills[node.id] ?? FLOW.pillW) : cell.w;
+  const h = Math.min(cell.h, layout?.nodes[node.id] ?? (pill ? FLOW.pillH : FLOW.cellH));
   return { x: cell.x + (cell.w - w) / 2, y: cell.y + (cell.h - h) / 2, w, h };
 }
 

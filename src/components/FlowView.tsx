@@ -9,6 +9,7 @@ import { projectPersonas } from '../model/project';
 import type { Id } from '../model/types';
 import { NoteButton, TagRow, TagSuggestions } from './CardExtras';
 import { useFitText } from './useFitText';
+import { FitText } from './FitText';
 import { LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
 import type { Flow, FlowNode, FlowNodeKind } from '../model/types';
 import { routeFlow, type RoutedLink } from '../lib/flowRoute';
@@ -21,6 +22,9 @@ import { cls } from './cls';
 
 const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
 
+/** Measures text widths, for the start and end pills. */
+let measureCanvas: HTMLCanvasElement | undefined;
+
 /** A flow: cards on a grid, arrows between them. */
 export function FlowView() {
   const zoom = useStore((s) => s.zoom);
@@ -28,8 +32,11 @@ export function FlowView() {
   // Height each card's text needs, measured once drawn: rows grow to fit.
   const [measured, setMeasured] = useState<Record<Id, number>>({});
   const onMeasure = useCallback((id: Id, h: number) => setMeasured((m) => (Math.abs((m[id] ?? 0) - h) < 1 ? m : { ...m, [id]: h })), []);
+  // And the width a pill's text needs on one line.
+  const [widths, setWidths] = useState<Record<Id, number>>({});
+  const onMeasureWidth = useCallback((id: Id, w: number) => setWidths((m) => (Math.abs((m[id] ?? 0) - w) < 1 ? m : { ...m, [id]: w })), []);
   if (!flow) return null;
-  const layout = flowLayout(flow, measured);
+  const layout = flowLayout(flow, measured, widths);
   const { cols, rows } = fo.extent(flow);
   // One spare column and row, to drop a card past the edge.
   const size = flowSize(cols + 1, rows + 1, layout);
@@ -44,7 +51,7 @@ export function FlowView() {
         ))}
         <Arrows routed={routed} width={size.w} height={size.h} />
         {flow.nodes.map((node) => (
-          <FlowCard key={node.id} node={node} layout={layout} onMeasure={onMeasure} />
+          <FlowCard key={node.id} node={node} layout={layout} onMeasure={onMeasure} onMeasureWidth={onMeasureWidth} />
         ))}
         <TagSuggestions id={FLOW_TAG_LIST} tags={fo.flowTagCounts(flow).map((x) => x.tag)} />
         {routed.map((r) => (
@@ -154,7 +161,8 @@ function ArrowExtras({ routed }: { routed: RoutedLink }) {
   );
 }
 
-function FlowCard({ node, layout, onMeasure }: { node: FlowNode; layout: FlowLayout; onMeasure: (id: Id, h: number) => void }) {
+function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: Id, h: number) => void; onMeasureWidth: (id: Id, w: number) => void }) {
+  const { node, layout, onMeasure, onMeasureWidth } = props;
   const t = useT();
   const applyFlow = useStore((s) => s.applyFlow);
   const focusLater = useStore((s) => s.focusLater);
@@ -162,7 +170,7 @@ function FlowCard({ node, layout, onMeasure }: { node: FlowNode; layout: FlowLay
   const tool = useStore((s) => s.tool);
   const linkFrom = useStore((s) => s.linkFrom);
   const setLinkFrom = useStore((s) => s.setLinkFrom);
-  const b = useBox<HTMLTextAreaElement & HTMLInputElement>(`node:${node.id}`, 'node');
+  const b = useBox<HTMLTextAreaElement>(`node:${node.id}`, 'node');
   const ref = useRef<HTMLDivElement>(null);
   const drop = useDropTarget('fnode', (d) => applyFlow((f) => fo.moveNode(f, d.id, node.col, node.row)));
   const tagFilter = useStore((s) => s.tagFilter);
@@ -200,13 +208,29 @@ function FlowCard({ node, layout, onMeasure }: { node: FlowNode; layout: FlowLay
   useFitText(pill ? noText : b.ref, [node.text, b.text.fontFamily, b.text.fontSize, b.text.fontWeight]);
   useLayoutEffect(() => {
     const el = content.current;
-    if (!el || pill) return;
+    if (!el) return;
     const report = () => onMeasure(node.id, el.offsetHeight);
     report();
     const ro = new ResizeObserver(report);
     ro.observe(el);
     return () => ro.disconnect();
   }, [node.id, pill, onMeasure]);
+  // A pill as wide as its text on one line, up to its cell.
+  const placeholder = t(pill ? `flow.kind.${node.kind}` : node.kind === 'choice' ? 'flow.choicePlaceholder' : 'flow.activityPlaceholder');
+  useLayoutEffect(() => {
+    const el = b.ref.current;
+    if (!el || !pill) return;
+    const measure = () => {
+      const css = getComputedStyle(el);
+      const ctx = (measureCanvas ??= document.createElement('canvas')).getContext('2d');
+      if (!ctx) return;
+      ctx.font = css.font;
+      const pad = parseFloat(css.paddingLeft) + parseFloat(css.paddingRight);
+      onMeasureWidth(node.id, ctx.measureText(node.text || placeholder).width + pad + 2);
+    };
+    measure();
+    document.fonts?.ready.then(measure);
+  }, [b.ref, node.id, node.text, pill, placeholder, onMeasureWidth]);
 
   return (
     <div
@@ -228,7 +252,9 @@ function FlowCard({ node, layout, onMeasure }: { node: FlowNode; layout: FlowLay
       }}
     >
       {pill ? (
-        <input ref={b.ref} className="flow-pill-text" aria-label={t('flow.cardText')} value={node.text} placeholder={t(`flow.kind.${node.kind}`)} onFocus={b.onFocus} onChange={(e) => setText(e.target.value)} />
+        <div className="flow-card-content" ref={content}>
+          <FitText ref={b.ref} singleLine className="flow-pill-text" aria-label={t('flow.cardText')} value={node.text} placeholder={placeholder} onFocus={b.onFocus} onChange={(e) => setText(e.target.value)} />
+        </div>
       ) : (
         <div className="flow-card-content" ref={content}>
           {node.kind === 'choice' && (
@@ -250,7 +276,7 @@ function FlowCard({ node, layout, onMeasure }: { node: FlowNode; layout: FlowLay
             className="flow-text"
             aria-label={t('flow.cardText')}
             value={node.text}
-            placeholder={t(node.kind === 'choice' ? 'flow.choicePlaceholder' : 'flow.activityPlaceholder')}
+            placeholder={placeholder}
             onFocus={b.onFocus}
             onChange={(e) => setText(e.target.value)}
             style={b.text}
