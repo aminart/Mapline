@@ -22,6 +22,15 @@ export function useFitText(ref: RefObject<HTMLTextAreaElement | null>, deps: unk
     fit();
     // Again once the web fonts are in, which changes the line breaks.
     document.fonts?.ready.then(fit);
+    // And whenever the box gets narrower or wider: the lines break elsewhere.
+    let width = el.offsetWidth;
+    const ro = new ResizeObserver(() => {
+      if (el.offsetWidth === width) return;
+      width = el.offsetWidth;
+      fit();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
     // The caller lists what changes the text's size.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref, ...deps]);

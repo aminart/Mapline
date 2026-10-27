@@ -7,6 +7,7 @@ import * as ops from '../model/ops';
 import type { Step } from '../model/types';
 import { useBox } from './useBox';
 import { useFitText } from './useFitText';
+import { FitText } from './FitText';
 import { cls } from './cls';
 
 /** Optional row under the personas: free text under each step, like the storyboard without images. */
@@ -23,7 +24,8 @@ export function InfoRow() {
     <div className="grid-row info-row">
       <div className="row-head">
         {/* Title and description start as the defaults and can be renamed. */}
-        <input
+        <FitText
+          singleLine
           className="eyebrow eyebrow-accent row-head-title"
           aria-label={t('info.renameTitle')}
           title={t('info.renameTitle')}

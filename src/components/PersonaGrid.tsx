@@ -15,6 +15,7 @@ import { GAP, ROW_GAP } from './layout';
 import { midpoint, roundedPath, routeArrow, type Rect } from '../lib/arrows';
 import { startDrag, useDropTarget } from './dnd';
 import { useFitText } from './useFitText';
+import { FitText } from './FitText';
 
 export function PersonaGrid() {
   const personas = useMap((m) => m.personas);
@@ -42,7 +43,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
   const t = useT();
   const steps = useMap((m) => m.steps);
   const apply = useStore((s) => s.apply);
-  const b = useBox<HTMLInputElement>(`persona:${persona.id}`, 'persona', persona.color);
+  const b = useBox<HTMLTextAreaElement>(`persona:${persona.id}`, 'persona', persona.color);
   const custom = useMap((m) => m.styles[`persona:${persona.id}`]);
   const { accent, onAccent } = personaAccent(persona.color, custom);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -73,8 +74,9 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
           {sheet?.sheet.photo ? <img src={sheet.sheet.photo} alt="" /> : (persona.name || '?').charAt(0).toUpperCase()}
         </div>
         <div className="persona-fields">
-          <input
+          <FitText
             ref={b.ref}
+            singleLine
             aria-label={t('board.personaName')}
             value={persona.name}
             placeholder={t('board.personaName')}
@@ -85,8 +87,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
             }}
             style={b.text}
           />
-          <textarea
-            rows={3}
+          <FitText
             aria-label={t('board.personaRole')}
             value={persona.role}
             placeholder={t('board.personaRolePlaceholder')}
@@ -148,7 +149,8 @@ function DividerRow({ divider }: { divider: Divider }) {
   const apply = useStore((s) => s.apply);
   return (
     <div className="divider-row">
-      <input
+      <FitText
+        singleLine
         className="divider-label"
         aria-label={t('board.dividerLabel')}
         value={divider.label}

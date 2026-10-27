@@ -10,6 +10,7 @@ import { withBusy } from '../actions';
 import { useBox } from './useBox';
 import { CloseIcon, ImageIcon } from './Icons';
 import { cls } from './cls';
+import { FitText } from './FitText';
 
 export function StoryboardRow() {
   const t = useT();
@@ -82,9 +83,8 @@ function SceneCell({ step }: { step: Step }) {
         </label>
       )}
       {error && <span className="error-sm" role="alert">{error}</span>}
-      <textarea
+      <FitText
         ref={b.ref}
-        rows={3}
         aria-label={t('sb.description')}
         value={text}
         placeholder={t('sb.describe')}
