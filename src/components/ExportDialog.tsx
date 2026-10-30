@@ -15,7 +15,7 @@ const OPTIONS_KEY = 'mapline:export';
 const FORMATS: ExportFormat[] = ['png', 'jpeg', 'pdf', 'pptx', 'csv'];
 const SCALES = [1, 2, 3];
 
-const DEFAULTS: ExportOptions = { format: 'png', scale: 2, transparent: false, storyboard: true, info: true, pdfLayout: 'a4', overview: true, notes: true, slides: 'project', slidePhases: true };
+const DEFAULTS: ExportOptions = { format: 'png', scale: 2, transparent: false, storyboard: true, info: true, pdfLayout: 'a4', overview: true, notes: true, slides: 'project', slidePhases: true, slideMode: 'edit' };
 const PDF_LAYOUTS: PdfLayout[] = ['single', 'a4', 'a3', 'phases'];
 
 function loadOptions(): ExportOptions {
@@ -32,6 +32,7 @@ function loadOptions(): ExportOptions {
       notes: saved.notes !== false,
       slides: saved.slides === 'doc' ? 'doc' : 'project',
       slidePhases: saved.slidePhases !== false,
+      slideMode: saved.slideMode === 'image' ? 'image' : 'edit',
     };
   } catch {
     return DEFAULTS;
@@ -136,16 +137,18 @@ export function ExportDialog() {
 
         {isImage && (
           <div className="export-options">
-            <fieldset className="field-group">
-              <legend>{t('export.resolution')}</legend>
-              <div className="segmented segmented-sm">
-                {SCALES.map((n) => (
-                  <button key={n} type="button" className={cls(opts.scale === n && 'is-on')} aria-pressed={opts.scale === n} onClick={() => update({ scale: n })}>
-                    ×{n}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+            {!(shown.format === 'pptx' && opts.slideMode === 'edit') && (
+              <fieldset className="field-group">
+                <legend>{t('export.resolution')}</legend>
+                <div className="segmented segmented-sm">
+                  {SCALES.map((n) => (
+                    <button key={n} type="button" className={cls(opts.scale === n && 'is-on')} aria-pressed={opts.scale === n} onClick={() => update({ scale: n })}>
+                      ×{n}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
             {shown.format === 'png' && (
               <fieldset className="field-group">
                 <legend>{t('export.background')}</legend>
@@ -166,6 +169,18 @@ export function ExportDialog() {
                   {PDF_LAYOUTS.map((l) => (
                     <button key={l} type="button" className={cls(shown.pdfLayout === l && 'is-on')} aria-pressed={shown.pdfLayout === l} onClick={() => update({ pdfLayout: l })}>
                       {t(`export.pages.${l}` as MessageKey)}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {shown.format === 'pptx' && (
+              <fieldset className="field-group">
+                <legend>{t('export.slideMode')}</legend>
+                <div className="segmented segmented-sm">
+                  {(['edit', 'image'] as const).map((v) => (
+                    <button key={v} type="button" className={cls(opts.slideMode === v && 'is-on')} aria-pressed={opts.slideMode === v} onClick={() => update({ slideMode: v })}>
+                      {t(`export.slideMode.${v}`)}
                     </button>
                   ))}
                 </div>

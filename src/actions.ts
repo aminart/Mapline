@@ -4,7 +4,8 @@
 import { activeMap, t, useStore } from './store';
 import { isDesktop, openProject, saveExport, saveProject } from './lib/fileio';
 import { boardRef } from './components/Board';
-import { nextFrame, renderBoardCanvas, type BoardLayout, type RenderOptions } from './lib/exportImage';
+import { measureLayout, nextFrame, renderBoardCanvas, withExportLayout, type BoardLayout, type RenderOptions } from './lib/exportImage';
+import { boardShapes, sliceShapes, type Shape } from './lib/boardShapes';
 import { crop, pdfDocument, planPhasePages, type PdfLayout } from './lib/exportPdf';
 import { pptxDocument, type Slide } from './lib/exportPptx';
 import { copyPng, jpegBlob, pngBlob, type ExportFormat } from './lib/exportFormats';
@@ -172,6 +173,8 @@ export interface ExportOptions extends RenderOptions {
   slides: 'doc' | 'project';
   /** PowerPoint: a map gets one slide per phase rather than one for the whole map. */
   slidePhases: boolean;
+  /** PowerPoint: boxes and texts that can be edited, or a picture of each page. */
+  slideMode: 'edit' | 'image';
 }
 
 /** Renders the board for an image export, without selection ring or focus. */
@@ -246,6 +249,22 @@ async function exportNow(opts: ExportOptions): Promise<boolean> {
   }
 }
 
+/** The board as shapes, laid out for export, without selection ring or focus. */
+async function shapesForExport(opts: RenderOptions): Promise<{ shapes: Shape[]; layout: BoardLayout }> {
+  const node = boardRef.current;
+  if (!node) throw new Error(t('file.exportFailed'));
+  const { sel, select } = useStore.getState();
+  select(null);
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  await nextFrame();
+  await nextFrame();
+  try {
+    return await withExportLayout(node, opts, () => ({ shapes: boardShapes(node), layout: measureLayout(node) }));
+  } finally {
+    select(sel);
+  }
+}
+
 /**
  * The slides of a PowerPoint export: each document is shown in turn and
  * pictured; a map is cut into its phases when asked. The document that was
@@ -260,13 +279,26 @@ async function renderSlides(opts: ExportOptions): Promise<Slide[]> {
       setDoc(doc.id);
       await nextFrame();
       await document.fonts?.ready;
-      const { canvas, layout } = await renderForExport(opts);
       const label = docLabel(project, doc.id);
-      const objective = doc.kind === 'mission-map' ? layout.objective : undefined;
-      if (doc.kind === 'mission-map' && opts.slidePhases && layout.phases.length > 0) {
+      const phases = doc.kind === 'mission-map' && opts.slidePhases;
+      if (opts.slideMode === 'edit') {
+        const { shapes, layout } = await shapesForExport(opts);
+        if (phases && layout.phases.length > 0) {
+          for (const p of planPhasePages(layout)) {
+            const parts = [{ x0: 0, x1: layout.stripRight }, p];
+            const list = sliceShapes(shapes, parts, p.top);
+            slides.push({ title: `${label} · ${p.title || t('pdf.phase', { n: p.index + 1 })}`, subtitle: layout.objective, shapes: { list, width: layout.stripRight + p.x1 - p.x0, height: layout.height - p.top } });
+          }
+        } else {
+          slides.push({ title: label, shapes: { list: shapes, width: layout.width, height: layout.height } });
+        }
+        continue;
+      }
+      const { canvas, layout } = await renderForExport(opts);
+      if (phases && layout.phases.length > 0) {
         for (const p of planPhasePages(layout)) {
           const image = crop(canvas, opts.scale, [{ x0: 0, x1: layout.stripRight }, p], p.top, layout.height);
-          slides.push({ title: `${label} · ${p.title || t('pdf.phase', { n: p.index + 1 })}`, subtitle: objective, image });
+          slides.push({ title: `${label} · ${p.title || t('pdf.phase', { n: p.index + 1 })}`, subtitle: layout.objective, image });
         }
       } else {
         slides.push({ title: label, image: canvas });

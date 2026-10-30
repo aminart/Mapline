@@ -353,13 +353,14 @@ test('renames a map and a flow from their tab, and shows long names in full', as
   await expect(title).toHaveAttribute('title', long);
 });
 
-test('exports PowerPoint slides: one per document, a map cut into its phases', async ({ page }) => {
+test('exports PowerPoint slides: one per document, a map cut into its phases, its text editable', async ({ page }) => {
   await startProject(page);
+  await addActivity(page, 0, 0, 'Prendre rendez-vous');
   // A second document: a flow.
   await page.getByRole('button', { name: 'Nouveau flow' }).click();
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(2);
-  const slideCount = async () => {
+  const exportSlides = async () => {
     await page.getByRole('button', { name: 'Exporter…' }).click();
     await page.locator('input[name=export-format][value=pptx]').check({ force: true });
     const download = page.waitForEvent('download');
@@ -370,19 +371,32 @@ test('exports PowerPoint slides: one per document, a map cut into its phases', a
     expect(bytes.subarray(0, 2).toString()).toBe('PK');
     const { default: JSZip } = await import('jszip');
     const zip = await JSZip.loadAsync(bytes);
-    return Object.keys(zip.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)).length;
+    const names = Object.keys(zip.files)
+      .filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+      .sort((a, b) => parseInt(a.replace(/\D/g, ''), 10) - parseInt(b.replace(/\D/g, ''), 10));
+    return Promise.all(names.map((n) => zip.file(n)!.async('string')));
   };
-  // The map's three phases, then the flow.
-  expect(await slideCount()).toBe(4);
+  const options = async (fn: () => Promise<void>) => {
+    await page.getByRole('button', { name: 'Exporter…' }).click();
+    await page.locator('input[name=export-format][value=pptx]').check({ force: true });
+    await fn();
+    await page.keyboard.press('Escape');
+  };
+  // The map's three phases, then the flow; the activity is text in the first slide.
+  let slides = await exportSlides();
+  expect(slides).toHaveLength(4);
+  expect(slides[0]).toContain('<a:t>Prendre rendez-vous</a:t>');
+  expect(slides[0]).toContain('<a:t>Map · Avant</a:t>');
+  expect(slides[0]).not.toContain('<p:pic>');
   // Back on the flow tab after the export, as before it.
   await expect(page.locator('.doc-tab.is-active')).toContainText('Flow');
-  await page.getByRole('button', { name: 'Exporter…' }).click();
-  await page.locator('input[name=export-format][value=pptx]').check({ force: true });
-  await page.getByRole('checkbox', { name: 'Maps : une diapositive par phase' }).uncheck();
-  await page.keyboard.press('Escape');
-  expect(await slideCount()).toBe(2);
-  await page.getByRole('button', { name: 'Exporter…' }).click();
-  await page.getByRole('button', { name: 'Ce document' }).click();
-  await page.keyboard.press('Escape');
-  expect(await slideCount()).toBe(1);
+  await options(() => page.getByRole('checkbox', { name: 'Maps : une diapositive par phase' }).uncheck());
+  expect(await exportSlides()).toHaveLength(2);
+  // As pictures: the text is in the image only.
+  await options(() => page.getByRole('button', { name: 'Image', exact: true }).click());
+  slides = await exportSlides();
+  expect(slides[0]).toContain('<p:pic>');
+  expect(slides[0]).not.toContain('Prendre rendez-vous');
+  await options(() => page.getByRole('button', { name: 'Ce document' }).click());
+  expect(await exportSlides()).toHaveLength(1);
 });
