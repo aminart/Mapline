@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildCsv } from './exportCsv';
 import { exampleBlueprint } from '../model/fixtures';
-import { addAlternative, addDivider, addTag, activityKey, altKey, DIVIDER_TOP, setActivityNote, setActivityText, setInfo, setJoiner } from '../model/ops';
+import { addAlternative, addDivider, addTag, activityKey, altKey, DIVIDER_TOP, setActivityNote, setActivityText, addTextRow, setTextCell, setTextRow, setJoiner } from '../model/ops';
 
 const labels = { objective: 'Objectif', phases: 'Phases', steps: 'Étapes', storyboard: 'Storyboard', note: 'Note', or: 'ou', info: 'Infos' };
 
@@ -34,16 +34,17 @@ describe('buildCsv', () => {
     expect(lines.findIndex((l) => l === '— Client —')).toBe(lines.findIndex((l) => l.startsWith('Patient')) - 1);
   });
 
-  it('lists an alternative after its card and adds the information row', () => {
+  it('lists an alternative after its card and adds the free text rows', () => {
     let doc = exampleBlueprint();
     const key = activityKey(doc.personas[0].id, doc.steps[0].slots[0]);
     doc = addAlternative(doc, key).doc;
     doc = setActivityText(doc, altKey(key), 'Appelle le cabinet');
-    doc = setInfo({ ...doc, infoRow: true }, doc.steps[0].id, 'Mobile');
+    const row = addTextRow(doc, 'Infos');
+    doc = setTextCell(row.doc, row.rowId, doc.steps[0].id, 'Mobile');
     const csv = buildCsv(doc, labels, ';');
     expect(csv).toContain('"Cherche un praticien disponible près de chez lui\nou Appelle le cabinet"');
     expect(csv.split('\r\n')).toContain('Infos;Mobile;;;;');
-    const renamed = buildCsv({ ...setJoiner(doc, altKey(key), 'sinon'), infoTitle: 'Canaux' }, labels, ';');
+    const renamed = buildCsv(setTextRow(setJoiner(doc, altKey(key), 'sinon'), row.rowId, { title: 'Canaux' }), labels, ';');
     expect(renamed).toContain('sinon Appelle le cabinet');
     expect(renamed.split('\r\n')).toContain('Canaux;Mobile;;;;');
   });

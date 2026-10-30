@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, BoxStyle, Id, PersonaSheet, SheetBlock, SheetField, SheetItem } from './types';
+import type { BlockPlace, BlockView, BoxStyle, Id, PersonaSheet, SheetBlock, SheetField, SheetItem } from './types';
 import { uid } from './ops';
 
 /** Level a new gauge starts at. */
@@ -59,7 +59,9 @@ function newItem(view: BlockView, text = ''): SheetItem {
 /** Adds a block at `index` (the end by default). */
 export function addBlock(sheet: PersonaSheet, block: SheetBlock, index = sheet.blocks.length): PersonaSheet {
   const blocks = sheet.blocks.slice();
-  blocks.splice(Math.max(0, Math.min(index, blocks.length)), 0, block);
+  // Once blocks have been placed by hand, a new one takes the first free cell.
+  const placed = blocks.some((b) => b.place) && !block.place ? { ...block, place: freeSpot(sheetLayout(blocks), DEFAULT_W) } : block;
+  blocks.splice(Math.max(0, Math.min(index, blocks.length)), 0, placed);
   return { ...sheet, blocks };
 }
 
@@ -73,6 +75,74 @@ export function moveBlock(sheet: PersonaSheet, from: number, to: number): Person
   const blocks = sheet.blocks.slice();
   const [moved] = blocks.splice(from, 1);
   blocks.splice(to, 0, moved);
+  return { ...sheet, blocks };
+}
+
+/** Columns of the sheet's grid. A block is a third of it wide unless resized. */
+export const SHEET_COLS = 6;
+const DEFAULT_W = 2;
+
+const overlaps = (a: BlockPlace, b: BlockPlace) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** The first free cell, row by row, for a block `w` columns wide. */
+function freeSpot(taken: BlockPlace[], w: number): BlockPlace {
+  for (let y = 0; ; y++) {
+    for (let x = 0; x + w <= SHEET_COLS; x++) {
+      const spot = { x, y, w, h: 1 };
+      if (!taken.some((p) => overlaps(p, spot))) return spot;
+    }
+  }
+}
+
+const clampPlace = (p: BlockPlace): BlockPlace => {
+  const w = Math.max(1, Math.min(SHEET_COLS, Math.round(p.w)));
+  return { x: Math.max(0, Math.min(SHEET_COLS - w, Math.round(p.x))), y: Math.max(0, Math.round(p.y)), w, h: Math.max(1, Math.round(p.h)) };
+};
+
+/**
+ * Where each block sits: its own place, or, for blocks never moved, the next
+ * free cell in order (three to a row, as sheets were laid out before).
+ */
+export function sheetLayout(blocks: SheetBlock[]): BlockPlace[] {
+  const taken: BlockPlace[] = blocks.flatMap((b) => (b.place ? [clampPlace(b.place)] : []));
+  return blocks.map((b) => {
+    if (b.place) return clampPlace(b.place);
+    const spot = freeSpot(taken, DEFAULT_W);
+    taken.push(spot);
+    return spot;
+  });
+}
+
+/** Rows the sheet's grid uses. */
+export function sheetRows(blocks: SheetBlock[]): number {
+  return Math.max(0, ...sheetLayout(blocks).map((p) => p.y + p.h));
+}
+
+/**
+ * Puts a block at `place` (moved or resized). Blocks it would cover move down
+ * out of its way, and blocks are kept in reading order: by row, then column.
+ */
+export function placeBlock(sheet: PersonaSheet, blockId: Id, place: BlockPlace): PersonaSheet {
+  const layout = sheetLayout(sheet.blocks);
+  const i = sheet.blocks.findIndex((b) => b.id === blockId);
+  if (i < 0) return sheet;
+  const target = clampPlace(place);
+  const old = layout[i];
+  if (old.x === target.x && old.y === target.y && old.w === target.w && old.h === target.h && sheet.blocks[i].place) return sheet;
+  const places = layout.slice();
+  places[i] = target;
+  // Settled blocks are fixed; each other one, top to bottom, goes down until it is clear.
+  const settled = [i];
+  const rest = places.map((_, j) => j).filter((j) => j !== i).sort((a, b) => places[a].y - places[b].y || places[a].x - places[b].x);
+  for (const j of rest) {
+    let p = places[j];
+    while (settled.some((k) => overlaps(places[k], p))) p = { ...p, y: p.y + 1 };
+    places[j] = p;
+    settled.push(j);
+  }
+  const blocks = sheet.blocks
+    .map((b, j) => ({ ...b, place: places[j] }))
+    .sort((a, b) => a.place.y - b.place.y || a.place.x - b.place.x);
   return { ...sheet, blocks };
 }
 

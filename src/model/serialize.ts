@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
 import { normalizePhases, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
@@ -63,9 +63,18 @@ function parseDoc(raw: unknown): ProjectDoc {
   }
 }
 
+/** A map as stored, including the fields of older versions. */
+type RawMap = Partial<Omit<Blueprint, 'textRows'>> & {
+  textRows?: Partial<TextRow>[];
+  infos?: Record<string, string>;
+  infoRow?: boolean;
+  infoTitle?: string;
+  infoText?: string;
+};
+
 function parseMap(input: unknown): Blueprint {
   if (!isObject(input)) throw new ProjectFileError('invalid');
-  const raw = input as Partial<Blueprint>;
+  const raw = input as RawMap;
   if (!Array.isArray(raw.steps) || !Array.isArray(raw.personas)) throw new ProjectFileError('invalid');
   const steps = raw.steps.map((s) => ({
     id: String(s.id),
@@ -87,13 +96,39 @@ function parseMap(input: unknown): Blueprint {
     links: Array.isArray(raw.links) ? raw.links : [],
     dividers: Array.isArray(raw.dividers) ? raw.dividers : [],
     tagColors: raw.tagColors && typeof raw.tagColors === 'object' ? raw.tagColors : {},
-    styles: raw.styles ?? {},
+    ...textRowsOf(raw),
     storyboard: Boolean(raw.storyboard),
-    infos: raw.infos && typeof raw.infos === 'object' ? raw.infos : {},
-    infoRow: Boolean(raw.infoRow),
-    ...(typeof raw.infoTitle === 'string' ? { infoTitle: raw.infoTitle } : {}),
-    ...(typeof raw.infoText === 'string' ? { infoText: raw.infoText } : {}),
   };
+}
+
+/**
+ * The free text rows. Files before 1.2 had a single one (infoRow, infos,
+ * infoTitle, infoText, and its cells styled as 'info:<step>'): it becomes the
+ * first row when it was shown or held text.
+ */
+function textRowsOf(raw: RawMap): Pick<Blueprint, 'textRows' | 'styles'> {
+  const styles: Blueprint['styles'] = raw.styles ?? {};
+  if (Array.isArray(raw.textRows)) {
+    const textRows = raw.textRows.map((r) => ({
+      id: String(r.id ?? uid()),
+      ...(typeof r.title === 'string' ? { title: r.title } : {}),
+      ...(typeof r.text === 'string' ? { text: r.text } : {}),
+      cells: r.cells && typeof r.cells === 'object' ? r.cells : {},
+    }));
+    return { textRows, styles };
+  }
+  const cells = raw.infos && typeof raw.infos === 'object' ? raw.infos : {};
+  if (!raw.infoRow && !Object.values(cells).some((v) => String(v).trim())) return { textRows: [], styles };
+  const id = uid();
+  const moved: Blueprint['styles'] = {};
+  for (const [key, style] of Object.entries(styles)) moved[/^info:[^:]+$/.test(key) ? `info:${id}:${key.slice(5)}` : key] = style;
+  const row = {
+    id,
+    ...(typeof raw.infoTitle === 'string' ? { title: raw.infoTitle } : {}),
+    ...(typeof raw.infoText === 'string' ? { text: raw.infoText } : {}),
+    cells,
+  };
+  return { textRows: [row], styles: moved };
 }
 
 /** A tag colour map, when the file has one: index per lower-cased tag. */
@@ -143,7 +178,14 @@ function parseBlock(raw: Record<string, unknown>): SheetBlock {
       ...(typeof i.level === 'number' ? { level: Math.max(0, Math.min(100, i.level)) } : {}),
     })),
     text: str(raw.text),
+    ...placeOf(raw.place),
   };
+}
+
+function placeOf(v: unknown): { place?: SheetBlock['place'] } {
+  if (!isObject(v)) return {};
+  const n = (k: string, min: number) => (typeof v[k] === 'number' && Number.isFinite(v[k]) ? Math.max(min, Math.floor(v[k] as number)) : min);
+  return { place: { x: n('x', 0), y: n('y', 0), w: n('w', 1), h: n('h', 1) } };
 }
 
 const NODE_KINDS: FlowNodeKind[] = ['start', 'end', 'activity', 'choice'];

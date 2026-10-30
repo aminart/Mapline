@@ -62,7 +62,6 @@ export function exampleBlueprint(): Blueprint {
     tagColors: {},
     styles: {},
     storyboard: true,
-    infos: {},
-    infoRow: false,
+    textRows: [],
   };
 }

@@ -115,7 +115,7 @@ function pick(s: DocState): DocState {
 const EMPTY_MAP: Blueprint = {
   objective: '', phases: [], steps: [], personas: [],
   activities: {}, scenes: {}, links: [], dividers: [], tagColors: {}, styles: {}, storyboard: false,
-  infos: {}, infoRow: false,
+  textRows: [],
 };
 const emptyProject = projectFromMap('', EMPTY_MAP);
 

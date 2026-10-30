@@ -9,6 +9,7 @@ import { createSheet, createSheetProject, sheetDoc } from './templates';
 import { parse, serialize } from './serialize';
 import { removePersona } from './ops';
 import type { PersonaSheet } from './types';
+import { PROJECT_VERSION } from './project';
 
 const blank = (): PersonaSheet => createSheet('blank', 'fr');
 
@@ -149,5 +150,56 @@ describe('sheets in a project', () => {
     const { project, mapId, persona } = withSheet();
     const map = missionMapOf(project, mapId)!.map;
     expect(personaFootprint(map, persona.id)).toEqual({ steps: 5, activities: 6, tags: [] });
+  });
+});
+
+describe('placing blocks on the sheet grid', () => {
+  const classic = () => createSheet('classic', 'fr');
+  const at = (s: PersonaSheet, title: string) => sheetOps.sheetLayout(s.blocks)[s.blocks.findIndex((b) => b.title === title)];
+
+  it('lays out blocks never moved three to a row', () => {
+    const s = classic();
+    expect(sheetOps.sheetLayout(s.blocks).map((p) => [p.x, p.y, p.w, p.h])).toEqual([
+      [0, 0, 2, 1],
+      [2, 0, 2, 1],
+      [4, 0, 2, 1],
+      [0, 1, 2, 1],
+      [2, 1, 2, 1],
+      [4, 1, 2, 1],
+    ]);
+  });
+
+  it('moves a block anywhere, pushing down the blocks it would cover', () => {
+    let s = classic();
+    s = sheetOps.placeBlock(s, s.blocks[5].id, { x: 0, y: 0, w: 2, h: 1 });
+    expect(at(s, 'Scénario')).toEqual({ x: 0, y: 0, w: 2, h: 1 });
+    expect(at(s, 'Objectifs')).toEqual({ x: 0, y: 1, w: 2, h: 1 });
+    // Blocks keep reading order: row, then column.
+    expect(s.blocks[0].title).toBe('Scénario');
+    // A free cell far down is fine: the gap is kept.
+    s = sheetOps.placeBlock(s, s.blocks[0].id, { x: 4, y: 5, w: 2, h: 1 });
+    expect(at(s, 'Scénario')).toEqual({ x: 4, y: 5, w: 2, h: 1 });
+  });
+
+  it('resizes across columns and rows, within the grid', () => {
+    let s = classic();
+    const id = s.blocks[0].id;
+    s = sheetOps.placeBlock(s, id, { x: 0, y: 0, w: 4, h: 2 });
+    expect(at(s, 'Objectifs')).toEqual({ x: 0, y: 0, w: 4, h: 2 });
+    expect(at(s, 'Frustrations').y).toBe(2);
+    s = sheetOps.placeBlock(s, id, { x: 3, y: 0, w: 9, h: 0 });
+    expect(at(s, 'Objectifs')).toEqual({ x: 0, y: 0, w: sheetOps.SHEET_COLS, h: 1 });
+    const places = sheetOps.sheetLayout(s.blocks);
+    for (const p of places) for (const q of places)
+      if (p !== q) expect(p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h).toBe(false);
+  });
+
+  it('puts a new block in the first free cell, and keeps places through save', () => {
+    let s = classic();
+    s = sheetOps.placeBlock(s, s.blocks[1].id, { x: 2, y: 3, w: 2, h: 1 });
+    s = sheetOps.addBlock(s, sheetOps.newBlock('Nouveau', 'list', '#2F55D4'));
+    expect(at(s, 'Nouveau')).toEqual({ x: 2, y: 0, w: 2, h: 1 });
+    const back = parse(serialize({ version: PROJECT_VERSION, title: '', docs: [sheetDoc(s)] })).docs[0];
+    expect(back.kind === 'persona' && back.sheet.blocks.map((b) => b.place)).toEqual(s.blocks.map((b) => b.place));
   });
 });

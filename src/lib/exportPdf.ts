@@ -95,7 +95,7 @@ export interface PdfLabels {
 }
 
 /** Copies part of the rendered board (layout px, from `top` down) into a new canvas. */
-function crop(canvas: HTMLCanvasElement, scale: number, parts: { x0: number; x1: number }[], top: number, height: number) {
+export function crop(canvas: HTMLCanvasElement, scale: number, parts: { x0: number; x1: number }[], top: number, height: number) {
   const out = document.createElement('canvas');
   out.width = Math.round(parts.reduce((w, p) => w + (p.x1 - p.x0), 0) * scale);
   out.height = Math.round((height - top) * scale);

@@ -153,7 +153,7 @@ describe('drag and drop', () => {
     expect(swapped.links).toEqual(doc.links);
   });
 
-  it('reorders steps and personas, keeping phase sizes and separators', () => {
+  it('reorders steps and personas, keeping phase sizes and separator places', () => {
     let doc = exampleBlueprint();
     doc = ops.addDivider(doc, doc.personas[1].id, 'Ligne');
     const ids = doc.steps.map((s) => s.id);
@@ -162,7 +162,8 @@ describe('drag and drop', () => {
     expect(spans(moved)).toEqual(spans(doc));
     const people = ops.movePersona(doc, 0, 2);
     expect(people.personas.map((p) => p.name)).toEqual(['Secrétaire', 'Praticien', 'Patient']);
-    expect(people.dividers[0].after).toBe(doc.personas[1].id);
+    // The separator stays under the second row, whoever is there now.
+    expect(people.dividers[0].after).toBe(people.personas[1].id);
     expect(ops.moveStep(doc, 0, 9)).toBe(doc);
   });
 });
@@ -185,6 +186,21 @@ describe('separators', () => {
     doc = ops.removePersona(doc, doc.personas[0].id);
     expect(doc.dividers).toEqual([expect.objectContaining({ after: ops.DIVIDER_TOP, label: 'Ligne de visibilité' })]);
     expect(roundTrip(doc).dividers).toEqual(doc.dividers);
+  });
+});
+
+describe('moving separators', () => {
+  it('moves a separator to another place between rows, never onto another one', () => {
+    let doc = exampleBlueprint();
+    doc = ops.addDivider(doc, doc.personas[0].id, 'Visibilité');
+    doc = ops.addDivider(doc, doc.personas[1].id, 'Interne');
+    const [visibility, internal] = doc.dividers;
+    const top = ops.moveDivider(doc, visibility.id, 0);
+    expect(top.dividers[0].after).toBe(ops.DIVIDER_TOP);
+    const last = ops.moveDivider(doc, visibility.id, 3);
+    expect(ops.dividerGap(last, last.dividers[0])).toBe(3);
+    expect(ops.moveDivider(doc, visibility.id, 2)).toBe(doc);
+    expect(ops.moveDivider(doc, internal.id, 9)).toBe(doc);
   });
 });
 
@@ -305,19 +321,38 @@ describe('alternative wording', () => {
   });
 });
 
-describe('additional information row', () => {
-  it('stores text per step and drops it with its step', () => {
+describe('free text rows', () => {
+  it('adds rows, stores text per step and drops it with its step', () => {
     let doc = exampleBlueprint();
-    doc = ops.setInfo(doc, doc.steps[0].id, 'Canal : mobile');
-    expect(roundTrip(doc).infos[doc.steps[0].id]).toBe('Canal : mobile');
-    expect(ops.removeStep(doc, 0).infos).toEqual({});
+    const first = ops.addTextRow(doc, 'Canaux');
+    const second = ops.addTextRow(first.doc, 'Texte libre');
+    doc = ops.setTextCell(second.doc, first.rowId, doc.steps[0].id, 'Canal : mobile');
+    expect(roundTrip(doc).textRows.map((r) => r.title)).toEqual(['Canaux', 'Texte libre']);
+    expect(roundTrip(doc).textRows[0].cells[doc.steps[0].id]).toBe('Canal : mobile');
+    expect(ops.removeStep(doc, 0).textRows[0].cells).toEqual({});
+    expect(ops.removeTextRow(doc, first.rowId).textRows.map((r) => r.id)).toEqual([second.rowId]);
   });
 
   it('keeps a renamed title and description, and leaves the defaults unset', () => {
+    const { doc, rowId } = ops.addTextRow(exampleBlueprint(), 'Infos');
+    const renamed = roundTrip(ops.setTextRow(doc, rowId, { title: 'Canaux', text: 'Par où passe le client' }));
+    expect(renamed.textRows[0]).toMatchObject({ title: 'Canaux', text: 'Par où passe le client' });
+    expect(roundTrip({ ...doc, textRows: [{ id: rowId, cells: {} }] }).textRows[0].text).toBeUndefined();
+  });
+
+  it('opens the single information row of older files as the first text row', () => {
     const doc = exampleBlueprint();
-    expect(roundTrip(doc).infoTitle).toBeUndefined();
-    const renamed = roundTrip({ ...doc, infoTitle: 'Canaux', infoText: 'Par où passe le client' });
-    expect([renamed.infoTitle, renamed.infoText]).toEqual(['Canaux', 'Par où passe le client']);
+    const step = doc.steps[0].id;
+    const { textRows: _rows, ...rest } = doc;
+    const old = { ...rest, infoRow: true, infos: { [step]: 'Mobile' }, infoTitle: 'Canaux', styles: { [`info:${step}`]: { bg: '#FFF' } } };
+    const [map] = parse(JSON.stringify(old)).docs;
+    if (map.kind !== 'mission-map') throw new Error('not a map');
+    const [row] = map.map.textRows;
+    expect(row).toMatchObject({ title: 'Canaux', cells: { [step]: 'Mobile' } });
+    expect(map.map.styles[ops.textCellKey(row.id, step)]).toEqual({ bg: '#FFF' });
+    // Hidden and empty: nothing to keep.
+    const hidden = parse(JSON.stringify({ ...rest, infoRow: false, infos: {} })).docs[0];
+    expect(hidden.kind === 'mission-map' && hidden.map.textRows).toEqual([]);
   });
 });
 

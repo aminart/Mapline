@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Activity, Blueprint, BoxKey, BoxStyle, Id, Link, Phase, Scene } from './types';
+import type { Activity, Blueprint, BoxKey, BoxStyle, Divider, Id, Link, Persona, Phase, Scene } from './types';
 import { PERSONA_PALETTE } from './theme';
 
 export function uid(): Id {
@@ -79,11 +79,10 @@ function prune(doc: Blueprint): Blueprint {
   }
   const scenes: Blueprint['scenes'] = {};
   for (const [stepId, scene] of Object.entries(doc.scenes)) if (steps.has(stepId)) scenes[stepId] = scene;
-  const infos: Blueprint['infos'] = {};
-  for (const [stepId, info] of Object.entries(doc.infos)) if (steps.has(stepId)) infos[stepId] = info;
+  const textRows = doc.textRows.map((r) => ({ ...r, cells: Object.fromEntries(Object.entries(r.cells).filter(([stepId]) => steps.has(stepId))) }));
   const links = doc.links.filter((l) => alive.has(l.from) && alive.has(l.to));
   const dividers = doc.dividers.filter((d) => d.after === DIVIDER_TOP || personas.has(d.after));
-  return { ...doc, activities, scenes, infos, links, dividers };
+  return { ...doc, activities, scenes, textRows, links, dividers };
 }
 
 // Steps
@@ -334,11 +333,32 @@ export function removeLink(doc: Blueprint, linkId: Id): Blueprint {
   return { ...doc, links: doc.links.filter((l) => l.id !== linkId) };
 }
 
-// Storyboard
+// Free text rows
 
-export function setInfo(doc: Blueprint, stepId: Id, text: string): Blueprint {
-  return { ...doc, infos: { ...doc.infos, [stepId]: text } };
+/** Adds a free text row at the bottom, titled `title`. */
+export function addTextRow(doc: Blueprint, title: string): { doc: Blueprint; rowId: Id } {
+  const rowId = uid();
+  return { doc: { ...doc, textRows: doc.textRows.concat([{ id: rowId, title, cells: {} }]) }, rowId };
 }
+
+export function removeTextRow(doc: Blueprint, rowId: Id): Blueprint {
+  return { ...doc, textRows: doc.textRows.filter((r) => r.id !== rowId) };
+}
+
+/** Renames a row or changes its description. */
+export function setTextRow(doc: Blueprint, rowId: Id, patch: { title?: string; text?: string }): Blueprint {
+  return { ...doc, textRows: doc.textRows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)) };
+}
+
+/** The text of a row under one step. */
+export function setTextCell(doc: Blueprint, rowId: Id, stepId: Id, text: string): Blueprint {
+  return { ...doc, textRows: doc.textRows.map((r) => (r.id === rowId ? { ...r, cells: { ...r.cells, [stepId]: text } } : r)) };
+}
+
+/** Key of a row's cell under a step, for its style. */
+export const textCellKey = (rowId: Id, stepId: Id): BoxKey => `info:${rowId}:${stepId}`;
+
+// Storyboard
 
 export function setScene(doc: Blueprint, stepId: Id, patch: Partial<Scene>): Blueprint {
   const prev = doc.scenes[stepId] ?? { img: null, text: '' };
@@ -395,10 +415,15 @@ export function moveStep(doc: Blueprint, from: number, to: number): Blueprint {
   return { ...doc, steps: moveItem(doc.steps, from, to) };
 }
 
-/** Moves a persona row; separators stay under their persona. */
+/**
+ * Moves a persona row. Separators keep their place between rows (the line of
+ * visibility stays where it was drawn), whichever personas end up around them.
+ */
 export function movePersona(doc: Blueprint, from: number, to: number): Blueprint {
   if (from === to || from < 0 || to < 0 || from >= doc.personas.length || to >= doc.personas.length) return doc;
-  return { ...doc, personas: moveItem(doc.personas, from, to) };
+  const personas = moveItem(doc.personas, from, to);
+  const dividers = doc.dividers.map((d) => ({ ...d, after: gapAnchor(personas, dividerGap(doc, d)) }));
+  return { ...doc, personas, dividers };
 }
 
 // Arrows
@@ -415,6 +440,24 @@ export const DIVIDER_TOP = '';
 export function addDivider(doc: Blueprint, after: Id, label: string): Blueprint {
   if (doc.dividers.some((d) => d.after === after)) return doc;
   return { ...doc, dividers: doc.dividers.concat([{ id: uid(), after, label }]) };
+}
+
+/** How many persona rows sit above a separator. */
+export function dividerGap(doc: Blueprint, divider: Divider): number {
+  return divider.after === DIVIDER_TOP ? 0 : doc.personas.findIndex((p) => p.id === divider.after) + 1;
+}
+
+const gapAnchor = (personas: Persona[], gap: number): Id => (gap <= 0 ? DIVIDER_TOP : personas[gap - 1].id);
+
+/**
+ * Moves a separator between other rows: `gap` counts the persona rows above
+ * its new place. A place that already has a separator is refused.
+ */
+export function moveDivider(doc: Blueprint, id: Id, gap: number): Blueprint {
+  if (gap < 0 || gap > doc.personas.length) return doc;
+  const after = gapAnchor(doc.personas, gap);
+  if (doc.dividers.some((d) => d.after === after)) return doc;
+  return { ...doc, dividers: doc.dividers.map((d) => (d.id === id ? { ...d, after } : d)) };
 }
 
 export function setDividerLabel(doc: Blueprint, id: Id, label: string): Blueprint {

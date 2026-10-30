@@ -4,24 +4,54 @@
 import { useRef } from 'react';
 import { useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
-import type { Step } from '../model/types';
+import type { Step, TextRow as Row } from '../model/types';
 import { useBox } from './useBox';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
+import { PlusIcon } from './Icons';
 import { cls } from './cls';
 
-/** Optional row under the personas: free text under each step, like the storyboard without images. */
-export function InfoRow() {
+/** The free text rows under the personas, and the button that adds one. */
+export function TextRows() {
+  const t = useT();
+  const rows = useMap((m) => m.textRows);
+  const apply = useStore((s) => s.apply);
+  const focusLater = useStore((s) => s.focusLater);
+  const firstStep = useMap((m) => m.steps[0]?.id);
+  const add = () => {
+    let id = '';
+    apply((d) => {
+      // The first row keeps its usual name; the next ones are plain text rows.
+      const r = ops.addTextRow(d, t(d.textRows.length ? 'info.newTitle' : 'info.title'));
+      id = r.rowId;
+      return r.doc;
+    });
+    if (firstStep) focusLater(ops.textCellKey(id, firstStep));
+  };
+  return (
+    <>
+      {rows.map((r) => (
+        <TextRow key={r.id} row={r} />
+      ))}
+      <div className="grid-row no-export">
+        <button className="add-dashed add-text-row" onClick={add}>
+          <PlusIcon /> {t('info.add')}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** A free text row: text under each step, like the storyboard without images. */
+function TextRow({ row }: { row: Row }) {
   const t = useT();
   const steps = useMap((m) => m.steps);
-  const title = useMap((m) => m.infoTitle);
-  const text = useMap((m) => m.infoText);
   const apply = useStore((s) => s.apply);
   const textRef = useRef<HTMLTextAreaElement>(null);
-  const shownText = text ?? t('info.text');
+  const shownText = row.text ?? t('info.text');
   useFitText(textRef, [shownText]);
   return (
-    <div className="grid-row info-row">
+    <div className="grid-row info-row" data-text-row={row.id}>
       <div className="row-head">
         {/* Title and description start as the defaults and can be renamed. */}
         <FitText
@@ -29,11 +59,11 @@ export function InfoRow() {
           className="eyebrow eyebrow-accent row-head-title"
           aria-label={t('info.renameTitle')}
           title={t('info.renameTitle')}
-          value={title ?? t('info.title')}
+          value={row.title ?? t('info.title')}
           maxLength={60}
           onChange={(e) => {
             const v = e.target.value;
-            apply((d) => ({ ...d, infoTitle: v }), { coalesce: 'info-title' });
+            apply((d) => ops.setTextRow(d, row.id, { title: v }), { coalesce: `text-row-title:${row.id}` });
           }}
         />
         <textarea
@@ -45,26 +75,25 @@ export function InfoRow() {
           value={shownText}
           onChange={(e) => {
             const v = e.target.value;
-            apply((d) => ({ ...d, infoText: v }), { coalesce: 'info-text' });
+            apply((d) => ops.setTextRow(d, row.id, { text: v }), { coalesce: `text-row-text:${row.id}` });
           }}
         />
-        <button className="chip no-export" onClick={() => apply((d) => ({ ...d, infoRow: false }))}>
-          {t('sb.hide')}
+        <button className="chip no-export" onClick={() => apply((d) => ops.removeTextRow(d, row.id))}>
+          {t('info.remove')}
         </button>
       </div>
       {steps.map((s) => (
-        <InfoCell key={s.id} step={s} />
+        <TextCell key={s.id} rowId={row.id} step={s} text={row.cells[s.id] ?? ''} />
       ))}
       <div />
     </div>
   );
 }
 
-function InfoCell({ step }: { step: Step }) {
+function TextCell({ rowId, step, text }: { rowId: string; step: Step; text: string }) {
   const t = useT();
-  const text = useMap((m) => m.infos[step.id] ?? '');
   const apply = useStore((s) => s.apply);
-  const b = useBox<HTMLTextAreaElement>(`info:${step.id}`, 'info');
+  const b = useBox<HTMLTextAreaElement>(ops.textCellKey(rowId, step.id), 'info');
   useFitText(b.ref, [text, b.text.fontFamily, b.text.fontSize, b.text.fontWeight]);
   return (
     <div className={cls('box info', b.selected && 'is-selected')} style={{ ...b.box, gridColumn: `span ${step.slots.length}` }} data-step={step.id}>
@@ -77,7 +106,7 @@ function InfoCell({ step }: { step: Step }) {
         onFocus={b.onFocus}
         onChange={(e) => {
           const v = e.target.value;
-          apply((d) => ops.setInfo(d, step.id, v), { coalesce: `info:${step.id}` });
+          apply((d) => ops.setTextCell(d, rowId, step.id, v), { coalesce: `info:${rowId}:${step.id}` });
         }}
         style={b.text}
       />

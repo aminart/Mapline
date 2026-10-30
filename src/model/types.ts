@@ -97,12 +97,18 @@ export interface Blueprint {
   /** Keyed by a box key, see BoxKey. */
   styles: Record<string, BoxStyle>;
   storyboard: boolean;
-  /** Additional information under each step, below the personas. Keyed by step id. */
-  infos: Record<Id, string>;
-  infoRow: boolean;
+  /** Free text rows under the personas, in order. */
+  textRows: TextRow[];
+}
+
+/** A free text row under the personas: a title, a description, and a text under each step. */
+export interface TextRow {
+  id: Id;
   /** The row's own title and description; the translated defaults when unset. */
-  infoTitle?: string;
-  infoText?: string;
+  title?: string;
+  text?: string;
+  /** Keyed by step id. */
+  cells: Record<Id, string>;
 }
 
 /** A mission map inside a project. */
@@ -136,6 +142,19 @@ export interface SheetBlock {
   items: SheetItem[];
   /** Free text, for the text view. */
   text: string;
+  /** Where the block sits on the sheet's grid; laid out in order when missing. */
+  place?: BlockPlace;
+}
+
+/**
+ * A block's cell on the sheet grid: column and row of its top left corner,
+ * and how many columns and rows it spans.
+ */
+export interface BlockPlace {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 /** A labelled line of the identity column: age, place, situation… */

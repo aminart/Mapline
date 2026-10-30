@@ -5,7 +5,8 @@ import { activeMap, t, useStore } from './store';
 import { isDesktop, openProject, saveExport, saveProject } from './lib/fileio';
 import { boardRef } from './components/Board';
 import { nextFrame, renderBoardCanvas, type BoardLayout, type RenderOptions } from './lib/exportImage';
-import { pdfDocument, type PdfLayout } from './lib/exportPdf';
+import { crop, pdfDocument, planPhasePages, type PdfLayout } from './lib/exportPdf';
+import { pptxDocument, type Slide } from './lib/exportPptx';
 import { copyPng, jpegBlob, pngBlob, type ExportFormat } from './lib/exportFormats';
 import { buildCsv } from './lib/exportCsv';
 import { ProjectFileError } from './model/serialize';
@@ -167,6 +168,10 @@ export interface ExportOptions extends RenderOptions {
   overview: boolean;
   /** PDF: the activity notes as an appendix. */
   notes: boolean;
+  /** PowerPoint: the active document only, or every document of the project. */
+  slides: 'doc' | 'project';
+  /** PowerPoint: a map gets one slide per phase rather than one for the whole map. */
+  slidePhases: boolean;
 }
 
 /** Renders the board for an image export, without selection ring or focus. */
@@ -205,6 +210,12 @@ async function exportNow(opts: ExportOptions): Promise<boolean> {
       await saveExport(new Blob([csv], { type: 'text/csv;charset=utf-8' }), title, 'csv', t('file.csv'));
       return true;
     }
+    if (opts.format === 'pptx') {
+      const slides = await renderSlides(opts);
+      const name = opts.slides === 'project' ? projectTitle : title;
+      await saveExport(await pptxDocument(name, slides), name, 'pptx', t('file.pptx'));
+      return true;
+    }
     const { canvas, layout } = await renderForExport(opts);
     if (opts.format === 'png') await saveExport(await pngBlob(canvas), title, 'png', t('file.png'));
     else if (opts.format === 'jpeg') await saveExport(await jpegBlob(canvas), title, 'jpg', t('file.jpeg'));
@@ -233,6 +244,38 @@ async function exportNow(opts: ExportOptions): Promise<boolean> {
     report(err);
     return false;
   }
+}
+
+/**
+ * The slides of a PowerPoint export: each document is shown in turn and
+ * pictured; a map is cut into its phases when asked. The document that was
+ * open is shown again at the end.
+ */
+async function renderSlides(opts: ExportOptions): Promise<Slide[]> {
+  const { project, docId, setDoc } = useStore.getState();
+  const docs = opts.slides === 'project' ? project.docs : project.docs.filter((d) => d.id === docId);
+  const slides: Slide[] = [];
+  try {
+    for (const doc of docs) {
+      setDoc(doc.id);
+      await nextFrame();
+      await document.fonts?.ready;
+      const { canvas, layout } = await renderForExport(opts);
+      const label = docLabel(project, doc.id);
+      const objective = doc.kind === 'mission-map' ? layout.objective : undefined;
+      if (doc.kind === 'mission-map' && opts.slidePhases && layout.phases.length > 0) {
+        for (const p of planPhasePages(layout)) {
+          const image = crop(canvas, opts.scale, [{ x0: 0, x1: layout.stripRight }, p], p.top, layout.height);
+          slides.push({ title: `${label} · ${p.title || t('pdf.phase', { n: p.index + 1 })}`, subtitle: objective, image });
+        }
+      } else {
+        slides.push({ title: label, image: canvas });
+      }
+    }
+  } finally {
+    setDoc(docId);
+  }
+  return slides;
 }
 
 /** Copies the board as a PNG; must be called from the click handler itself. */

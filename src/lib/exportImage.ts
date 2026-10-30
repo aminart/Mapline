@@ -98,7 +98,7 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
     const objective = board.querySelector<HTMLElement>('.objective');
     const phases = Array.from(board.querySelectorAll<HTMLElement>('.phase')).map((el) => {
       const at = layoutOffset(el);
-      const input = el.querySelector('input');
+      const input = el.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
       const style = input ? getComputedStyle(input) : null;
       return {
         left: at.x - origin.x,

@@ -3,7 +3,7 @@
 
 import { isDesktop } from './fileio';
 
-export type ExportFormat = 'png' | 'jpeg' | 'pdf' | 'csv';
+export type ExportFormat = 'png' | 'jpeg' | 'pdf' | 'pptx' | 'csv';
 
 function toBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) =>
