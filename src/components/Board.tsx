@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, CloseIcon, GripIcon, MinusIcon, PlusIcon } f
 import { startDrag, useDropTarget } from './dnd';
 import { PresentationFocus } from './Presentation';
 import { StoryboardRow } from './Storyboard';
-import { InfoRow } from './InfoRow';
+import { TextRows } from './InfoRow';
 import { FitText } from './FitText';
 import { PersonaGrid, TagSuggestions } from './PersonaGrid';
 import { cls } from './cls';
@@ -24,7 +24,6 @@ export function Board() {
   const t = useT();
   const steps = useMap((m) => m.steps);
   const storyboard = useMap((m) => m.storyboard);
-  const infoRow = useMap((m) => m.infoRow);
   const zoom = useStore((s) => s.zoom);
   const presenting = useStore((s) => s.presentStep !== null);
   const apply = useStore((s) => s.apply);
@@ -41,12 +40,13 @@ export function Board() {
         {storyboard && <StoryboardRow />}
         <PersonaGrid />
         <TagSuggestions />
-        {infoRow && <InfoRow />}
+        {/* Right under the last persona, above the free text rows. */}
         <div className="grid-row no-export">
           <button className="add-dashed add-persona" onClick={() => apply(ops.addPersona)}>
             <PlusIcon /> {t('board.addPersona')}
           </button>
         </div>
+        <TextRows />
       </div>
     </div>
   );

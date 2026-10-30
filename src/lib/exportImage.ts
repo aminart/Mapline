@@ -54,6 +54,63 @@ export interface BoardLayout {
   phases: { left: number; right: number; top: number; height: number; title: string; color: string; size: number }[];
 }
 
+/** Classes that lay the board out as exported: no hints, rows left out, flat or transparent. */
+function exportModes(opts: RenderOptions): string[] {
+  return ['is-exporting', opts.transparent && 'export-transparent', opts.flat && 'export-flat', !opts.storyboard && 'export-no-storyboard', !opts.info && 'export-no-info'].filter(
+    (c): c is string => Boolean(c),
+  );
+}
+
+/** Runs `fn` while the board is laid out for export, with the empty-field hints cleared. */
+export async function withExportLayout<T>(board: HTMLElement, opts: RenderOptions, fn: () => T | Promise<T>): Promise<T> {
+  const modes = exportModes(opts);
+  board.classList.add(...modes);
+  const hinted = Array.from(board.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[placeholder]'));
+  const hints = hinted.map((el) => el.placeholder);
+  hinted.forEach((el) => (el.placeholder = ''));
+  try {
+    await nextFrame();
+    return await fn();
+  } finally {
+    hinted.forEach((el, i) => (el.placeholder = hints[i]));
+    board.classList.remove(...modes);
+  }
+}
+
+/** Where the steps, phases and objective are on the board, in layout pixels. */
+export function measureLayout(board: HTMLElement): BoardLayout {
+  const origin = layoutOffset(board);
+  const boardWidth = board.offsetWidth;
+  const steps = Array.from(board.querySelectorAll<HTMLElement>('.step[data-step]')).map((el) => {
+    const x = layoutOffset(el).x - origin.x;
+    return { left: x, right: x + el.offsetWidth };
+  });
+  const objective = board.querySelector<HTMLElement>('.objective');
+  const phases = Array.from(board.querySelectorAll<HTMLElement>('.phase')).map((el) => {
+    const at = layoutOffset(el);
+    const input = el.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
+    const style = input ? getComputedStyle(input) : null;
+    return {
+      left: at.x - origin.x,
+      right: at.x - origin.x + el.offsetWidth,
+      top: at.y - origin.y,
+      height: el.offsetHeight,
+      title: input?.value ?? '',
+      color: style?.color ?? '#1E3A9E',
+      size: style ? parseFloat(style.fontSize) : 14,
+    };
+  });
+  return {
+    width: boardWidth,
+    height: board.offsetHeight,
+    stripRight: steps.length ? steps[0].left - 6 : boardWidth,
+    steps,
+    objectiveBottom: objective ? layoutOffset(objective).y - origin.y + objective.offsetHeight + 8 : 0,
+    objective: objective?.querySelector('textarea')?.value ?? '',
+    phases,
+  };
+}
+
 /**
  * Renders the board on a canvas.
  *
@@ -66,9 +123,7 @@ export interface BoardLayout {
 export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions): Promise<{ canvas: HTMLCanvasElement; layout: BoardLayout }> {
   const { toCanvas } = await import('html-to-image');
 
-  const modes = ['is-exporting', opts.transparent && 'export-transparent', opts.flat && 'export-flat', !opts.storyboard && 'export-no-storyboard', !opts.info && 'export-no-info'].filter(
-    (c): c is string => Boolean(c),
-  );
+  const modes = exportModes(opts);
   board.classList.add(...modes);
   const hinted = Array.from(board.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[placeholder]'));
   const hints = hinted.map((el) => el.placeholder);
@@ -91,34 +146,7 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
     // Measured while the export layout (e.g. without storyboard) applies.
     origin = layoutOffset(board);
     boardWidth = board.offsetWidth;
-    const steps = Array.from(board.querySelectorAll<HTMLElement>('.step[data-step]')).map((el) => {
-      const x = layoutOffset(el).x - origin.x;
-      return { left: x, right: x + el.offsetWidth };
-    });
-    const objective = board.querySelector<HTMLElement>('.objective');
-    const phases = Array.from(board.querySelectorAll<HTMLElement>('.phase')).map((el) => {
-      const at = layoutOffset(el);
-      const input = el.querySelector('input');
-      const style = input ? getComputedStyle(input) : null;
-      return {
-        left: at.x - origin.x,
-        right: at.x - origin.x + el.offsetWidth,
-        top: at.y - origin.y,
-        height: el.offsetHeight,
-        title: input?.value ?? '',
-        color: style?.color ?? '#1E3A9E',
-        size: style ? parseFloat(style.fontSize) : 14,
-      };
-    });
-    layout = {
-      width: boardWidth,
-      height: board.offsetHeight,
-      stripRight: steps.length ? steps[0].left - 6 : boardWidth,
-      steps,
-      objectiveBottom: objective ? layoutOffset(objective).y - origin.y + objective.offsetHeight + 8 : 0,
-      objective: objective?.querySelector('textarea')?.value ?? '',
-      phases,
-    };
+    layout = measureLayout(board);
     const svgParent = board.querySelector<SVGSVGElement>('svg.links')?.parentElement;
     if (svgParent) {
       layer = layoutOffset(svgParent);

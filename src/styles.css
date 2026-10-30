@@ -303,7 +303,7 @@ select:focus-visible,
 }
 .project-title {
   min-width: 0;
-  max-width: 320px;
+  max-width: 34vw;
   height: 34px;
   padding: 0 10px;
   border: 1px solid transparent;
@@ -337,6 +337,7 @@ select:focus-visible,
   flex-direction: column;
   gap: 8px;
   min-width: 260px;
+  max-width: min(480px, 90vw);
   padding: 12px;
 }
 .project-list {
@@ -362,17 +363,15 @@ select:focus-visible,
   align-items: center;
   gap: 8px;
   min-width: 0;
-  height: 32px;
-  padding: 0 10px;
+  min-height: 32px;
+  padding: 6px 10px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   text-align: left;
   font-size: 13px;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .project-item:not(.is-active) .project-item-btn:hover {
   background: var(--surface-2);
@@ -900,9 +899,13 @@ select:focus-visible,
   gap: 4px;
   min-height: 72px;
 }
-.add-persona {
+.add-persona,
+.add-text-row {
   height: 52px;
   font-size: 14px;
+}
+.add-text-row {
+  margin-top: 4px;
 }
 
 .step-row {
@@ -1571,8 +1574,28 @@ body.is-dragging {
   min-height: 28px;
   margin: -6px 0;
 }
+.grip-divider {
+  width: 16px;
+  height: 18px;
+  margin-right: -8px;
+  border-radius: 4px;
+  opacity: 0;
+}
+.divider-row:hover .grip-divider {
+  opacity: 1;
+}
+.grip-divider:hover {
+  color: var(--ink-2);
+  background: rgba(20, 24, 32, 0.06);
+}
+/* While a separator is dragged over a persona row. */
+.persona-row.is-divider-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  border-radius: var(--radius);
+}
 .divider-label {
-  width: var(--persona-col, 220px);
+  width: calc(var(--persona-col, 220px) - 12px);
   flex-shrink: 0;
   border: 0;
   background: transparent;
@@ -1721,17 +1744,14 @@ body.is-dragging {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 30px;
-  padding: 0 4px 0 10px;
+  min-height: 30px;
+  padding: 4px 4px 4px 10px;
   border-radius: 15px;
   background: var(--accent-soft);
   color: var(--accent-ink);
   font-size: 12px;
   font-weight: 600;
-  max-width: 320px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .text-field {
   height: 32px;
@@ -1742,6 +1762,11 @@ body.is-dragging {
   font-size: 13px;
   padding: 0 8px;
   color: var(--ink);
+}
+.text-field-fit {
+  width: auto;
+  min-width: 180px;
+  max-width: 50vw;
 }
 .text-field:focus {
   outline: 2px solid var(--accent);
@@ -1825,9 +1850,7 @@ body.is-dragging {
 .present-name {
   font-size: 17px;
   font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .present-hint {
   font-size: 12px;
@@ -1924,7 +1947,9 @@ body.is-dragging {
   padding: 6px 12px 0;
   background: var(--surface-2);
   border-bottom: 1px solid var(--line);
-  overflow-x: auto;
+  /* Every tab stays in view with its whole name: more tabs make more rows. */
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 .doc-tab {
   position: relative;
@@ -1971,13 +1996,29 @@ body.is-dragging {
   color: var(--ink);
   font-weight: 600;
 }
-.doc-tab-close {
+.doc-tab-action {
   opacity: 0;
   margin-left: -4px;
 }
-.doc-tab:hover .doc-tab-close,
-.doc-tab-close:focus-visible {
+.doc-tab-action + .doc-tab-action {
+  margin-left: -6px;
+}
+.doc-tab:hover .doc-tab-action,
+.doc-tab.is-active .doc-tab-action,
+.doc-tab-action:focus-visible {
   opacity: 1;
+}
+.doc-tab-input {
+  height: 26px;
+  margin: 0 6px;
+  padding: 0 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  outline: none;
 }
 .doc-add {
   display: flex;
@@ -2187,11 +2228,41 @@ body.is-dragging {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
+  /* Six columns: a block is two wide unless resized. Rows fit the tallest block in them. */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: minmax(72px, auto);
+  align-items: stretch;
   gap: 14px;
 }
+.sheet-drop-ghost {
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+.sheet-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  opacity: 0;
+  background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 60%, transparent 60%, transparent 72%, var(--muted) 72%, var(--muted) 82%, transparent 82%);
+  border-bottom-right-radius: 8px;
+}
+.sheet-block:hover .sheet-resize,
+body.is-resizing .sheet-resize {
+  opacity: 0.7;
+}
+body.is-resizing,
+body.is-resizing * {
+  cursor: nwse-resize !important;
+  user-select: none;
+}
 .sheet-block {
+  position: relative;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;

@@ -1,12 +1,12 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import { activeSheet, useStore, useT } from '../store';
 import * as so from '../model/sheet';
 import { setSheetIdentity, sheetIdentity } from '../model/project';
 import { BLOCK_ACCENTS, PERSONA_PALETTE, TAG_PALETTE, personaAccent, tagColor } from '../model/theme';
-import type { BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
+import type { BlockPlace, BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
 import { readImage } from '../lib/image';
 import { withBusy } from '../actions';
 import { boardRef } from './Board';
@@ -14,7 +14,7 @@ import { useBox } from './useBox';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
 import { focusSoon, useFocusKey } from './useFocusKey';
-import { startDrag, useDropTarget } from './dnd';
+import { startDrag, useDropTarget, type DropPoint } from './dnd';
 import { CameraIcon, CloseIcon, GripIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
 
@@ -29,13 +29,78 @@ export function SheetView() {
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="sheet" ref={boardRef}>
         <Identity sheet={sheet} />
-        <div className="sheet-blocks">
-          {sheet.blocks.map((block, i) => (
-            <BlockCard key={block.id} block={block} index={i} />
-          ))}
-          <AddBlock count={sheet.blocks.length} />
-        </div>
+        <Blocks sheet={sheet} />
       </div>
+    </div>
+  );
+}
+
+/** Height of an empty row of the blocks grid, in CSS pixels; matches styles.css. */
+const ROW_MIN = 72;
+
+/**
+ * The grid cell under a point of the blocks grid, from the grid's own track
+ * sizes. Below the last row, rows of the minimum height are counted on.
+ */
+function cellAt(grid: HTMLElement, at: DropPoint): { x: number; y: number } {
+  const r = grid.getBoundingClientRect();
+  // The board is zoomed: client pixels are CSS pixels times the scale.
+  const scale = grid.offsetWidth ? r.width / grid.offsetWidth : 1;
+  const style = getComputedStyle(grid);
+  const gap = parseFloat(style.columnGap) || 0;
+  const cols = style.gridTemplateColumns.split(' ').map(parseFloat);
+  const rows = style.gridTemplateRows === 'none' ? [] : style.gridTemplateRows.split(' ').map(parseFloat);
+  const px = (at.x - r.left) / scale;
+  const py = (at.y - r.top) / scale;
+  let x = 0;
+  for (let edge = 0; x < cols.length - 1 && px > edge + cols[x] + gap / 2; x++) edge += cols[x] + gap;
+  let y = 0;
+  let edge = 0;
+  for (; y < rows.length && py > edge + rows[y] + gap / 2; y++) edge += rows[y] + gap;
+  if (y === rows.length && py > edge) y += Math.floor((py - edge) / (ROW_MIN + gap));
+  return { x, y };
+}
+
+const gridArea = (p: BlockPlace) => ({ gridColumn: `${p.x + 1} / span ${p.w}`, gridRow: `${p.y + 1} / span ${p.h}` });
+
+/**
+ * The blocks, on a grid of six columns: each can be dragged to any cell, and
+ * resized from its corner, across columns and rows.
+ */
+function Blocks({ sheet }: { sheet: PersonaSheet }) {
+  const applySheet = useStore((s) => s.applySheet);
+  const ref = useRef<HTMLDivElement>(null);
+  const [ghost, setGhost] = useState<BlockPlace | null>(null);
+  const layout = so.sheetLayout(sheet.blocks);
+  const rows = Math.max(0, ...layout.map((p) => p.y + p.h));
+  // Where a dragged block would land: the cell under its top left corner.
+  const landing = (d: { id: string; grabX: number; grabY: number }, at: DropPoint): BlockPlace | null => {
+    const i = sheet.blocks.findIndex((b) => b.id === d.id);
+    if (i < 0 || !ref.current) return null;
+    const cell = cellAt(ref.current, { x: at.x - d.grabX + 8, y: at.y - d.grabY + 8 });
+    const { w, h } = layout[i];
+    return { x: Math.min(cell.x, so.SHEET_COLS - w), y: cell.y, w, h };
+  };
+  const drop = useDropTarget(
+    'block',
+    (d, at) => {
+      setGhost(null);
+      const place = landing(d, at);
+      if (place) applySheet((s) => so.placeBlock(s, d.id, place));
+    },
+    (d, at) => {
+      const place = landing(d, at);
+      if (place && (place.x !== ghost?.x || place.y !== ghost?.y || place.w !== ghost?.w || place.h !== ghost?.h)) setGhost(place);
+    },
+  );
+  const shown = drop.over ? ghost : null;
+  return (
+    <div ref={ref} className={cls('sheet-blocks', drop.over && 'is-dragging-over')} {...drop.props}>
+      {sheet.blocks.map((block, i) => (
+        <BlockCard key={block.id} sheet={sheet} block={block} place={layout[i]} grid={ref} />
+      ))}
+      {shown && <div className="sheet-drop-ghost no-export" style={gridArea(shown)} aria-hidden="true" />}
+      <AddBlock count={sheet.blocks.length} row={rows} />
     </div>
   );
 }
@@ -267,22 +332,57 @@ function Chips(props: {
   );
 }
 
-function BlockCard({ block, index }: { block: SheetBlock; index: number }) {
+/**
+ * Resizes a block from its corner: the cell under the pointer becomes its
+ * bottom right one. Each step is placed from the sheet as it was when the
+ * drag began, so blocks pushed down come back when the block shrinks again.
+ */
+function startResize(e: ReactPointerEvent, sheet: PersonaSheet, blockId: string, place: BlockPlace, grid: HTMLElement | null) {
+  if (e.button !== 0 || !grid) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const { applySheet } = useStore.getState();
+  const coalesce = `resize:${blockId}:${Date.now()}`;
+  let last = place;
+  const onMove = (ev: PointerEvent) => {
+    const cell = cellAt(grid, { x: ev.clientX, y: ev.clientY });
+    const next = { ...place, w: Math.max(1, cell.x - place.x + 1), h: Math.max(1, cell.y - place.y + 1) };
+    if (next.w === last.w && next.h === last.h) return;
+    last = next;
+    applySheet(() => so.placeBlock(sheet, blockId, next), { coalesce });
+  };
+  const onUp = () => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    document.body.classList.remove('is-resizing');
+  };
+  document.body.classList.add('is-resizing');
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+}
+
+function BlockCard({ sheet, block, place, grid }: { sheet: PersonaSheet; block: SheetBlock; place: BlockPlace; grid: RefObject<HTMLDivElement | null> }) {
   const t = useT();
   const applySheet = useStore((s) => s.applySheet);
   const b = useBox<HTMLTextAreaElement>(`block:${block.id}`, 'block');
   const ref = useRef<HTMLElement>(null);
-  const drop = useDropTarget('block', (d) => applySheet((s) => so.moveBlock(s, d.index, index)));
   return (
     <section
       ref={ref}
-      className={cls('box sheet-block', b.selected && 'is-selected', drop.over && 'is-drop-target')}
-      style={{ ...b.box, borderTopColor: block.accent }}
+      className={cls('box sheet-block', b.selected && 'is-selected')}
+      style={{ ...b.box, borderTopColor: block.accent, ...gridArea(place) }}
       data-block={block.id}
-      {...drop.props}
     >
       <header className="sheet-block-head">
-        <span className="grip no-export" title={t('sheet.dragBlock')} aria-hidden="true" onPointerDown={(e) => startDrag(e, { kind: 'block', index }, ref.current)}>
+        <span
+          className="grip no-export"
+          title={t('sheet.dragBlock')}
+          aria-hidden="true"
+          onPointerDown={(e) => {
+            const r = ref.current?.getBoundingClientRect();
+            startDrag(e, { kind: 'block', id: block.id, grabX: r ? e.clientX - r.left : 0, grabY: r ? e.clientY - r.top : 0 }, ref.current);
+          }}
+        >
           <GripIcon size={12} />
         </span>
         <FitText
@@ -320,6 +420,12 @@ function BlockCard({ block, index }: { block: SheetBlock; index: number }) {
         )}
         {block.view === 'text' && <TextBody block={block} onFocus={b.onFocus} />}
       </div>
+      <span
+        className="sheet-resize no-export"
+        title={t('sheet.resizeBlock')}
+        aria-hidden="true"
+        onPointerDown={(e) => startResize(e, sheet, block.id, place, grid.current)}
+      />
     </section>
   );
 }
@@ -486,7 +592,7 @@ function TextBody({ block, onFocus }: { block: SheetBlock; onFocus: () => void }
 }
 
 /** "Add a block", then the kind of block. */
-function AddBlock({ count }: { count: number }) {
+function AddBlock({ count, row }: { count: number; row: number }) {
   const t = useT();
   const applySheet = useStore((s) => s.applySheet);
   const focusLater = useStore((s) => s.focusLater);
@@ -498,7 +604,7 @@ function AddBlock({ count }: { count: number }) {
     focusLater(`block:${block.id}`);
   };
   return (
-    <div className="sheet-add-block no-export">
+    <div className="sheet-add-block no-export" style={{ gridRow: row + 1 }}>
       {open ? (
         <div className="sheet-add-choices" role="group" aria-label={t('sheet.addBlock')}>
           {VIEWS.map((v) => (

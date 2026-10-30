@@ -185,3 +185,9 @@ export const FlowIcon = ({ size = 14 }: P) => (
     <path d="M8 12h4M16 12l3-3 3 3-3 3z" />
   </Svg>
 );
+export const PencilIcon = ({ size = 12 }: P) => (
+  <Svg size={size}>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+    <path d="M14 6l4 4" />
+  </Svg>
+);

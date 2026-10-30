@@ -58,7 +58,7 @@ export function buildCsv(doc: Blueprint, labels: CsvLabels, sep: ',' | ';'): str
     const divider = doc.dividers.find((d) => d.after === p.id);
     if (divider) rows.push([`— ${divider.label} —`]);
   }
-  if (doc.infoRow) rows.push([doc.infoTitle?.trim() || labels.info, ...doc.steps.map((s) => doc.infos[s.id] ?? '')]);
+  for (const r of doc.textRows) rows.push([r.title?.trim() || labels.info, ...doc.steps.map((s) => r.cells[s.id] ?? '')]);
   // BOM so Excel reads accents as UTF-8.
   return '﻿' + rows.map((r) => r.map((v) => cell(v, sep)).join(sep)).join('\r\n') + '\r\n';
 }

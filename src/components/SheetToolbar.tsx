@@ -54,6 +54,14 @@ export function SheetToolbar() {
   );
 }
 
+/** Block widths offered in the toolbar, in columns of the sheet grid. */
+const WIDTHS: [number, string][] = [
+  [2, '1/3'],
+  [3, '1/2'],
+  [4, '2/3'],
+  [so.SHEET_COLS, '1'],
+];
+
 function BlockControls({ sheet, blockId }: { sheet: PersonaSheet; blockId: string }) {
   const t = useT();
   const applySheet = useStore((s) => s.applySheet);
@@ -61,6 +69,7 @@ function BlockControls({ sheet, blockId }: { sheet: PersonaSheet; blockId: strin
   if (!block) return null;
   const key = `block:${blockId}`;
   const custom = sheet.styles[key];
+  const place = so.sheetLayout(sheet.blocks)[sheet.blocks.indexOf(block)];
   return (
     <div className="style-controls">
       <span className="badge">{t('kind.block')}</span>
@@ -72,6 +81,21 @@ function BlockControls({ sheet, blockId }: { sheet: PersonaSheet; blockId: strin
           {VIEWS.map((v) => (
             <button key={v} className={cls(block.view === v && 'is-on')} aria-pressed={block.view === v} onClick={() => applySheet((s) => so.setBlockView(s, blockId, v))}>
               {t(`sheet.view.${v}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="swatches" role="group" aria-label={t('sheet.width')}>
+        <span className="swatches-label">{t('sheet.width')}</span>
+        <div className="segmented segmented-sm">
+          {WIDTHS.map(([w, label]) => (
+            <button
+              key={w}
+              className={cls(place.w === w && 'is-on')}
+              aria-pressed={place.w === w}
+              onClick={() => applySheet((s) => so.placeBlock(s, blockId, { ...place, w }))}
+            >
+              {label}
             </button>
           ))}
         </div>

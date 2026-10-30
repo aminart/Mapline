@@ -48,13 +48,20 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
   const { accent, onAccent } = personaAccent(persona.color, custom);
   const boxRef = useRef<HTMLDivElement>(null);
   const drop = useDropTarget('persona', (d) => apply((doc) => ops.movePersona(doc, d.index, index)));
+  // A separator dropped on the row goes above it or below it, by the half it lands on.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const dividerDrop = useDropTarget('divider', (d, at) => {
+    const r = rowRef.current?.getBoundingClientRect();
+    const below = !r || at.y > r.top + r.height / 2;
+    apply((doc) => ops.moveDivider(doc, d.id, below ? index + 1 : index));
+  });
   const docId = useStore((s) => s.docId);
   const sheet = useStore((s) => sheetFor(s.project, s.docId, persona.id));
   const setSheetPreview = useStore((s) => s.setSheetPreview);
   const setNewSheet = useStore((s) => s.setNewSheet);
   const name = persona.name || t('doc.unnamed');
   return (
-    <div className="grid-row persona-row">
+    <div ref={rowRef} className={cls('grid-row persona-row', dividerDrop.over && 'is-divider-target')} {...dividerDrop.props}>
       <div
         ref={boxRef}
         className={cls('box persona', b.selected && 'is-selected', drop.over && 'is-drop-target')}
@@ -147,8 +154,17 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
 function DividerRow({ divider }: { divider: Divider }) {
   const t = useT();
   const apply = useStore((s) => s.apply);
+  const ref = useRef<HTMLDivElement>(null);
   return (
-    <div className="divider-row">
+    <div ref={ref} className="divider-row" data-divider={divider.id}>
+      <span
+        className="grip grip-divider no-export"
+        title={t('board.dragDivider')}
+        aria-hidden="true"
+        onPointerDown={(e) => startDrag(e, { kind: 'divider', id: divider.id }, ref.current)}
+      >
+        <GripIcon size={12} />
+      </span>
       <FitText
         singleLine
         className="divider-label"

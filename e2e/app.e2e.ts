@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { addActivity, arrowsOverCards, cell, clippedFields, fillWithLongText, link, personaRows, startProject, openProjects } from './helpers';
 
 const legacyFile = fileURLToPath(new URL('./fixtures/projet-v0.9.missionmap', import.meta.url));
@@ -254,7 +254,8 @@ test('shows every text of the map in full: phases, steps, personas and rows grow
   await startProject(page);
   const tools = page.getByRole('toolbar', { name: 'Outils et mise en forme' });
   await tools.getByText('Storyboard', { exact: true }).click();
-  await tools.getByText('Infos complémentaires', { exact: true }).click();
+  await page.getByRole('button', { name: 'Ligne de texte libre' }).click();
+  await page.getByRole('button', { name: 'Ligne de texte libre' }).click();
   await addActivity(page, 0, 0, 'Une activité');
   await fillWithLongText(page, '.board');
   expect(await clippedFields(page, '.board')).toEqual([]);
@@ -263,4 +264,139 @@ test('shows every text of the map in full: phases, steps, personas and rows grow
   await step.press('End');
   await step.press('Enter');
   await expect(step).not.toHaveValue(/\n/);
+});
+
+/** The persona rows and separator lines of the map, top to bottom: persona names, or '—' for a line. */
+async function rowOrder(page: Page): Promise<string[]> {
+  return page.locator('.persona-grid').locator('.persona-row, .divider-row').evaluateAll((els) =>
+    els.map((el) => (el.classList.contains('divider-row') ? '—' : (el.querySelector<HTMLTextAreaElement>('textarea[aria-label="Nom du persona"]')?.value ?? '?'))),
+  );
+}
+
+/** Drags from the centre of `from` to a point of `to` (its centre by default). */
+async function dragTo(page: Page, from: Locator, to: Locator, dy = 0) {
+  await from.scrollIntoViewIfNeeded();
+  await from.hover({ force: true });
+  const a = (await from.boundingBox())!;
+  const b = (await to.boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 + dy, { steps: 8 });
+  await page.mouse.up();
+}
+
+test('swaps personas without moving the separator lines, and moves a line', async ({ page }) => {
+  // Tall enough for every persona row to be in view while dragging.
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await startProject(page);
+  const names = page.locator('.persona-row').getByRole('textbox', { name: 'Nom du persona' });
+  const count = await names.count();
+  for (let i = 0; i < count; i++) await names.nth(i).fill(`P${i + 1}`);
+  // A line between the first and second persona.
+  while ((await page.locator('.divider-row').count()) > 0) await page.locator('.divider-row').first().getByRole('button', { name: 'Supprimer la ligne de séparation' }).click();
+  await page.locator('.persona-row').first().hover();
+  await page.locator('.persona-row').first().getByRole('button', { name: 'Ajouter une ligne de séparation dessous' }).click();
+  expect(await rowOrder(page)).toEqual(['P1', '—', ...Array.from({ length: count - 1 }, (_, i) => `P${i + 2}`)]);
+  // P1 dragged onto P2: they swap, the line stays between the first two rows.
+  await dragTo(page, page.locator('.persona-row').first().locator('.grip-persona'), page.locator('.persona-row').nth(1).locator('.persona'));
+  expect((await rowOrder(page)).slice(0, 3)).toEqual(['P2', '—', 'P1']);
+  // The line dragged to the lower half of the last persona goes under it.
+  const last = page.locator('.persona-row').last();
+  await dragTo(page, page.locator('.divider-row .grip-divider'), last, 20);
+  const order = await rowOrder(page);
+  expect(order.at(-1)).toBe('—');
+  expect(order.slice(0, 2)).toEqual(['P2', 'P1']);
+});
+
+test('adds free text rows under the add persona button, each named and removable', async ({ page }) => {
+  await startProject(page);
+  const add = page.getByRole('button', { name: 'Ligne de texte libre' });
+  await add.click();
+  await add.click();
+  const rows = page.locator('.info-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.getByRole('textbox', { name: 'Titre de la ligne (modifiable)' })).toHaveText(['Infos complémentaires', 'Texte libre']);
+  // The add persona button sits right under the last persona, above the text rows.
+  const addPersona = (await page.getByRole('button', { name: 'Ajouter un persona' }).boundingBox())!;
+  const lastPersona = (await page.locator('.persona-row').last().boundingBox())!;
+  const firstRow = (await rows.first().boundingBox())!;
+  expect(addPersona.y).toBeGreaterThanOrEqual(lastPersona.y + lastPersona.height - 1);
+  expect(addPersona.y).toBeLessThan(firstRow.y);
+  await rows.nth(1).getByRole('textbox', { name: 'Informations complémentaires de l’étape' }).first().fill('Une note');
+  await rows.first().getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await expect(rows).toHaveCount(1);
+  await expect(rows.getByRole('textbox', { name: 'Titre de la ligne (modifiable)' })).toHaveText('Texte libre');
+  await expect(rows.getByRole('textbox', { name: 'Informations complémentaires de l’étape' }).first()).toHaveValue('Une note');
+});
+
+test('renames a map and a flow from their tab, and shows long names in full', async ({ page }) => {
+  await startProject(page);
+  const long = 'Parcours patient — prise de rendez-vous en ligne et rappel la veille';
+  const tab = page.locator('.doc-tab').first();
+  await tab.locator('.doc-tab-btn').dblclick();
+  const field = page.getByRole('textbox', { name: 'Nom de la map' });
+  await field.fill(long);
+  await field.press('Enter');
+  await expect(tab).toHaveText(long);
+  const btn = tab.locator('.doc-tab-btn');
+  expect(await btn.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  // Escape leaves the name as it was.
+  await tab.getByRole('button', { name: `Renommer ${long}` }).click();
+  await page.getByRole('textbox', { name: 'Nom de la map' }).fill('Autre');
+  await page.keyboard.press('Escape');
+  await expect(tab).toHaveText(long);
+  // The project name grows with its text, and shows in full on hover.
+  const title = page.getByRole('textbox', { name: 'Nom du projet' });
+  await title.fill('Clinique du Parc — parcours patient');
+  expect(await title.evaluate((el: HTMLInputElement) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await title.fill(long);
+  await expect(title).toHaveAttribute('title', long);
+});
+
+test('exports PowerPoint slides: one per document, a map cut into its phases, its text editable', async ({ page }) => {
+  await startProject(page);
+  await addActivity(page, 0, 0, 'Prendre rendez-vous');
+  // A second document: a flow.
+  await page.getByRole('button', { name: 'Nouveau flow' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
+  await expect(page.locator('.doc-tab')).toHaveCount(2);
+  const exportSlides = async () => {
+    await page.getByRole('button', { name: 'Exporter…' }).click();
+    await page.locator('input[name=export-format][value=pptx]').check({ force: true });
+    const download = page.waitForEvent('download');
+    await page.locator('dialog[open] .btn-primary').click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/\.pptx$/);
+    const bytes = await readFile(await file.path());
+    expect(bytes.subarray(0, 2).toString()).toBe('PK');
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(bytes);
+    const names = Object.keys(zip.files)
+      .filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+      .sort((a, b) => parseInt(a.replace(/\D/g, ''), 10) - parseInt(b.replace(/\D/g, ''), 10));
+    return Promise.all(names.map((n) => zip.file(n)!.async('string')));
+  };
+  const options = async (fn: () => Promise<void>) => {
+    await page.getByRole('button', { name: 'Exporter…' }).click();
+    await page.locator('input[name=export-format][value=pptx]').check({ force: true });
+    await fn();
+    await page.keyboard.press('Escape');
+  };
+  // The map's three phases, then the flow; the activity is text in the first slide.
+  let slides = await exportSlides();
+  expect(slides).toHaveLength(4);
+  expect(slides[0]).toContain('<a:t>Prendre rendez-vous</a:t>');
+  expect(slides[0]).toContain('<a:t>Map · Avant</a:t>');
+  expect(slides[0]).not.toContain('<p:pic>');
+  // Back on the flow tab after the export, as before it.
+  await expect(page.locator('.doc-tab.is-active')).toContainText('Flow');
+  await options(() => page.getByRole('checkbox', { name: 'Maps : une diapositive par phase' }).uncheck());
+  expect(await exportSlides()).toHaveLength(2);
+  // As pictures: the text is in the image only.
+  await options(() => page.getByRole('button', { name: 'Image', exact: true }).click());
+  slides = await exportSlides();
+  expect(slides[0]).toContain('<p:pic>');
+  expect(slides[0]).not.toContain('Prendre rendez-vous');
+  await options(() => page.getByRole('button', { name: 'Ce document' }).click());
+  expect(await exportSlides()).toHaveLength(1);
 });

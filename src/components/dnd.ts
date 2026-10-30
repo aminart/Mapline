@@ -12,12 +12,21 @@ export type Drag =
   | { kind: 'act'; key: string }
   | { kind: 'step'; index: number }
   | { kind: 'persona'; index: number }
-  | { kind: 'block'; index: number }
+  | { kind: 'divider'; id: string }
+  /** grabX/grabY: where the block was taken, from its top left corner, in client pixels. */
+  | { kind: 'block'; id: string; grabX: number; grabY: number }
   | { kind: 'fnode'; id: string };
+
+/** Where the pointer was released, in client pixels. */
+export interface DropPoint {
+  x: number;
+  y: number;
+}
 
 interface Target {
   kind: Drag['kind'];
-  onDrop: (drag: Drag) => void;
+  onDrop: (drag: Drag, at: DropPoint) => void;
+  onHover?: (drag: Drag, at: DropPoint) => void;
   setOver: (over: boolean) => void;
 }
 
@@ -26,11 +35,16 @@ const targets = new Map<string, Target>();
 const THRESHOLD = 4;
 const EDGE = 48;
 
+/** The innermost drop target of this kind under the point (targets can nest). */
 function targetAt(x: number, y: number, kind: Drag['kind']): [string, Target] | null {
-  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-drop]');
-  const id = el?.dataset.drop;
-  const target = id ? targets.get(id) : undefined;
-  return id && target && target.kind === kind ? [id, target] : null;
+  let el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-drop]');
+  while (el) {
+    const id = el.dataset.drop;
+    const target = id ? targets.get(id) : undefined;
+    if (id && target?.kind === kind) return [id, target];
+    el = el.parentElement?.closest<HTMLElement>('[data-drop]');
+  }
+  return null;
 }
 
 /** Scrolls the board when dragging near its edges. */
@@ -78,11 +92,14 @@ export function startDrag(e: ReactPointerEvent, drag: Drag, source: HTMLElement 
       document.body.appendChild(ghost);
       document.body.classList.add('is-dragging');
     }
+    last = { x: ev.clientX, y: ev.clientY };
     ghost.style.transform = `translate(${ev.clientX - offsetX}px, ${ev.clientY - offsetY}px) scale(${scale})`;
     setHovered(targetAt(ev.clientX, ev.clientY, drag.kind));
+    hovered?.[1].onHover?.(drag, last);
     autoScroll(ev.clientX, ev.clientY);
   };
 
+  let last: DropPoint = { x: startX, y: startY };
   const finish = (drop: boolean) => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
@@ -91,7 +108,7 @@ export function startDrag(e: ReactPointerEvent, drag: Drag, source: HTMLElement 
     document.body.classList.remove('is-dragging');
     const target = hovered;
     setHovered(null);
-    if (drop && ghost && target) target[1].onDrop(drag);
+    if (drop && ghost && target) target[1].onDrop(drag, last);
   };
   const onUp = () => finish(true);
   const onKey = (ev: KeyboardEvent) => {
@@ -107,11 +124,16 @@ export function startDrag(e: ReactPointerEvent, drag: Drag, source: HTMLElement 
 }
 
 /** Makes an element accept drops of one kind; `over` is true while a drag hovers it. */
-export function useDropTarget<K extends Drag['kind']>(kind: K, onDrop: (drag: Extract<Drag, { kind: K }>) => void) {
+export function useDropTarget<K extends Drag['kind']>(
+  kind: K,
+  onDrop: (drag: Extract<Drag, { kind: K }>, at: DropPoint) => void,
+  /** Called as the pointer moves over the target, to show where the drop would land. */
+  onHover?: (drag: Extract<Drag, { kind: K }>, at: DropPoint) => void,
+) {
   const id = useId();
   const [over, setOver] = useState(false);
   // Re-registered each render so the callback sees current props.
-  targets.set(id, { kind, onDrop: onDrop as (drag: Drag) => void, setOver });
+  targets.set(id, { kind, onDrop: onDrop as (drag: Drag, at: DropPoint) => void, onHover: onHover as Target['onHover'], setOver });
   useEffect(() => () => void targets.delete(id), [id]);
   return { over, props: { 'data-drop': id } };
 }

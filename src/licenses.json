@@ -54,6 +54,12 @@
     "url": "https://github.com/tauri-apps/plugins-workspace"
   },
   {
+    "name": "@types/node",
+    "version": "18.19.130",
+    "license": "MIT",
+    "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node"
+  },
+  {
     "name": "@types/pako",
     "version": "2.0.4",
     "license": "MIT",
@@ -88,6 +94,12 @@
     "version": "3.51.0",
     "license": "MIT",
     "url": "https://core-js.io"
+  },
+  {
+    "name": "core-util-is",
+    "version": "1.0.3",
+    "license": "MIT",
+    "url": "git://github.com/isaacs/core-util-is"
   },
   {
     "name": "css-line-break",
@@ -126,10 +138,40 @@
     "url": "https://html2canvas.hertzen.com"
   },
   {
+    "name": "https",
+    "version": "1.0.0",
+    "license": "ISC",
+    "url": ""
+  },
+  {
+    "name": "image-size",
+    "version": "1.2.1",
+    "license": "MIT",
+    "url": "git://github.com/image-size/image-size.git"
+  },
+  {
+    "name": "immediate",
+    "version": "3.0.6",
+    "license": "MIT",
+    "url": "git://github.com/calvinmetcalf/immediate.git"
+  },
+  {
+    "name": "inherits",
+    "version": "2.0.4",
+    "license": "ISC",
+    "url": "git://github.com/isaacs/inherits"
+  },
+  {
     "name": "iobuffer",
     "version": "5.4.0",
     "license": "MIT",
     "url": "https://github.com/image-js/iobuffer#readme"
+  },
+  {
+    "name": "isarray",
+    "version": "1.0.0",
+    "license": "MIT",
+    "url": "https://github.com/juliangruber/isarray"
   },
   {
     "name": "jspdf",
@@ -138,16 +180,52 @@
     "url": "https://github.com/parallax/jsPDF"
   },
   {
+    "name": "jszip",
+    "version": "3.10.2",
+    "license": "(MIT OR GPL-3.0-or-later)",
+    "url": "https://github.com/Stuk/jszip.git"
+  },
+  {
+    "name": "lie",
+    "version": "3.3.0",
+    "license": "MIT",
+    "url": "https://github.com/calvinmetcalf/lie.git"
+  },
+  {
     "name": "pako",
     "version": "2.2.0",
     "license": "(MIT AND Zlib)",
     "url": "nodeca/pako"
   },
   {
+    "name": "pako",
+    "version": "1.0.11",
+    "license": "(MIT AND Zlib)",
+    "url": "https://github.com/nodeca/pako"
+  },
+  {
     "name": "performance-now",
     "version": "2.1.0",
     "license": "MIT",
     "url": "https://github.com/braveg1rl/performance-now"
+  },
+  {
+    "name": "pptxgenjs",
+    "version": "3.12.0",
+    "license": "MIT",
+    "url": "https://gitbrent.github.io/PptxGenJS/"
+  },
+  {
+    "name": "process-nextick-args",
+    "version": "2.0.1",
+    "license": "MIT",
+    "url": "https://github.com/calvinmetcalf/process-nextick-args"
+  },
+  {
+    "name": "queue",
+    "version": "6.0.2",
+    "license": "MIT",
+    "url": "https://github.com/jessetane/queue.git"
   },
   {
     "name": "raf",
@@ -168,6 +246,12 @@
     "url": "https://react.dev/"
   },
   {
+    "name": "readable-stream",
+    "version": "2.3.8",
+    "license": "MIT",
+    "url": "git://github.com/nodejs/readable-stream"
+  },
+  {
     "name": "regenerator-runtime",
     "version": "0.13.11",
     "license": "MIT",
@@ -180,16 +264,34 @@
     "url": "https://github.com/yetzt/node-rgbcolor.git"
   },
   {
+    "name": "safe-buffer",
+    "version": "5.1.2",
+    "license": "MIT",
+    "url": "https://github.com/feross/safe-buffer"
+  },
+  {
     "name": "scheduler",
     "version": "0.28.0",
     "license": "MIT",
     "url": "https://react.dev/"
   },
   {
+    "name": "setimmediate",
+    "version": "1.0.5",
+    "license": "MIT",
+    "url": "YuzuJS/setImmediate"
+  },
+  {
     "name": "stackblur-canvas",
     "version": "2.7.0",
     "license": "MIT",
     "url": "http://www.quasimondo.com/StackBlurForCanvas/StackBlurDemo.html"
+  },
+  {
+    "name": "string_decoder",
+    "version": "1.1.1",
+    "license": "MIT",
+    "url": "https://github.com/nodejs/string_decoder"
   },
   {
     "name": "svg-pathdata",
@@ -202,6 +304,18 @@
     "version": "1.0.3",
     "license": "MIT",
     "url": "https://github.com/niklasvh/text-segmentation"
+  },
+  {
+    "name": "undici-types",
+    "version": "5.26.5",
+    "license": "MIT",
+    "url": "https://undici.nodejs.org"
+  },
+  {
+    "name": "util-deprecate",
+    "version": "1.0.2",
+    "license": "MIT",
+    "url": "https://github.com/TooTallNate/util-deprecate"
   },
   {
     "name": "utrie",

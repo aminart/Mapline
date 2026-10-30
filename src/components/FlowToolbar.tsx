@@ -36,10 +36,10 @@ export function FlowToolbar() {
       <label className="field">
         {t('flow.name')}
         <input
-          className="text-field"
+          className="text-field text-field-fit"
           value={name}
           placeholder={t('flow.default')}
-          maxLength={60}
+          size={Math.max(12, name.length + 1)}
           onChange={(e) => {
             const v = e.target.value;
             applyProject((p) => renameDoc(p, docId, v), { coalesce: `doc-name:${docId}` });

@@ -34,7 +34,7 @@ export function createMap(id: TemplateId, lang: Lang): Blueprint {
 
 function titledMap(id: TemplateId, lang: Lang): Blueprint & { title: string } {
   const t = (key: MessageKey) => translate(lang, key);
-  const base = { objective: '', activities: {}, scenes: {}, links: [], dividers: [], tagColors: {}, styles: {}, infos: {}, infoRow: false };
+  const base = { objective: '', activities: {}, scenes: {}, links: [], dividers: [], tagColors: {}, styles: {}, textRows: [] };
   switch (id) {
     case 'mission-map': {
       const [user, front, back] = [uid(), uid(), uid()];

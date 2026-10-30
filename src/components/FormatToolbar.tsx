@@ -12,7 +12,6 @@ import { cls } from './cls';
 export function FormatToolbar() {
   const t = useT();
   const storyboard = useMap((m) => m.storyboard);
-  const infoRow = useMap((m) => m.infoRow);
   const apply = useStore((s) => s.apply);
   const tool = useStore((s) => s.tool);
   const setTool = useStore((s) => s.setTool);
@@ -39,17 +38,6 @@ export function FormatToolbar() {
           }}
         />
         <span>{t('tool.storyboard')}</span>
-      </label>
-      <label className="toggle toggle-inline">
-        <input
-          type="checkbox"
-          checked={infoRow}
-          onChange={(e) => {
-            const on = e.target.checked;
-            apply((d) => ({ ...d, infoRow: on }));
-          }}
-        />
-        <span>{t('tool.infoRow')}</span>
       </label>
       <MapTagManager />
       <div className="divider" />

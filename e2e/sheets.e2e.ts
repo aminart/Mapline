@@ -208,3 +208,50 @@ test('shows every text of a sheet in full, the persona name included', async ({ 
   await fillWithLongText(page, '.sheet');
   expect(await clippedFields(page, '.sheet')).toEqual([]);
 });
+
+test('moves a block to any cell and resizes it across columns and rows', async ({ page }) => {
+  await startProject(page);
+  await createFirstSheet(page);
+  const blocks = page.locator('.sheet-block');
+  const scenario = blocks.nth(5);
+  const goals = blocks.nth(0);
+  const start = (await goals.boundingBox())!;
+  // Drag the scenario block by its grip to where the goals block is.
+  const grip = scenario.locator('.grip');
+  await scenario.hover();
+  const g = (await grip.boundingBox())!;
+  const s = (await scenario.boundingBox())!;
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + (g.x - s.x) + 20, start.y + (g.y - s.y) + 10, { steps: 8 });
+  await expect(page.locator('.sheet-drop-ghost')).toBeVisible();
+  await page.mouse.up();
+  await expect(blocks.first().locator('.sheet-block-title')).toHaveValue('Scénario');
+  const moved = (await blocks.first().boundingBox())!;
+  expect(Math.abs(moved.x - start.x)).toBeLessThan(2);
+  expect(Math.abs(moved.y - start.y)).toBeLessThan(2);
+
+  // Resize it from its corner: two columns wider, one row taller.
+  const first = blocks.first();
+  await first.hover();
+  const corner = (await first.locator('.sheet-resize').boundingBox())!;
+  const cols = await page.locator('.sheet-blocks').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').map(parseFloat));
+  await page.mouse.move(corner.x + 4, corner.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(corner.x + (cols[0] + 14) * 2, corner.y + 100, { steps: 8 });
+  await page.mouse.up();
+  const wide = (await first.boundingBox())!;
+  expect(wide.width).toBeGreaterThan(moved.width * 1.8);
+  expect(wide.height).toBeGreaterThan(moved.height);
+  // No two blocks overlap.
+  const boxes = await blocks.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) {
+      const [a, b] = [boxes[i], boxes[j]];
+      expect(a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1, `blocks ${i} and ${j} overlap`).toBe(false);
+    }
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  // Undo puts it back to its first size.
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(async () => (await blocks.first().boundingBox())!.width).toBeLessThan(wide.width);
+});

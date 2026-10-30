@@ -53,7 +53,8 @@ export function ProjectSwitcher() {
         aria-label={t('top.projectName')}
         value={title}
         placeholder={t('app.untitled')}
-        size={Math.max(8, Math.min(32, name.length + 1))}
+        size={Math.max(8, name.length + 1)}
+        title={name}
         onChange={(e) => {
           const v = e.target.value;
           applyProject((p) => setProjectTitle(p, v), { coalesce: 'title' });
