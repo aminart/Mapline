@@ -97,20 +97,6 @@ select:focus-visible,
 .spacer {
   flex-grow: 1;
 }
-.title-input {
-  border: 0;
-  background: transparent;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 6px 8px;
-  border-radius: 6px;
-  min-width: 120px;
-  width: 280px;
-}
-.title-input:hover,
-.title-input:focus {
-  background: var(--surface-2);
-}
 
 .btn {
   height: 36px;
@@ -1714,19 +1700,6 @@ body.is-dragging {
   font: inherit;
   color: inherit;
   cursor: pointer;
-}
-.tag-palette {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  display: flex;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 8px 20px rgba(20, 24, 32, 0.14);
 }
 .tag-colors {
   display: flex;

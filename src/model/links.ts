@@ -75,11 +75,6 @@ export function addDetailFlow(project: Project, doc: FlowDoc, source: FlowSource
   return addDoc(project, { ...doc, name, flow });
 }
 
-/** The persona a flow card is coloured by: its own, else the flow's main persona. */
-export function nodePersona(flow: Flow, personaId: Id | null | undefined): Id | undefined {
-  return personaId ?? flow.personaId ?? undefined;
-}
-
 /** The flows a map persona is in: as the flow's main persona or on one of its cards. */
 export function personaFlows(project: Project, personaId: Id): FlowDoc[] {
   return project.docs.filter(
