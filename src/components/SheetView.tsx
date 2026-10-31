@@ -1,11 +1,11 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import { activeSheet, useStore, useT } from '../store';
 import * as so from '../model/sheet';
 import { setSheetIdentity, sheetIdentity } from '../model/project';
-import { BLOCK_ACCENTS, PERSONA_PALETTE, TAG_PALETTE, personaAccent, tagColor } from '../model/theme';
+import { BLOCK_ACCENTS, PERSONA_PALETTE, personaAccent, tagColor } from '../model/theme';
 import type { BlockPlace, BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
 import { readImage } from '../lib/image';
 import { docLabel, withBusy } from '../actions';
@@ -14,6 +14,7 @@ import { useBox } from './useBox';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
 import { focusSoon, useFocusKey } from './useFocusKey';
+import { TagEditor } from './CardExtras';
 import { startDrag, useDropTarget, type DropPoint } from './dnd';
 import { CameraIcon, ChevronRight, CloseIcon, FlowIcon, GripIcon, PlusIcon } from './Icons';
 import { personaFlows } from '../model/links';
@@ -226,6 +227,8 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
         onFocus={b.onFocus}
         colorOf={(tag) => tagColor(tag, sheet.tagColors)}
         onColor={(tag, color) => applySheet((s) => so.setSheetTagColor(s, tag, color))}
+        onRename={(from, to) => applySheet((s) => so.renameSheetTag(s, from, to))}
+        colors={sheet.tagColors}
       />
       <PersonaFlows sheet={sheet} />
     </section>
@@ -278,29 +281,24 @@ function Chips(props: {
   onRemove: (tag: string) => void;
   onFocus: () => void;
   colorOf: (tag: string) => { bg: string; fg: string };
-  /** When given, clicking a tag offers the tag colours. */
+  /** When given with `colors`, clicking a tag edits its name and colour. */
   onColor?: (tag: string, color: number) => void;
+  onRename?: (from: string, to: string) => void;
+  colors?: Record<string, number>;
 }) {
   const t = useT();
-  const { tags, onAdd, onRemove, onFocus, colorOf, onColor } = props;
+  const { tags, onAdd, onRemove, onFocus, colorOf, onColor, onRename, colors } = props;
   const [draft, setDraft] = useState('');
-  const [picking, setPicking] = useState<string | null>(null);
-  useEffect(() => {
-    if (!picking) return;
-    const onDown = (e: MouseEvent) => {
-      if (!(e.target as Element).closest('.tag-pickable')) setPicking(null);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [picking]);
+  const [editing, setEditing] = useState<string | null>(null);
+  const editable = Boolean(onColor && onRename);
   return (
     <div className="sheet-chips">
       {tags.map((tag) => {
         const c = colorOf(tag);
         return (
-          <span key={tag} className={cls('tag', onColor && 'tag-pickable')} style={{ background: c.bg, color: c.fg }}>
-            {onColor ? (
-              <button className="tag-name" aria-label={t('tags.color', { tag })} title={t('tags.color', { tag })} aria-expanded={picking === tag} onClick={() => setPicking(picking === tag ? null : tag)}>
+          <span key={tag} className={cls('tag', editable && 'tag-pickable')} style={{ background: c.bg, color: c.fg }}>
+            {editable ? (
+              <button className="tag-name" aria-label={t('tags.edit', { tag })} title={t('tags.edit', { tag })} aria-expanded={editing === tag} onClick={() => setEditing(tag)}>
                 {tag}
               </button>
             ) : (
@@ -309,21 +307,8 @@ function Chips(props: {
             <button className="tag-x no-export" aria-label={t('board.removeTag', { tag })} onClick={() => onRemove(tag)}>
               <CloseIcon size={9} />
             </button>
-            {onColor && picking === tag && (
-              <span className="tag-palette no-export" role="group" aria-label={t('tags.color', { tag })}>
-                {TAG_PALETTE.map((p, i) => (
-                  <button
-                    key={i}
-                    className={cls('swatch swatch-xs', p.bg === c.bg && 'is-on')}
-                    style={{ background: p.bg, borderColor: p.fg }}
-                    aria-label={`${t('tags.color', { tag })} ${i + 1}`}
-                    onClick={() => {
-                      onColor(tag, i);
-                      setPicking(null);
-                    }}
-                  />
-                ))}
-              </span>
+            {editable && editing === tag && (
+              <TagEditor tag={tag} colors={colors} onRename={(from, to) => onRename!(from, to)} onColor={onColor!} uses={() => 1} onClose={() => setEditing(null)} />
             )}
           </span>
         );

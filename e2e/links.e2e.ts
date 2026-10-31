@@ -38,6 +38,25 @@ test('details a step and a phase in flows, and goes back to the map', async ({ p
   await expect(phase.locator('.flow-chip')).toHaveText('Prendre rendez-vous');
   await expect(step.locator('.flow-chip')).toHaveCount(0);
   if (shots) await page.screenshot({ path: `${shots}/map.png` });
+
+  // Presenting the step's phase offers its flow.
+  await page.getByRole('button', { name: 'Présenter' }).click();
+  await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Voir le flow Prendre rendez-vous' }).click();
+  await expect(page.locator('.flow')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Merging the phase away asks first, and leaves the flow unlinked.
+  await docTab(page, 'Map').click();
+  page.once('dialog', (d) => {
+    expect(d.message()).toContain('Prendre rendez-vous');
+    void d.accept();
+  });
+  await phase.hover();
+  await phase.getByRole('button', { name: 'Fusionner cette phase avec la voisine' }).click();
+  await expect(page.locator('.phase .flow-chip')).toHaveCount(0);
+  await docTab(page, 'Prendre rendez-vous').click();
+  await expect(page.locator('.flow-source')).toHaveCount(0);
 });
 
 test('links a persona’s sheet to the flows they are in', async ({ page }) => {
@@ -56,6 +75,13 @@ test('links a persona’s sheet to the flows they are in', async ({ page }) => {
   const flows = page.locator('.sheet-identity .sheet-flow');
   await expect(flows).toHaveText(['Arriver']);
   if (shots) await page.screenshot({ path: `${shots}/sheet.png` });
+  // Its tags are edited like a card's.
+  await page.locator('.sheet-identity').getByRole('textbox', { name: 'Ajouter un tag' }).fill('Mobile');
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Modifier le tag Mobile' }).click();
+  await page.getByRole('textbox', { name: 'Nom du tag' }).fill('Smartphone');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.sheet-identity .tag')).toHaveText(['Smartphone']);
   await flows.first().click();
   await expect(page.locator('.flow')).toBeVisible();
 });

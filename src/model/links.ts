@@ -86,3 +86,12 @@ export function personaFlows(project: Project, personaId: Id): FlowDoc[] {
     (d): d is FlowDoc => d.kind === 'flow' && (d.flow.personaId === personaId || d.flow.nodes.some((n) => n.personaId === personaId)),
   );
 }
+
+/**
+ * Removes a phase or a step of the map `docId` with `remove`, and unlinks the
+ * flows that detailed it: one undo step for both.
+ */
+export function removeDetailed(project: Project, docId: Id, kind: FlowSource['kind'], id: Id, remove: (project: Project) => Project): Project {
+  const unlinked = flowsDetailing(project, docId, kind, id).reduce((p, f) => setFlowSource(p, f.id, null), project);
+  return remove(unlinked);
+}

@@ -3,8 +3,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { exampleProject } from './fixtures';
-import { addDetailFlow, flowsDetailing, personaFlows, resolveSource, setFlowPersona, setFlowSource } from './links';
-import { addDoc, flowOf, removeDoc } from './project';
+import { addDetailFlow, flowsDetailing, personaFlows, removeDetailed, resolveSource, setFlowPersona, setFlowSource } from './links';
+import { renameSheetTag } from './sheet';
+import { addDoc, flowOf, removeDoc, updateMap } from './project';
 import { parse, serialize } from './serialize';
 import { createFlowDoc } from './templates';
 import * as fo from './flow';
@@ -71,6 +72,18 @@ describe('flows detailing a map', () => {
   });
 });
 
+describe('removing a detailed step', () => {
+  it('unlinks its flows in the same change', () => {
+    const { project, map, mapId } = setup();
+    const doc = createFlowDoc('blank', 'fr');
+    const step = map.steps[1];
+    const p = addDetailFlow(project, doc, { docId: mapId, kind: 'step', id: step.id });
+    const next = removeDetailed(p, mapId, 'step', step.id, (q) => updateMap(q, mapId, (m) => ops.removeStep(m, 1)));
+    expect(flowOf(next, doc.id)!.flow.source).toBeUndefined();
+    expect((next.docs[0] as MissionMapDoc).map.steps.some((s) => s.id === step.id)).toBe(false);
+  });
+});
+
 describe('editing a tag from its card', () => {
   it('renames on one card or on all, keeping the colour', () => {
     const { map } = setup();
@@ -89,6 +102,13 @@ describe('editing a tag from its card', () => {
     // Merges with a tag the card already has.
     const both = ops.addTag(doc, keys[0], 'Email');
     expect(ops.renameTag(both, keys[0], 'irritant', 'email').activities[keys[0]].tags).toEqual(['email']);
+  });
+
+  it('renames a persona sheet’s tag, its colour following', () => {
+    const sheet = { tags: ['Mobile', 'Pressée'], tagColors: { mobile: 2 } } as unknown as Parameters<typeof renameSheetTag>[0];
+    const next = renameSheetTag(sheet, 'Mobile', 'Smartphone');
+    expect(next.tags).toEqual(['Smartphone', 'Pressée']);
+    expect(next.tagColors).toEqual({ smartphone: 2 });
   });
 
   it('does the same on flow cards', () => {

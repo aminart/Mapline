@@ -196,10 +196,12 @@ test('gives the sheet tags a colour of their choice', async ({ page }) => {
   const chips = page.locator('.sheet-identity .sheet-chips');
   await chips.getByRole('textbox', { name: 'Ajouter un tag' }).fill('Senior');
   await page.keyboard.press('Enter');
-  await chips.getByRole('button', { name: 'Couleur de « Senior »' }).click();
+  // A click on the tag opens the same editor as on map and flow cards.
+  await chips.getByRole('button', { name: 'Modifier le tag Senior' }).click();
   await chips.getByRole('button', { name: 'Couleur de « Senior » 5' }).click();
   await expect(chips.locator('.tag').filter({ hasText: 'Senior' })).toHaveCSS('background-color', 'rgb(255, 241, 191)');
-  await expect(chips.locator('.tag-palette')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(chips.locator('.tag-editor')).toHaveCount(0);
 });
 
 test('shows every text of a sheet in full, the persona name included', async ({ page }) => {

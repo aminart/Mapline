@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { BlockPlace, BlockView, BoxStyle, Id, PersonaSheet, SheetBlock, SheetField, SheetItem } from './types';
-import { uid } from './ops';
+import { renamedTagColors, renamedTags, uid } from './ops';
 
 /** Level a new gauge starts at. */
 export const DEFAULT_LEVEL = 50;
@@ -34,6 +34,12 @@ export function addSheetTag(sheet: PersonaSheet, tag: string): PersonaSheet {
 
 export function setSheetTagColor(sheet: PersonaSheet, tag: string, color: number): PersonaSheet {
   return { ...sheet, tagColors: { ...sheet.tagColors, [tag.toLowerCase()]: color } };
+}
+
+/** Renames one of the sheet's tags; its colour follows. */
+export function renameSheetTag(sheet: PersonaSheet, from: string, to: string): PersonaSheet {
+  const tags = renamedTags(sheet.tags, from, to);
+  return tags ? { ...sheet, tags, tagColors: renamedTagColors(sheet.tagColors, from, to, true) } : sheet;
 }
 
 export function removeSheetTag(sheet: PersonaSheet, tag: string): PersonaSheet {
