@@ -82,7 +82,10 @@ function Objective() {
 
 function PhaseRow() {
   const t = useT();
-  const doc = useMap((m) => m);
+  // Phases and steps only: typing in a card doesn't redraw the row.
+  const rawPhases = useMap((m) => m.phases);
+  const steps = useMap((m) => m.steps);
+  const doc = { phases: rawPhases, steps };
   const apply = useStore((s) => s.apply);
   const phases = ops.normalizePhases(doc.phases, doc.steps.length);
   let cursor = 0;

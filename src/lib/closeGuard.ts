@@ -31,7 +31,7 @@ export async function installCloseGuard(): Promise<void> {
       okLabel: t('confirm.quitAnyway'),
       cancelLabel: t('new.cancel'),
     });
-    if (quit) saveSession();
+    if (quit) await saveSession();
     else event.preventDefault();
   });
 }

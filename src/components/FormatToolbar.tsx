@@ -114,12 +114,14 @@ function LinkControls() {
 }
 
 function MapTagManager() {
-  const doc = useMap((m) => m);
+  // As one string, so typing a card's text doesn't redraw the toolbar.
+  const counts = useMap((m) => JSON.stringify(ops.tagCounts(m)));
+  const tagColors = useMap((m) => m.tagColors);
   const apply = useStore((s) => s.apply);
   return (
     <TagManager
-      tags={ops.tagCounts(doc)}
-      colors={doc.tagColors}
+      tags={JSON.parse(counts) as { tag: string; count: number }[]}
+      colors={tagColors}
       setColor={(tag, i) => apply((d) => ops.setTagColor(d, tag, i))}
       deleteTag={(tag) => apply((d) => ops.deleteTagEverywhere(d, tag))}
     />
