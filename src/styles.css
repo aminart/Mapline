@@ -2836,3 +2836,451 @@ body.is-dragging .flow-drop {
     transform: rotate(360deg);
   }
 }
+
+/* Links between documents: flows detailing a phase, a step or an activity */
+
+.flow-links {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.card-flows {
+  padding: 0 8px 7px;
+}
+.phase .flow-links {
+  flex: 0 1 auto;
+  max-width: 55%;
+  flex-wrap: nowrap;
+}
+.phase .flow-chip {
+  min-width: 0;
+}
+.flow-links:not(.has-links):not(.is-open) {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.phase:hover .flow-links,
+.phase:focus-within .flow-links,
+.step:hover .flow-links,
+.step:focus-within .flow-links,
+.card:hover .flow-links,
+.card:focus-within .flow-links {
+  opacity: 1;
+}
+.card-flows:not(.has-links) {
+  position: absolute;
+  top: 4px;
+  right: 52px;
+  z-index: 6;
+  padding: 0;
+}
+.card-flows:not(.has-links) .flow-links-btn {
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+.card-flows:not(.has-links) .flow-links-menu {
+  left: auto;
+  right: -52px;
+}
+.flow-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.flow-chip:hover {
+  background: #d5defa;
+}
+.flow-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.flow-links-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 5px;
+  border: 1px dashed var(--dots);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.flow-links-btn:hover,
+.flow-links.is-open .flow-links-btn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.flow-links-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 250px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 24, 32, 0.18);
+  color: var(--ink);
+  font-weight: 400;
+  text-align: left;
+}
+.flow-links-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 13px var(--font, inherit);
+  text-align: left;
+  cursor: pointer;
+}
+.flow-links-item:hover {
+  background: var(--surface-2);
+}
+.flow-links-item.is-main {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.flow-links-item.is-muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+.flow-links-label {
+  padding: 8px 10px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.flow-links-hint {
+  margin: 4px 10px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* A flow's header (what it details, its main persona) and free text */
+
+.flow-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.flow-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+}
+.flow-header-gap {
+  flex: 1;
+}
+.flow-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 70%;
+  height: 32px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.flow-source:hover {
+  border-color: var(--accent);
+}
+.flow-source strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.flow-main-persona {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.flow-main-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 3px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+}
+.flow-main-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+}
+.flow-main-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.flow-main-pill select {
+  border: 0;
+  background: transparent;
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.flow-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.flow-brief .flow-brief-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.flow-brief .flow-brief-text {
+  min-height: 2.8em;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* A tag edited from its card */
+
+.tag-editor {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(20, 24, 32, 0.18);
+  color: var(--ink);
+  font-weight: 400;
+  white-space: normal;
+}
+.box.card .tag-editor input.text-field,
+.tag-editor input.text-field {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.tag-editor-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.tag-editor-all input {
+  flex: none;
+  width: auto;
+  height: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.tag-editor-all {
+  justify-content: flex-start;
+  text-align: left;
+  white-space: nowrap;
+}
+.tag-editor .tag-colors {
+  flex-wrap: wrap;
+}
+
+/* A persona sheet's journeys */
+
+.sheet-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sheet-journeys {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--ink);
+  border-radius: 10px;
+}
+.sheet-journeys-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sheet-journeys-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.switch input {
+  appearance: none;
+  position: relative;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  border-radius: 9px;
+  background: var(--dots);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.switch input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.switch input:checked {
+  background: var(--accent);
+}
+.switch input:checked::after {
+  transform: translateX(14px);
+}
+.switch input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sheet-journeys-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.journey {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.journey:hover {
+  background: var(--accent-soft);
+}
+.journey-flow {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  align-self: start;
+}
+.journey-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.journey-title svg {
+  color: var(--accent);
+}
+.journey-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.journey-steps strong {
+  color: var(--accent);
+}
+.journey-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.sheet-journeys-off {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  border: 1px dashed var(--dots);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sheet-journeys-off:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

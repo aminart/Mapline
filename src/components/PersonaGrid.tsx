@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { useMap, useStore, useT } from '../store';
+import { activeMap, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
 import type { Divider, Id, Persona } from '../model/types';
 import { CHOICE_STYLE, LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
 import { useBox } from './useBox';
 import { CloseIcon, DiamondIcon, GripIcon, LineAboveIcon, LineIcon, PersonIcon, PlusIcon, SplitIcon } from './Icons';
 import { NoteButton, TagRow, TagSuggestions as TagList } from './CardExtras';
+import { FlowLinks } from './FlowLinks';
 import { sheetFor } from '../model/project';
 import { cls } from './cls';
 import { GAP, ROW_GAP } from './layout';
@@ -336,7 +337,11 @@ function ActivityCard(props: {
         listId={TAG_LIST_ID}
         onAdd={(tag) => apply((d) => ops.addTag(d, activityKey, tag))}
         onRemove={(tag) => apply((d) => ops.removeTag(d, activityKey, tag))}
+        onRename={(from, to, everywhere) => apply((d) => ops.renameTag(d, everywhere ? null : activityKey, from, to))}
+        onColor={(tag, i) => apply((d) => ops.setTagColor(d, tag, i))}
+        uses={(tag) => ops.tagUses(activeMap(useStore.getState()), tag)}
       />
+      <FlowLinks kind="act" id={activityId} className="card-flows" />
       <span
         className="grip grip-card card-btn no-export"
         title={t('board.dragActivity')}

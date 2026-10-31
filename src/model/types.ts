@@ -184,6 +184,8 @@ export interface PersonaSheet {
   link: { docId: Id; personaId: Id } | null;
   /** Keep the name, role and colour the same as the linked persona's. */
   sync: boolean;
+  /** False hides the "Their journeys" block (maps and flows the persona appears in). */
+  journeys?: boolean;
 }
 
 export interface PersonaSheetDoc {
@@ -222,6 +224,14 @@ export interface FlowLink {
   color?: string;
 }
 
+/** The part of a mission map a flow details: a phase, a step or an activity. */
+export interface FlowSource {
+  docId: Id;
+  kind: 'phase' | 'step' | 'act';
+  /** The phase's, step's or activity's id. */
+  id: Id;
+}
+
 /** A flow: cards on a grid and the arrows between them. */
 export interface Flow {
   nodes: FlowNode[];
@@ -230,6 +240,13 @@ export interface Flow {
   styles: Record<string, BoxStyle>;
   /** Chosen colour (index into the tag palette) per lower-cased tag. */
   tagColors?: Record<string, number>;
+  /** The map phase, step or activity this flow details. */
+  source?: FlowSource;
+  /** Main persona: cards without a persona of their own take its colour. */
+  personaId?: Id;
+  /** Free text above the cards (the flow's goals, say), and its title; the translated default when unset. */
+  brief?: string;
+  briefTitle?: string;
 }
 
 export interface FlowDoc {

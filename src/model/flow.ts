@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { Flow, FlowLink, FlowNode, FlowNodeKind, Id, LinkStyle } from './types';
-import { uid, withTag } from './ops';
+import { renamedTagColors, renamedTags, uid, withTag } from './ops';
 
 export type Direction = 'up' | 'right' | 'down' | 'left';
 
@@ -154,6 +154,31 @@ export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink,
 
 export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind' | 'personaId'>>): Flow {
   return { ...flow, nodes: flow.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) };
+}
+
+/** Renames a tag on one card (`id`), or on every card when `id` is null. */
+export function renameNodeTag(flow: Flow, id: Id | null, from: string, to: string): Flow {
+  let changed = false;
+  const nodes = flow.nodes.map((n) => {
+    const tags = id === null || n.id === id ? renamedTags(n.tags ?? [], from, to) : null;
+    if (!tags) return n;
+    changed = true;
+    return { ...n, tags };
+  });
+  return changed ? { ...flow, nodes, tagColors: renamedTagColors(flow.tagColors, from, to, id === null) } : flow;
+}
+
+/** How many cards carry `tag` (case-insensitive). */
+export function flowTagUses(flow: Flow, tag: string): number {
+  const key = tag.toLowerCase();
+  return flow.nodes.filter((n) => n.tags?.some((x) => x.toLowerCase() === key)).length;
+}
+
+/** Sets the free text above the cards, or its title. */
+export function setBrief(flow: Flow, patch: { brief?: string; briefTitle?: string }): Flow {
+  const next = { ...flow, ...patch };
+  if (patch.brief !== undefined && !patch.brief) delete next.brief;
+  return next;
 }
 
 export function addNodeTag(flow: Flow, id: Id, tag: string): Flow {

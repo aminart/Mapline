@@ -8,14 +8,15 @@ import { setSheetIdentity, sheetIdentity } from '../model/project';
 import { BLOCK_ACCENTS, PERSONA_PALETTE, TAG_PALETTE, personaAccent, tagColor } from '../model/theme';
 import type { BlockPlace, BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
 import { readImage } from '../lib/image';
-import { withBusy } from '../actions';
+import { docLabel, withBusy } from '../actions';
 import { boardRef } from './Board';
 import { useBox } from './useBox';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
 import { focusSoon, useFocusKey } from './useFocusKey';
 import { startDrag, useDropTarget, type DropPoint } from './dnd';
-import { CameraIcon, CloseIcon, GripIcon, PlusIcon } from './Icons';
+import { CameraIcon, ChevronRight, CloseIcon, FlowIcon, GripIcon, MapIcon, PlusIcon } from './Icons';
+import { personaJourneys, setSheetJourneys } from '../model/links';
 import { cls } from './cls';
 
 const VIEWS: BlockView[] = ['list', 'gauges', 'tags', 'text'];
@@ -29,9 +30,80 @@ export function SheetView() {
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="sheet" ref={boardRef}>
         <Identity sheet={sheet} />
-        <Blocks sheet={sheet} />
+        <div className="sheet-main">
+          <Journeys sheet={sheet} />
+          <Blocks sheet={sheet} />
+        </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Their journeys": the steps of the map the persona appears in, and its
+ * flows, each opening its document. Shown unless turned off; off, a thin
+ * line (not exported) turns it back on.
+ */
+function Journeys({ sheet }: { sheet: PersonaSheet }) {
+  const t = useT();
+  const project = useStore((s) => s.project);
+  const applySheet = useStore((s) => s.applySheet);
+  const setDoc = useStore((s) => s.setDoc);
+  if (sheet.journeys === false) {
+    return (
+      <button className="sheet-journeys-off no-export" onClick={() => applySheet((s) => setSheetJourneys(s, true))}>
+        <PlusIcon size={11} /> {t('sheet.journeysShow')}
+      </button>
+    );
+  }
+  const linked = sheet.link ? personaJourneys(project, sheet.link.docId, sheet.link.personaId) : null;
+  const empty = linked && !linked.map && linked.flows.length === 0;
+  return (
+    <section className="box sheet-journeys">
+      <div className="sheet-journeys-head">
+        <span className="sheet-journeys-title">{t('sheet.journeys')}</span>
+        <label className="switch no-export">
+          <span>{t('sheet.journeysToggle')}</span>
+          <input type="checkbox" role="switch" checked onChange={() => applySheet((s) => setSheetJourneys(s, false))} />
+        </label>
+      </div>
+      {!linked ? (
+        <p className="muted-sm">{t('sheet.journeysUnlinked')}</p>
+      ) : empty ? (
+        <p className="muted-sm">{t('sheet.journeysEmpty')}</p>
+      ) : (
+        <div className="sheet-journeys-list">
+          {linked.map && (
+            <button className="journey journey-map" onClick={() => setDoc(linked.map!.docId)}>
+              <span className="journey-title">
+                <MapIcon size={13} /> {docLabel(project, linked.map.docId)}
+              </span>
+              {linked.map.steps.length === 0 ? (
+                <span className="muted-sm">{t('sheet.journeysNoSteps')}</span>
+              ) : (
+                <ol className="journey-steps">
+                  {linked.map.steps.map((st) => (
+                    <li key={st.n}>
+                      <strong>{st.n}</strong> · {st.title || t('board.step', { n: st.n })}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </button>
+          )}
+          {linked.flows.map((f) => (
+            <button key={f.id} className="journey journey-flow" onClick={() => setDoc(f.id)}>
+              <span className="journey-title">
+                <FlowIcon size={13} /> {docLabel(project, f.id)}
+              </span>
+              <span className="journey-open no-export">
+                {t('sheet.journeysOpen')} <ChevronRight size={11} />
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

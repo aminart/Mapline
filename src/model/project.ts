@@ -50,12 +50,20 @@ export function addDoc(project: Project, doc: ProjectDoc, afterId?: Id): Project
   return { ...project, docs };
 }
 
-/** Removes a document; a project always keeps one. Sheets of a removed mission map keep their own copy. */
+/** Removes a document; a project always keeps one. Sheets of a removed mission map keep their own copy, and its flows stay. */
 export function removeDoc(project: Project, docId: Id): Project {
   if (project.docs.length <= 1 || !findDoc(project, docId)) return project;
   const docs = project.docs
     .filter((d) => d.id !== docId)
-    .map((d) => (d.kind === 'persona' && d.sheet.link?.docId === docId ? { ...d, sheet: { ...d.sheet, link: null } } : d));
+    .map((d) => {
+      if (d.kind === 'persona' && d.sheet.link?.docId === docId) return { ...d, sheet: { ...d.sheet, link: null } };
+      // A flow detailing part of the removed map no longer does.
+      if (d.kind === 'flow' && d.flow.source?.docId === docId) {
+        const { source: _gone, ...flow } = d.flow;
+        return { ...d, flow };
+      }
+      return d;
+    });
   return { ...project, docs };
 }
 
