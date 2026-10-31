@@ -74,6 +74,7 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
   if (!node) return null;
   const custom = flow.styles[`node:${id}`];
   const personas = projectPersonas(project);
+  const mainName = personas.find((p) => p.persona.id === flow.personaId)?.persona.name;
   const editable = node.kind === 'activity' || node.kind === 'choice';
   return (
     <div className="style-controls">
@@ -97,7 +98,7 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
             const v = e.target.value || null;
             applyFlow((f) => fo.setNode(f, id, { personaId: v }));
           }}>
-            <option value="">{t('flow.noPersona')}</option>
+            <option value="">{mainName !== undefined ? t('flow.inheritPersona', { name: mainName || t('doc.unnamed') }) : t('flow.noPersona')}</option>
             {personas.map(({ persona }) => (
               <option key={persona.id} value={persona.id}>
                 {persona.name || t('doc.unnamed')}

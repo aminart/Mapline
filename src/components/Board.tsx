@@ -11,6 +11,7 @@ import { startDrag, useDropTarget } from './dnd';
 import { PresentationFocus } from './Presentation';
 import { StoryboardRow } from './Storyboard';
 import { TextRows } from './InfoRow';
+import { FlowLinks } from './FlowLinks';
 import { FitText } from './FitText';
 import { PersonaGrid, TagSuggestions } from './PersonaGrid';
 import { cls } from './cls';
@@ -128,6 +129,7 @@ function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: bo
         }}
         style={b.text}
       />
+      <FlowLinks kind="phase" id={phase.id} />
       <div className="box-actions no-export" style={{ color: b.style.color }}>
         {!isLast && (
           <>
@@ -223,6 +225,7 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
         }}
         style={b.text}
       />
+      <FlowLinks kind="step" id={step.id} className="step-flows" />
       <div className="step-slots no-export">
         <button className="chip" aria-label={t('board.addColumnLabel')} onClick={() => apply((d) => ops.addSlot(d, step.id, null, null).doc)}>
           <PlusIcon size={12} /> {t('board.addColumn')}

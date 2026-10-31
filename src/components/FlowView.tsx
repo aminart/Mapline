@@ -17,7 +17,9 @@ import { pointAlong, roundedPath } from '../lib/arrows';
 import { boardRef } from './Board';
 import { useBox } from './useBox';
 import { startDrag, useDropTarget } from './dnd';
-import { CloseIcon, GripIcon, PlusIcon } from './Icons';
+import { ChevronLeft, CloseIcon, GripIcon, PlusIcon } from './Icons';
+import { resolveSource, setFlowPersona } from '../model/links';
+import { docLabel } from '../actions';
 import { cls } from './cls';
 
 const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
@@ -45,7 +47,10 @@ export function FlowView() {
   for (let r = 0; r <= rows; r++) for (let c = 0; c <= cols; c++) if (!fo.nodeAt(flow, c, r)) empty.push([c, r]);
   return (
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
-      <div className="flow" ref={boardRef} style={{ width: size.w, height: size.h }}>
+      <div className="flow-doc" ref={boardRef} style={{ width: Math.max(size.w, 640) }}>
+      <FlowHeader flow={flow} />
+      <FlowBrief flow={flow} />
+      <div className="flow" style={{ width: size.w, height: size.h }}>
         {empty.map(([c, r]) => (
           <DropCell key={`${c}:${r}`} col={c} row={r} layout={layout} />
         ))}
@@ -58,7 +63,103 @@ export function FlowView() {
           <ArrowExtras key={r.link.id} routed={r} />
         ))}
       </div>
+      </div>
     </div>
+  );
+}
+
+/** What the flow details (a link back to the map) and its main persona. */
+function FlowHeader({ flow }: { flow: Flow }) {
+  const t = useT();
+  const project = useStore((s) => s.project);
+  const applyFlow = useStore((s) => s.applyFlow);
+  const setDoc = useStore((s) => s.setDoc);
+  const focusLater = useStore((s) => s.focusLater);
+  const source = resolveSource(project, flow.source);
+  const personas = projectPersonas(project);
+  const main = personas.find((p) => p.persona.id === flow.personaId);
+  const { accent, onAccent } = main ? personaAccent(main.persona.color, main.style) : { accent: '#5B6270', onAccent: '#FFFFFF' };
+  if (!source && personas.length === 0) return null;
+  const title = source?.title.trim() || t('links.untitled');
+  const label = !source ? '' : source.source.kind === 'phase' ? t('links.phase', { title }) : source.source.kind === 'step' ? t('links.step', { n: source.step, title }) : t('links.act', { title });
+  const back = () => {
+    if (!source) return;
+    setDoc(source.source.docId);
+    focusLater(`${source.source.kind}:${source.source.id}`);
+  };
+  return (
+    <div className="flow-header no-export">
+      {source && (
+        <button className="flow-source" title={t('links.back', { name: docLabel(project, source.source.docId) })} onClick={back}>
+          <ChevronLeft size={12} />
+          {t('links.details')} : <strong>{label}</strong>
+          <span className="muted-sm">({docLabel(project, source.source.docId)})</span>
+        </button>
+      )}
+      <span className="flow-header-gap" />
+      {personas.length > 0 && (
+        <label className="flow-main-persona">
+          <span className="muted-sm">{t('flow.mainPersona')}</span>
+          <span className="flow-main-pill">
+            <span className="flow-main-avatar" style={{ background: accent, color: onAccent }} aria-hidden="true">
+              {main?.photo ? <img src={main.photo} alt="" /> : (main?.persona.name || '?').charAt(0).toUpperCase()}
+            </span>
+            <select
+              aria-label={t('flow.mainPersonaLabel')}
+              value={flow.personaId ?? ''}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                applyFlow((f) => setFlowPersona(f, v));
+              }}
+            >
+              <option value="">{t('flow.noPersona')}</option>
+              {personas.map(({ persona }) => (
+                <option key={persona.id} value={persona.id}>
+                  {persona.name || t('doc.unnamed')}
+                </option>
+              ))}
+            </select>
+          </span>
+        </label>
+      )}
+    </div>
+  );
+}
+
+/** Free text above the cards: the flow's goals, say, under a title of one's own. */
+function FlowBrief({ flow }: { flow: Flow }) {
+  const t = useT();
+  const applyFlow = useStore((s) => s.applyFlow);
+  const docId = useStore((s) => s.docId);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const text = flow.brief ?? '';
+  useFitText(ref, [text]);
+  return (
+    <section className={cls('box flow-brief', !text.trim() && 'no-export')}>
+      <FitText
+        singleLine
+        className="flow-brief-title"
+        aria-label={t('flow.briefTitleLabel')}
+        placeholder={t('flow.briefTitle')}
+        value={flow.briefTitle ?? t('flow.briefTitle')}
+        onChange={(e) => {
+          const v = e.target.value;
+          applyFlow((f) => fo.setBrief(f, { briefTitle: v }), { coalesce: `brief-title:${docId}` });
+        }}
+      />
+      <textarea
+        ref={ref}
+        rows={2}
+        className="flow-brief-text"
+        aria-label={t('flow.briefLabel')}
+        placeholder={t('flow.briefPlaceholder')}
+        value={text}
+        onChange={(e) => {
+          const v = e.target.value;
+          applyFlow((f) => fo.setBrief(f, { brief: v }), { coalesce: `brief:${docId}` });
+        }}
+      />
+    </section>
   );
 }
 
@@ -177,7 +278,11 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
   const tagColors = useStore((s) => activeFlow(s)?.tagColors);
   const content = useRef<HTMLDivElement>(null);
   const box = nodeBox(node, layout);
-  const persona = node.personaId ? projectPersonas(project).find((p) => p.persona.id === node.personaId) : undefined;
+  const flowPersona = useStore((s) => activeFlow(s)?.personaId);
+  // Cards without a persona of their own take the flow's main persona's colour.
+  const personaId = node.personaId ?? flowPersona;
+  const persona = personaId ? projectPersonas(project).find((p) => p.persona.id === personaId) : undefined;
+  const ownPersona = Boolean(node.personaId);
   const tags = node.tags ?? [];
   const dimmed = tagFilter.length > 0 && !tags.some((tag) => tagFilter.includes(tag.toLowerCase()));
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
@@ -265,7 +370,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
           {t('flow.kind.choice')}
             </span>
           )}
-          {persona && (
+          {persona && ownPersona && (
             <span className="flow-persona" style={{ background: accent }} title={persona.persona.name} aria-label={persona.persona.name}>
               {persona.photo ? <img src={persona.photo} alt="" /> : (persona.persona.name || '?').charAt(0).toUpperCase()}
             </span>
@@ -287,6 +392,12 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
             listId={FLOW_TAG_LIST}
             onAdd={(tag) => applyFlow((f) => fo.addNodeTag(f, node.id, tag))}
             onRemove={(tag) => applyFlow((f) => fo.removeNodeTag(f, node.id, tag))}
+            onRename={(from, to, everywhere) => applyFlow((f) => fo.renameNodeTag(f, everywhere ? null : node.id, from, to))}
+            onColor={(tag, i) => applyFlow((f) => fo.setFlowTagColor(f, tag, i))}
+            uses={(tag) => {
+              const f = activeFlow(useStore.getState());
+              return f ? fo.flowTagUses(f, tag) : 0;
+            }}
           />
         </div>
       )}

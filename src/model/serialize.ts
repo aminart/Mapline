@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
 import { normalizePhases, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
@@ -162,6 +162,7 @@ function parseSheet(input: unknown): PersonaSheet {
     styles: isObject(raw.styles) ? (raw.styles as PersonaSheet['styles']) : {},
     link,
     sync: link ? raw.sync !== false : false,
+    ...(raw.journeys === false ? { journeys: false } : {}),
   };
 }
 
@@ -189,6 +190,7 @@ function placeOf(v: unknown): { place?: SheetBlock['place'] } {
 }
 
 const NODE_KINDS: FlowNodeKind[] = ['start', 'end', 'activity', 'choice'];
+const SOURCE_KINDS: FlowSource['kind'][] = ['phase', 'step', 'act'];
 const LINK_STYLES: LinkStyle[] = ['solid', 'dashed', 'dotted'];
 const cellIndex = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
 
@@ -225,5 +227,19 @@ function parseFlow(input: unknown): Flow {
       ...(LINK_STYLES.includes(l.style as LinkStyle) ? { style: l.style as LinkStyle } : {}),
       ...(typeof l.color === 'string' && /^#[0-9a-f]{6}$/i.test(l.color) ? { color: l.color } : {}),
     }));
-  return { nodes, links, styles: isObject(input.styles) ? (input.styles as Flow['styles']) : {}, ...tagColorsOf(input.tagColors) };
+  const src = input.source;
+  const source =
+    isObject(src) && typeof src.docId === 'string' && typeof src.id === 'string' && SOURCE_KINDS.includes(src.kind as FlowSource['kind'])
+      ? { source: { docId: src.docId, kind: src.kind as FlowSource['kind'], id: src.id } }
+      : {};
+  return {
+    nodes,
+    links,
+    styles: isObject(input.styles) ? (input.styles as Flow['styles']) : {},
+    ...tagColorsOf(input.tagColors),
+    ...source,
+    ...(typeof input.personaId === 'string' && input.personaId ? { personaId: input.personaId } : {}),
+    ...(typeof input.brief === 'string' && input.brief ? { brief: input.brief } : {}),
+    ...(typeof input.briefTitle === 'string' ? { briefTitle: input.briefTitle } : {}),
+  };
 }

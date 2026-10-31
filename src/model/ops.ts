@@ -290,6 +290,54 @@ export function withTag(tags: string[], tag: string): string[] | null {
   return tags.concat([clean]);
 }
 
+/**
+ * `tags` with `from` renamed `to` (case-insensitive), or null when `to` is
+ * blank or nothing changes. When the card already carries `to`, the two merge.
+ */
+export function renamedTags(tags: string[], from: string, to: string): string[] | null {
+  const clean = to.trim().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
+  const key = from.toLowerCase();
+  if (!clean || !tags.some((x) => x.toLowerCase() === key)) return null;
+  const out: string[] = [];
+  for (const x of tags) {
+    const next = x.toLowerCase() === key ? clean : x;
+    if (!out.some((y) => y.toLowerCase() === next.toLowerCase())) out.push(next);
+  }
+  return out.length === tags.length && out.every((x, i) => x === tags[i]) ? null : out;
+}
+
+/**
+ * The colours after renaming `from` to `to`: the new name takes the old
+ * one's colour unless it has its own; `everywhere` drops the old name's.
+ */
+export function renamedTagColors(colors: Record<string, number> | undefined, from: string, to: string, everywhere: boolean): Record<string, number> {
+  const out = { ...colors };
+  const [a, b] = [from.toLowerCase(), to.trim().replace(/\s+/g, ' ').toLowerCase()];
+  if (a === b) return out;
+  if (out[a] !== undefined && out[b] === undefined) out[b] = out[a];
+  if (everywhere) delete out[a];
+  return out;
+}
+
+/** Renames a tag on one activity (`key`), or on every activity when `key` is null. */
+export function renameTag(doc: Blueprint, key: string | null, from: string, to: string): Blueprint {
+  let changed = false;
+  const activities: Blueprint['activities'] = {};
+  for (const [k, act] of Object.entries(doc.activities)) {
+    const tags = key === null || k === key ? renamedTags(act.tags ?? [], from, to) : null;
+    activities[k] = tags ? { ...act, tags } : act;
+    if (tags) changed = true;
+  }
+  if (!changed) return doc;
+  return { ...doc, activities, tagColors: renamedTagColors(doc.tagColors, from, to, key === null) };
+}
+
+/** How many activities carry `tag` (case-insensitive). */
+export function tagUses(doc: Blueprint, tag: string): number {
+  const key = tag.toLowerCase();
+  return Object.values(doc.activities).filter((a) => a.tags?.some((x) => x.toLowerCase() === key)).length;
+}
+
 /** Adds a tag to an activity, ignoring blanks and duplicates (case-insensitive). */
 export function addTag(doc: Blueprint, key: string, tag: string): Blueprint {
   const act = doc.activities[key];
