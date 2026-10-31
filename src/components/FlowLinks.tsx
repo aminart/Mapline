@@ -11,7 +11,7 @@ import { ChevronRight, FlowIcon, LinkIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
 
 /**
- * The flows detailing a phase, a step or an activity of the map shown: a
+ * The flows detailing a phase or a step of the map shown: a
  * chip per flow, that opens it, and a menu to detail it in a new flow or
  * link an existing one.
  */

@@ -3,12 +3,12 @@
 
 /**
  * Links between a project's documents: a flow details a phase, a step or an
- * activity of a mission map, and has a main persona; a persona's sheet lists
- * the maps and flows that persona appears in.
+ * activity of a mission map, and has a main persona; a persona's sheet links
+ * to the flows that persona is in.
  */
 
-import type { Flow, FlowDoc, FlowSource, Id, PersonaSheet, Project } from './types';
-import { activityKey, activityKeyOf, altKey, normalizePhases } from './ops';
+import type { Flow, FlowDoc, FlowSource, Id, Project } from './types';
+import { activityKeyOf, normalizePhases } from './ops';
 import { addDoc, missionMapOf, updateFlow } from './project';
 
 /** The flows detailing a phase, a step or an activity of the map `docId`. */
@@ -80,27 +80,9 @@ export function nodePersona(flow: Flow, personaId: Id | null | undefined): Id | 
   return personaId ?? flow.personaId ?? undefined;
 }
 
-/** Where a map persona appears: the steps of its map that hold its activities, and the flows it is in. */
-export function personaJourneys(project: Project, mapDocId: Id, personaId: Id): { map: { docId: Id; steps: { n: number; title: string }[] } | null; flows: FlowDoc[] } {
-  const doc = missionMapOf(project, mapDocId);
-  let map: { docId: Id; steps: { n: number; title: string }[] } | null = null;
-  if (doc?.map.personas.some((p) => p.id === personaId)) {
-    const steps = doc.map.steps
-      .map((s, i) => ({ n: i + 1, title: s.title, used: s.slots.some((slot) => doc.map.activities[activityKey(personaId, slot)] || doc.map.activities[altKey(activityKey(personaId, slot))]) }))
-      .filter((s) => s.used)
-      .map(({ n, title }) => ({ n, title }));
-    map = { docId: mapDocId, steps };
-  }
-  const flows = project.docs.filter(
+/** The flows a map persona is in: as the flow's main persona or on one of its cards. */
+export function personaFlows(project: Project, personaId: Id): FlowDoc[] {
+  return project.docs.filter(
     (d): d is FlowDoc => d.kind === 'flow' && (d.flow.personaId === personaId || d.flow.nodes.some((n) => n.personaId === personaId)),
   );
-  return { map, flows };
-}
-
-/** Shows or hides a sheet's "Their journeys" block; shown is the default, so it isn't stored. */
-export function setSheetJourneys(sheet: PersonaSheet, shown: boolean): PersonaSheet {
-  if ((sheet.journeys !== false) === shown) return sheet;
-  if (!shown) return { ...sheet, journeys: false };
-  const { journeys: _gone, ...rest } = sheet;
-  return rest;
 }

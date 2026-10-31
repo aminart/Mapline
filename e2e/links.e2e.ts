@@ -7,69 +7,56 @@ import { addActivity, cell, startProject } from './helpers';
 const docTab = (page: import('@playwright/test').Page, name: string | RegExp) => page.locator('.doc-tab').filter({ hasText: name }).locator('.doc-tab-btn');
 const shots = process.env.LINKS_SHOTS;
 
-test('details an activity, a step and a phase in flows, and goes back to the map', async ({ page }) => {
+test('details a step and a phase in flows, and goes back to the map', async ({ page }) => {
   await startProject(page);
-  await page.locator('.persona-row').first().getByRole('textbox', { name: 'Nom du persona' }).fill('Patiente');
   await page.locator('.step').first().getByRole('textbox', { name: 'Nom de l’étape' }).fill('Prendre rendez-vous');
   await page.locator('.phase').first().getByRole('textbox', { name: 'Nom de la phase' }).fill('Avant la visite');
   await addActivity(page, 0, 0, 'Réserver en ligne');
+  // Activity cards stay free of flow links.
+  await expect(cell(page, 0, 0).locator('.card').getByRole('button', { name: 'Flows liés' })).toHaveCount(0);
 
-  // An activity: the new flow is named after it and takes its persona.
-  const card = cell(page, 0, 0).locator('.card');
-  await card.hover();
-  await card.getByRole('button', { name: 'Flows liés' }).click();
-  await page.getByRole('menuitem', { name: 'Détailler en nouveau flow' }).click();
-  await expect(page.locator('.flow')).toBeVisible();
-  await expect(page.locator('.doc-tab')).toContainText(['Flow · Réserver en ligne']);
-  await expect(page.locator('.flow-source')).toContainText('Activité · Réserver en ligne');
-  await expect(page.getByRole('combobox', { name: 'Persona principal du flow' })).toHaveValue(/.+/);
-  await page.getByRole('textbox', { name: 'Zone de texte libre' }).fill('Réserver en moins de 3 minutes');
-  if (shots) await page.screenshot({ path: `${shots}/flow.png` });
-
-  // Back to the map: the card shows its flow.
-  await page.locator('.flow-source').click();
-  await expect(page.locator('.board')).toBeVisible();
-  await expect(card.locator('.flow-chip')).toHaveText('Réserver en ligne');
-
-  // A step and a phase.
   const step = page.locator('.step').first();
   await step.hover();
   await step.getByRole('button', { name: 'Flows liés' }).click();
   await page.getByRole('menuitem', { name: 'Détailler en nouveau flow' }).click();
+  await expect(page.locator('.flow')).toBeVisible();
+  await expect(page.locator('.doc-tab')).toContainText(['Flow · Prendre rendez-vous']);
   await expect(page.locator('.flow-source')).toContainText('Étape 1 · Prendre rendez-vous');
-  await docTab(page, 'Map').click();
+  await page.getByRole('textbox', { name: 'Zone de texte libre' }).fill('Réserver en moins de 3 minutes');
+  if (shots) await page.screenshot({ path: `${shots}/flow.png` });
+
+  // Back to the map: the step shows its flow.
+  await page.locator('.flow-source').click();
+  await expect(page.locator('.board')).toBeVisible();
+  await expect(step.locator('.flow-chip')).toHaveText('Prendre rendez-vous');
+
+  // A phase, linked to the existing flow: it moves from the step.
   const phase = page.locator('.phase').first();
   await phase.hover();
   await phase.getByRole('button', { name: 'Flows liés' }).click();
-  // An existing flow can be linked too.
   await page.getByRole('menuitem', { name: 'Flow · Prendre rendez-vous' }).click();
   await expect(phase.locator('.flow-chip')).toHaveText('Prendre rendez-vous');
   await expect(step.locator('.flow-chip')).toHaveCount(0);
   if (shots) await page.screenshot({ path: `${shots}/map.png` });
 });
 
-test('lists a persona’s journeys on their sheet, and hides them', async ({ page }) => {
+test('links a persona’s sheet to the flows they are in', async ({ page }) => {
   await startProject(page);
   await page.locator('.persona-row').first().getByRole('textbox', { name: 'Nom du persona' }).fill('Patiente');
   await page.locator('.step').nth(1).getByRole('textbox', { name: 'Nom de l’étape' }).fill('Arriver');
-  await addActivity(page, 0, 1, 'Trouver le bâtiment');
-  const card = cell(page, 0, 1).locator('.card');
-  await card.hover();
-  await card.getByRole('button', { name: 'Flows liés' }).click();
+  const step = page.locator('.step').nth(1);
+  await step.hover();
+  await step.getByRole('button', { name: 'Flows liés' }).click();
   await page.getByRole('menuitem', { name: 'Détailler en nouveau flow' }).click();
+  await page.getByRole('combobox', { name: 'Persona principal du flow' }).selectOption({ label: 'Patiente' });
   await docTab(page, 'Map').click();
   await page.locator('.persona').first().hover();
   await page.getByRole('button', { name: 'Créer sa fiche' }).first().click();
   await page.locator('dialog[open]').getByRole('button', { name: 'Créer la fiche' }).click();
-  const journeys = page.locator('.sheet-journeys');
-  await expect(journeys.locator('.journey-steps li')).toHaveText(['2 · Arriver']);
-  await expect(journeys.locator('.journey-flow')).toContainText('Flow · Trouver le bâtiment');
+  const flows = page.locator('.sheet-identity .sheet-flow');
+  await expect(flows).toHaveText(['Arriver']);
   if (shots) await page.screenshot({ path: `${shots}/sheet.png` });
-  await journeys.getByRole('switch').click();
-  await expect(journeys).toHaveCount(0);
-  await page.getByRole('button', { name: 'Afficher ses parcours' }).click();
-  await expect(page.locator('.sheet-journeys')).toBeVisible();
-  await page.locator('.journey-flow').click();
+  await flows.first().click();
   await expect(page.locator('.flow')).toBeVisible();
 });
 

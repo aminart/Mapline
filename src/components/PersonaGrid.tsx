@@ -9,7 +9,6 @@ import { CHOICE_STYLE, LINK_COLORS, LINK_DASH, personaAccent } from '../model/th
 import { useBox } from './useBox';
 import { CloseIcon, DiamondIcon, GripIcon, LineAboveIcon, LineIcon, PersonIcon, PlusIcon, SplitIcon } from './Icons';
 import { NoteButton, TagRow, TagSuggestions as TagList } from './CardExtras';
-import { FlowLinks } from './FlowLinks';
 import { sheetFor } from '../model/project';
 import { cls } from './cls';
 import { GAP, ROW_GAP } from './layout';
@@ -341,7 +340,6 @@ function ActivityCard(props: {
         onColor={(tag, i) => apply((d) => ops.setTagColor(d, tag, i))}
         uses={(tag) => ops.tagUses(activeMap(useStore.getState()), tag)}
       />
-      <FlowLinks kind="act" id={activityId} className="card-flows" />
       <span
         className="grip grip-card card-btn no-export"
         title={t('board.dragActivity')}

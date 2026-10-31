@@ -162,7 +162,6 @@ function parseSheet(input: unknown): PersonaSheet {
     styles: isObject(raw.styles) ? (raw.styles as PersonaSheet['styles']) : {},
     link,
     sync: link ? raw.sync !== false : false,
-    ...(raw.journeys === false ? { journeys: false } : {}),
   };
 }
 
