@@ -97,20 +97,6 @@ select:focus-visible,
 .spacer {
   flex-grow: 1;
 }
-.title-input {
-  border: 0;
-  background: transparent;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 6px 8px;
-  border-radius: 6px;
-  min-width: 120px;
-  width: 280px;
-}
-.title-input:hover,
-.title-input:focus {
-  background: var(--surface-2);
-}
 
 .btn {
   height: 36px;
@@ -1715,19 +1701,6 @@ body.is-dragging {
   color: inherit;
   cursor: pointer;
 }
-.tag-palette {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  display: flex;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 8px 20px rgba(20, 24, 32, 0.14);
-}
 .tag-colors {
   display: flex;
   gap: 3px;
@@ -1851,6 +1824,24 @@ body.is-dragging {
   font-size: 17px;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+.present-flow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.present-flow:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 .present-hint {
   font-size: 12px;
@@ -2847,9 +2838,6 @@ body.is-dragging .flow-drop {
   gap: 4px;
   min-width: 0;
 }
-.card-flows {
-  padding: 0 8px 7px;
-}
 .phase .flow-links {
   flex: 0 1 auto;
   max-width: 55%;
@@ -2865,27 +2853,8 @@ body.is-dragging .flow-drop {
 .phase:hover .flow-links,
 .phase:focus-within .flow-links,
 .step:hover .flow-links,
-.step:focus-within .flow-links,
-.card:hover .flow-links,
-.card:focus-within .flow-links {
+.step:focus-within .flow-links {
   opacity: 1;
-}
-.card-flows:not(.has-links) {
-  position: absolute;
-  top: 4px;
-  right: 52px;
-  z-index: 6;
-  padding: 0;
-}
-.card-flows:not(.has-links) .flow-links-btn {
-  height: 22px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-}
-.card-flows:not(.has-links) .flow-links-menu {
-  left: auto;
-  right: -52px;
 }
 .flow-chip {
   display: inline-flex;
@@ -3055,6 +3024,19 @@ body.is-dragging .flow-drop {
   height: 100%;
   object-fit: cover;
 }
+.flow-main-name {
+  display: none;
+  padding-right: 6px;
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.is-exporting .flow-main-name {
+  display: inline;
+}
+.is-exporting .flow-main-pill select {
+  display: none;
+}
 .flow-main-pill select {
   border: 0;
   background: transparent;
@@ -3138,149 +3120,42 @@ body.is-dragging .flow-drop {
   flex-wrap: wrap;
 }
 
-/* A persona sheet's journeys */
+/* A persona sheet's flows */
 
-.sheet-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.sheet-journeys {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px 14px;
-  border: 1px solid var(--line);
-  border-top: 3px solid var(--ink);
-  border-radius: 10px;
-}
-.sheet-journeys-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.sheet-journeys-title {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-  cursor: pointer;
-}
-.switch input {
-  appearance: none;
-  position: relative;
-  width: 32px;
-  height: 18px;
-  margin: 0;
-  border-radius: 9px;
-  background: var(--dots);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.switch input::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 7px;
-  background: #fff;
-  transition: transform 0.15s;
-}
-.switch input:checked {
-  background: var(--accent);
-}
-.switch input:checked::after {
-  transform: translateX(14px);
-}
-.switch input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.sheet-journeys-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 10px;
-}
-.journey {
+.sheet-flows {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 4px;
+}
+.sheet-flows-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.sheet-flow {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  padding: 10px 12px;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 3px 10px;
   border: 0;
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--ink);
-  font: inherit;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
-.journey:hover {
-  background: var(--accent-soft);
+.sheet-flow:hover {
+  background: #fff;
 }
-.journey-flow {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  align-self: start;
-}
-.journey-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.journey-title svg {
-  color: var(--accent);
-}
-.journey-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.journey-steps strong {
-  color: var(--accent);
-}
-.journey-open {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-}
-.sheet-journeys-off {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 28px;
-  border: 1px dashed var(--dots);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  cursor: pointer;
-}
-.sheet-journeys-off:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+.sheet-flow-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

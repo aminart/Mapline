@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { createRef, useRef, type CSSProperties } from 'react';
-import { useMap, useStore, useT } from '../store';
+import { t as translate, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
-import type { Phase, Step } from '../model/types';
+import type { Blueprint, FlowSource, Id, Phase, Step } from '../model/types';
 import { useBox } from './useBox';
 import { ChevronLeft, ChevronRight, CloseIcon, GripIcon, MinusIcon, PlusIcon } from './Icons';
 import { startDrag, useDropTarget } from './dnd';
@@ -12,6 +12,8 @@ import { PresentationFocus } from './Presentation';
 import { StoryboardRow } from './Storyboard';
 import { TextRows } from './InfoRow';
 import { FlowLinks } from './FlowLinks';
+import { flowsDetailing, removeDetailed } from '../model/links';
+import { updateMap } from '../model/project';
 import { FitText } from './FitText';
 import { PersonaGrid, TagSuggestions } from './PersonaGrid';
 import { cls } from './cls';
@@ -80,7 +82,10 @@ function Objective() {
 
 function PhaseRow() {
   const t = useT();
-  const doc = useMap((m) => m);
+  // Phases and steps only: typing in a card doesn't redraw the row.
+  const rawPhases = useMap((m) => m.phases);
+  const steps = useMap((m) => m.steps);
+  const doc = { phases: rawPhases, steps };
   const apply = useStore((s) => s.apply);
   const phases = ops.normalizePhases(doc.phases, doc.steps.length);
   let cursor = 0;
@@ -142,7 +147,7 @@ function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: bo
           </>
         )}
         {canRemove && (
-          <button className="icon-btn" title={t('board.phaseRemove')} aria-label={t('board.phaseRemove')} onClick={() => apply((d) => ops.removePhase(d, index))}>
+          <button className="icon-btn" title={t('board.phaseRemove')} aria-label={t('board.phaseRemove')} onClick={() => removeLinked('phase', phase.id, (d) => ops.removePhase(d, index))}>
             <CloseIcon />
           </button>
         )}
@@ -208,7 +213,7 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
           </span>
           {t('board.step', { n: index + 1 })}
         </span>
-        <button className="icon-btn no-export" aria-label={t('board.removeStep')} onClick={() => apply((d) => ops.removeStep(d, index))}>
+        <button className="icon-btn no-export" aria-label={t('board.removeStep')} onClick={() => removeLinked('step', step.id, (d) => ops.removeStep(d, index))}>
           <CloseIcon />
         </button>
       </div>
@@ -241,4 +246,18 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
       </div>
     </div>
   );
+}
+
+/**
+ * Removes a phase or a step. When flows detail it, asks first, and unlinks
+ * them in the same undo step.
+ */
+function removeLinked(kind: FlowSource['kind'], id: Id, fn: (map: Blueprint) => Blueprint) {
+  const { project, docId, applyProject } = useStore.getState();
+  const flows = flowsDetailing(project, docId, kind, id);
+  if (flows.length > 0) {
+    const names = flows.map((f) => f.name || translate('flow.default')).join(', ');
+    if (!window.confirm(translate(kind === 'phase' ? 'links.confirmRemovePhase' : 'links.confirmRemoveStep', { n: flows.length, names }))) return;
+  }
+  applyProject((p) => removeDetailed(p, docId, kind, id, (q) => updateMap(q, docId, fn)));
 }

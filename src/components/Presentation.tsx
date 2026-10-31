@@ -9,7 +9,8 @@ import type { Project } from '../model/types';
 import { docLabel } from '../actions';
 import { boardRef } from './Board';
 import { isDesktop } from '../lib/fileio';
-import { ChevronLeft, ChevronRight, CloseIcon } from './Icons';
+import { ChevronLeft, ChevronRight, CloseIcon, FlowIcon } from './Icons';
+import { flowsDetailing } from '../model/links';
 
 let zoomBefore = 1;
 /** Stops listening for the window leaving full screen. */
@@ -162,6 +163,9 @@ export function PresentationBar() {
   const current = isMap && step >= 0 ? doc.steps[step] : null;
   const phases = normalizePhases(doc.phases, total);
   const phase = current ? phases[phaseIndexOf(phases, step)]?.title : '';
+  const phaseId = current ? phases[phaseIndexOf(phases, step)]?.id : undefined;
+  // The flows detailing the step shown, then its phase: one click opens them.
+  const detail = current ? [...flowsDetailing(project, docId, 'step', current.id), ...(phaseId ? flowsDetailing(project, docId, 'phase', phaseId) : [])] : [];
   const at = project.docs.findIndex((d) => d.id === docId);
   const label = docLabel(project, docId);
   // Which document, when the project has several.
@@ -191,6 +195,11 @@ export function PresentationBar() {
       <button className="present-btn" aria-label={t('present.next')} disabled={at >= project.docs.length - 1 && step >= lastStep(project, docId)} onClick={() => presentGo(1)}>
         <ChevronRight size={18} />
       </button>
+      {detail.map((f) => (
+        <button key={f.id} className="present-flow" onClick={() => useStore.getState().presentAt(f.id, -1)}>
+          <FlowIcon size={13} /> {t('present.flow', { name: f.name || t('flow.default') })}
+        </button>
+      ))}
       <span className="present-hint">{t('present.hint')}</span>
       <button className="present-btn" aria-label={t('present.exit')} title={t('present.exit')} onClick={stopPresentation}>
         <CloseIcon size={14} />

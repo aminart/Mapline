@@ -7,6 +7,7 @@ import { uid } from './model/ops';
 import { parse } from './model/serialize';
 import { findDoc, firstDocId, flowOf, missionMapOf, projectFromMap, sheetOf, updateFlow, updateMap, updateSheet } from './model/project';
 import { initialLang, rememberLang, translate, type Lang, type MessageKey } from './i18n';
+import { readSession, writeSession } from './lib/session';
 
 const HISTORY_LIMIT = 200;
 /** Edits with the same coalesce key closer than this form one undo step. */
@@ -160,7 +161,8 @@ interface SavedSession {
   tabs: { project?: unknown; doc?: unknown; filePath: string | null; dirty: boolean }[];
 }
 
-function restoreTabs(): { tabs: Tab[]; active: number } {
+/** The tabs of a session saved in local storage, before 1.3.1, or by the first versions. */
+function legacyTabs(): { tabs: Tab[]; active: number } {
   try {
     const session = localStorage.getItem(SESSION_KEY);
     if (session) {
@@ -183,13 +185,34 @@ function restoreTabs(): { tabs: Tab[]; active: number } {
   return { tabs: [], active: -1 };
 }
 
-const restored = restoreTabs();
-const firstTab = restored.tabs[restored.active];
+/** The tabs of the saved session: IndexedDB first, else local storage. */
+async function savedTabs(): Promise<{ tabs: Tab[]; active: number }> {
+  const saved = await readSession();
+  if (!saved) return legacyTabs();
+  const tabs: Tab[] = [];
+  for (const t of saved.index.tabs) {
+    try {
+      const tab: Tab = { ...fresh(parse(JSON.stringify(saved.projects.get(t.key))), t.filePath, t.dirty), id: t.key };
+      tabs.push(tab);
+      // Read back as saved: only a change writes it again.
+      written.set(tab.id, tab.project);
+    } catch {
+      // Skip a damaged entry, keep the others.
+    }
+  }
+  return { tabs, active: Math.min(Math.max(0, saved.index.active), tabs.length - 1) };
+}
+
+/** The project last written for each tab, so unchanged ones aren't written again. */
+const written = new Map<string, Project>();
+/** Saving waits until the saved session has been read, so it never writes over it. */
+let restored = false;
 
 export const useStore = create<State>((set, get) => ({
-  ...(firstTab ? pick(firstTab) : fresh(emptyProject, null)),
-  tabs: restored.tabs,
-  activeId: firstTab?.id ?? null,
+  // Filled by restoreSession, before the app is first drawn.
+  ...fresh(emptyProject, null),
+  tabs: [],
+  activeId: null,
   lang: initialLang(),
   pendingFocus: null,
   tool: 'select',
@@ -357,12 +380,40 @@ export function useT() {
   return (key: MessageKey, vars?: Record<string, string | number>) => translate(lang, key, vars);
 }
 
-/** Writes the recovery copy of every open project now. */
-export function saveSession() {
+/** Opens the projects of the last session, before the app is first drawn. */
+export async function restoreSession(): Promise<void> {
+  const { tabs, active } = await savedTabs();
+  const first = tabs[active];
+  if (first) useStore.setState({ ...pick(first), tabs, activeId: first.id });
+  restored = true;
+}
+
+/**
+ * Writes the recovery copy of the open projects now: the projects changed
+ * since the last write, and the list of tabs.
+ */
+export async function saveSession(): Promise<void> {
+  if (!restored) return;
   const s = useStore.getState();
   const tabs = syncedTabs(s);
+  const changed = new Map<string, unknown>();
+  for (const t of tabs) if (written.get(t.id) !== t.project) changed.set(t.id, t.project);
+  const index = { active: tabs.findIndex((t) => t.id === s.activeId), tabs: tabs.map((t) => ({ key: t.id, filePath: t.filePath, dirty: t.dirty })) };
+  if (await writeSession(index, changed)) {
+    for (const t of tabs) written.set(t.id, t.project);
+    for (const id of [...written.keys()]) if (!tabs.some((t) => t.id === id)) written.delete(id);
+    try {
+      // The copy in local storage, from before 1.3.1, is no longer needed.
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(LEGACY_AUTOSAVE_KEY);
+    } catch {
+      // Nothing to clean up.
+    }
+    return;
+  }
+  // No IndexedDB: local storage, as before.
   const session: SavedSession = {
-    active: tabs.findIndex((t) => t.id === s.activeId),
+    active: index.active,
     tabs: tabs.map((t) => ({ project: t.project, filePath: t.filePath, dirty: t.dirty })),
   };
   try {
@@ -373,10 +424,10 @@ export function saveSession() {
   }
 }
 
-// Keep a recovery copy of every open project in local storage.
+// Keep a recovery copy of every open project.
 let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
 useStore.subscribe((state, prev) => {
   if (state.project === prev.project && state.tabs === prev.tabs && state.activeId === prev.activeId && state.dirty === prev.dirty) return;
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(saveSession, 500);
+  autosaveTimer = setTimeout(() => void saveSession(), 500);
 });

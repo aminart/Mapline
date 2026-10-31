@@ -3,13 +3,14 @@
 
 import { describe, expect, it } from 'vitest';
 import { exampleProject } from './fixtures';
-import { addDetailFlow, flowsDetailing, personaJourneys, resolveSource, setFlowPersona, setFlowSource, setSheetJourneys } from './links';
-import { addDoc, flowOf, removeDoc } from './project';
+import { addDetailFlow, flowsDetailing, personaFlows, removeDetailed, resolveSource, setFlowPersona, setFlowSource } from './links';
+import { renameSheetTag } from './sheet';
+import { addDoc, flowOf, removeDoc, updateMap } from './project';
 import { parse, serialize } from './serialize';
 import { createFlowDoc } from './templates';
 import * as fo from './flow';
 import * as ops from './ops';
-import type { MissionMapDoc, PersonaSheet } from './types';
+import type { MissionMapDoc } from './types';
 
 function setup() {
   const project = exampleProject();
@@ -46,23 +47,20 @@ describe('flows detailing a map', () => {
     expect(flowOf(removed, flowDoc.id)!.flow.source).toBeUndefined();
   });
 
-  it('lists where a persona appears: its steps and its flows', () => {
-    const { project, map, mapId } = setup();
+  it('lists the flows a persona is in, as main persona or on a card', () => {
+    const { project, map } = setup();
     const secretary = map.personas[1].id;
     const flowDoc = createFlowDoc('blank', 'fr', 'Agenda');
     let p = addDoc(project, { ...flowDoc, flow: setFlowPersona(flowDoc.flow, secretary) });
-    const j = personaJourneys(p, mapId, secretary);
-    expect(j.map?.steps).toEqual([
-      { n: 2, title: 'Prise de rendez-vous' },
-      { n: 3, title: 'Confirmation' },
-      { n: 4, title: 'Consultation' },
-    ]);
-    expect(j.flows.map((f) => f.id)).toEqual([flowDoc.id]);
+    expect(personaFlows(p, secretary).map((f) => f.id)).toEqual([flowDoc.id]);
     p = { ...p, docs: p.docs.map((d) => (d.kind === 'flow' ? { ...d, flow: setFlowPersona(d.flow, null) } : d)) };
-    expect(personaJourneys(p, mapId, secretary).flows).toEqual([]);
+    expect(personaFlows(p, secretary)).toEqual([]);
+    const card = flowDoc.flow.nodes[0].id;
+    p = { ...p, docs: p.docs.map((d) => (d.kind === 'flow' ? { ...d, flow: fo.setNode(d.flow, card, { personaId: secretary }) } : d)) };
+    expect(personaFlows(p, secretary).map((f) => f.id)).toEqual([flowDoc.id]);
   });
 
-  it('saves the links, the main persona, the free text and a hidden journeys block', () => {
+  it('saves the links, the main persona and the free text', () => {
     const { project, map, mapId } = setup();
     const doc = createFlowDoc('blank', 'fr');
     let p = addDetailFlow(project, doc, { docId: mapId, kind: 'step', id: map.steps[0].id });
@@ -71,10 +69,18 @@ describe('flows detailing a map', () => {
     const flow = flowOf(back, doc.id)!.flow;
     expect(flow.source).toEqual({ docId: mapId, kind: 'step', id: map.steps[0].id });
     expect([flow.personaId, flow.brief, flow.briefTitle]).toEqual(['x', 'Objectifs', 'But']);
-    const sheet = { journeys: undefined } as unknown as PersonaSheet;
-    expect(setSheetJourneys(sheet, true)).toBe(sheet);
-    expect(setSheetJourneys(sheet, false).journeys).toBe(false);
-    expect('journeys' in setSheetJourneys(setSheetJourneys(sheet, false), true)).toBe(false);
+  });
+});
+
+describe('removing a detailed step', () => {
+  it('unlinks its flows in the same change', () => {
+    const { project, map, mapId } = setup();
+    const doc = createFlowDoc('blank', 'fr');
+    const step = map.steps[1];
+    const p = addDetailFlow(project, doc, { docId: mapId, kind: 'step', id: step.id });
+    const next = removeDetailed(p, mapId, 'step', step.id, (q) => updateMap(q, mapId, (m) => ops.removeStep(m, 1)));
+    expect(flowOf(next, doc.id)!.flow.source).toBeUndefined();
+    expect((next.docs[0] as MissionMapDoc).map.steps.some((s) => s.id === step.id)).toBe(false);
   });
 });
 
@@ -96,6 +102,13 @@ describe('editing a tag from its card', () => {
     // Merges with a tag the card already has.
     const both = ops.addTag(doc, keys[0], 'Email');
     expect(ops.renameTag(both, keys[0], 'irritant', 'email').activities[keys[0]].tags).toEqual(['email']);
+  });
+
+  it('renames a persona sheet’s tag, its colour following', () => {
+    const sheet = { tags: ['Mobile', 'Pressée'], tagColors: { mobile: 2 } } as unknown as Parameters<typeof renameSheetTag>[0];
+    const next = renameSheetTag(sheet, 'Mobile', 'Smartphone');
+    expect(next.tags).toEqual(['Smartphone', 'Pressée']);
+    expect(next.tagColors).toEqual({ smartphone: 2 });
   });
 
   it('does the same on flow cards', () => {

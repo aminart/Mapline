@@ -88,23 +88,28 @@ function FlowHeader({ flow }: { flow: Flow }) {
     focusLater(`${source.source.kind}:${source.source.id}`);
   };
   return (
-    <div className="flow-header no-export">
+    <div className={cls('flow-header', !source && !main && 'no-export')}>
       {source && (
         <button className="flow-source" title={t('links.back', { name: docLabel(project, source.source.docId) })} onClick={back}>
-          <ChevronLeft size={12} />
+          <span className="no-export">
+            <ChevronLeft size={12} />
+          </span>
           {t('links.details')} : <strong>{label}</strong>
           <span className="muted-sm">({docLabel(project, source.source.docId)})</span>
         </button>
       )}
       <span className="flow-header-gap" />
       {personas.length > 0 && (
-        <label className="flow-main-persona">
+        <label className={cls('flow-main-persona', !main && 'no-export')}>
           <span className="muted-sm">{t('flow.mainPersona')}</span>
           <span className="flow-main-pill">
             <span className="flow-main-avatar" style={{ background: accent, color: onAccent }} aria-hidden="true">
               {main?.photo ? <img src={main.photo} alt="" /> : (main?.persona.name || '?').charAt(0).toUpperCase()}
             </span>
+            {/* The name alone in exports, where a menu would show its arrow. */}
+            {main && <span className="flow-main-name">{main.persona.name || t('doc.unnamed')}</span>}
             <select
+              className="no-export"
               aria-label={t('flow.mainPersonaLabel')}
               value={flow.personaId ?? ''}
               onChange={(e) => {

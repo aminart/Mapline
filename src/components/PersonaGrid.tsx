@@ -9,7 +9,6 @@ import { CHOICE_STYLE, LINK_COLORS, LINK_DASH, personaAccent } from '../model/th
 import { useBox } from './useBox';
 import { CloseIcon, DiamondIcon, GripIcon, LineAboveIcon, LineIcon, PersonIcon, PlusIcon, SplitIcon } from './Icons';
 import { NoteButton, TagRow, TagSuggestions as TagList } from './CardExtras';
-import { FlowLinks } from './FlowLinks';
 import { sheetFor } from '../model/project';
 import { cls } from './cls';
 import { GAP, ROW_GAP } from './layout';
@@ -341,7 +340,6 @@ function ActivityCard(props: {
         onColor={(tag, i) => apply((d) => ops.setTagColor(d, tag, i))}
         uses={(tag) => ops.tagUses(activeMap(useStore.getState()), tag)}
       />
-      <FlowLinks kind="act" id={activityId} className="card-flows" />
       <span
         className="grip grip-card card-btn no-export"
         title={t('board.dragActivity')}
@@ -396,8 +394,9 @@ function JoinerInput({ activityKey, joiner }: { activityKey: string; joiner: str
 
 /** Suggestions for the tag inputs: every tag already used in the map. */
 export function TagSuggestions() {
-  const doc = useMap((m) => m);
-  return <TagList id={TAG_LIST_ID} tags={ops.allTags(doc)} />;
+  // As one string, so typing a card's text doesn't redraw the list.
+  const tags = useMap((m) => ops.allTags(m).join('\n'));
+  return <TagList id={TAG_LIST_ID} tags={tags ? tags.split('\n') : []} />;
 }
 
 const TAG_LIST_ID = 'mm-tag-list';
@@ -428,7 +427,12 @@ interface Drawn {
 
 function LinksLayer({ container }: { container: HTMLDivElement | null }) {
   const t = useT();
-  const doc = useMap((m) => m);
+  const links = useMap((m) => m.links);
+  // Where cards sit, without their text: typing doesn't re-plan the arrows,
+  // a card growing with its text is caught by the resize observer below.
+  const structure = useMap((m) =>
+    [m.steps.map((st) => st.slots.join(',')).join('|'), m.personas.map((p) => p.id).join(','), Object.keys(m.activities).sort().join(','), m.dividers.map((d) => `${d.id}>${d.after}`).join(','), String(m.storyboard)].join('/'),
+  );
   const sel = useStore((s) => s.sel);
   const select = useStore((s) => s.select);
   const [drawn, setDrawn] = useState<Drawn[]>([]);
@@ -440,7 +444,7 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
       const cards = new Map<string, HTMLElement>();
       container.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => cards.set(el.dataset.act!, el));
       const next: Drawn[] = [];
-      doc.links.forEach((l, i) => {
+      links.forEach((l, i) => {
         const a = cards.get(l.from);
         const b = cards.get(l.to);
         if (!a || !b) return;
@@ -461,10 +465,12 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
       setSize({ w: container.offsetWidth, h: container.offsetHeight });
     };
     compute();
+    // Re-planned when the grid or a card changes size (a card growing with its text, say).
     const ro = new ResizeObserver(compute);
     ro.observe(container);
+    container.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => ro.observe(el));
     return () => ro.disconnect();
-  }, [doc, container]);
+  }, [links, structure, container]);
 
   return (
     <>

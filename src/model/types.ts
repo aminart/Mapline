@@ -184,8 +184,6 @@ export interface PersonaSheet {
   link: { docId: Id; personaId: Id } | null;
   /** Keep the name, role and colour the same as the linked persona's. */
   sync: boolean;
-  /** False hides the "Their journeys" block (maps and flows the persona appears in). */
-  journeys?: boolean;
 }
 
 export interface PersonaSheetDoc {
@@ -224,7 +222,7 @@ export interface FlowLink {
   color?: string;
 }
 
-/** The part of a mission map a flow details: a phase, a step or an activity. */
+/** The part of a mission map a flow details: a phase or a step (an activity in files from 1.3.0). */
 export interface FlowSource {
   docId: Id;
   kind: 'phase' | 'step' | 'act';

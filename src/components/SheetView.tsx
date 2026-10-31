@@ -1,11 +1,11 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import { activeSheet, useStore, useT } from '../store';
 import * as so from '../model/sheet';
 import { setSheetIdentity, sheetIdentity } from '../model/project';
-import { BLOCK_ACCENTS, PERSONA_PALETTE, TAG_PALETTE, personaAccent, tagColor } from '../model/theme';
+import { BLOCK_ACCENTS, PERSONA_PALETTE, personaAccent, tagColor } from '../model/theme';
 import type { BlockPlace, BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
 import { readImage } from '../lib/image';
 import { docLabel, withBusy } from '../actions';
@@ -14,9 +14,10 @@ import { useBox } from './useBox';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
 import { focusSoon, useFocusKey } from './useFocusKey';
+import { TagEditor } from './CardExtras';
 import { startDrag, useDropTarget, type DropPoint } from './dnd';
-import { CameraIcon, ChevronRight, CloseIcon, FlowIcon, GripIcon, MapIcon, PlusIcon } from './Icons';
-import { personaJourneys, setSheetJourneys } from '../model/links';
+import { CameraIcon, ChevronRight, CloseIcon, FlowIcon, GripIcon, PlusIcon } from './Icons';
+import { personaFlows } from '../model/links';
 import { cls } from './cls';
 
 const VIEWS: BlockView[] = ['list', 'gauges', 'tags', 'text'];
@@ -30,80 +31,30 @@ export function SheetView() {
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="sheet" ref={boardRef}>
         <Identity sheet={sheet} />
-        <div className="sheet-main">
-          <Journeys sheet={sheet} />
-          <Blocks sheet={sheet} />
-        </div>
+        <Blocks sheet={sheet} />
       </div>
     </div>
   );
 }
 
-/**
- * "Their journeys": the steps of the map the persona appears in, and its
- * flows, each opening its document. Shown unless turned off; off, a thin
- * line (not exported) turns it back on.
- */
-function Journeys({ sheet }: { sheet: PersonaSheet }) {
+/** Links to the flows the sheet's persona is in, under the identity. */
+function PersonaFlows({ sheet }: { sheet: PersonaSheet }) {
   const t = useT();
   const project = useStore((s) => s.project);
-  const applySheet = useStore((s) => s.applySheet);
   const setDoc = useStore((s) => s.setDoc);
-  if (sheet.journeys === false) {
-    return (
-      <button className="sheet-journeys-off no-export" onClick={() => applySheet((s) => setSheetJourneys(s, true))}>
-        <PlusIcon size={11} /> {t('sheet.journeysShow')}
-      </button>
-    );
-  }
-  const linked = sheet.link ? personaJourneys(project, sheet.link.docId, sheet.link.personaId) : null;
-  const empty = linked && !linked.map && linked.flows.length === 0;
+  const flows = sheet.link ? personaFlows(project, sheet.link.personaId) : [];
+  if (flows.length === 0) return null;
   return (
-    <section className="box sheet-journeys">
-      <div className="sheet-journeys-head">
-        <span className="sheet-journeys-title">{t('sheet.journeys')}</span>
-        <label className="switch no-export">
-          <span>{t('sheet.journeysToggle')}</span>
-          <input type="checkbox" role="switch" checked onChange={() => applySheet((s) => setSheetJourneys(s, false))} />
-        </label>
-      </div>
-      {!linked ? (
-        <p className="muted-sm">{t('sheet.journeysUnlinked')}</p>
-      ) : empty ? (
-        <p className="muted-sm">{t('sheet.journeysEmpty')}</p>
-      ) : (
-        <div className="sheet-journeys-list">
-          {linked.map && (
-            <button className="journey journey-map" onClick={() => setDoc(linked.map!.docId)}>
-              <span className="journey-title">
-                <MapIcon size={13} /> {docLabel(project, linked.map.docId)}
-              </span>
-              {linked.map.steps.length === 0 ? (
-                <span className="muted-sm">{t('sheet.journeysNoSteps')}</span>
-              ) : (
-                <ol className="journey-steps">
-                  {linked.map.steps.map((st) => (
-                    <li key={st.n}>
-                      <strong>{st.n}</strong> · {st.title || t('board.step', { n: st.n })}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </button>
-          )}
-          {linked.flows.map((f) => (
-            <button key={f.id} className="journey journey-flow" onClick={() => setDoc(f.id)}>
-              <span className="journey-title">
-                <FlowIcon size={13} /> {docLabel(project, f.id)}
-              </span>
-              <span className="journey-open no-export">
-                {t('sheet.journeysOpen')} <ChevronRight size={11} />
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
+    <div className="sheet-flows">
+      <span className="sheet-flows-title">{t('sheet.flows')}</span>
+      {flows.map((f) => (
+        <button key={f.id} className="sheet-flow" title={t('links.open', { name: docLabel(project, f.id) })} onClick={() => setDoc(f.id)}>
+          <FlowIcon size={12} />
+          <span className="sheet-flow-name">{f.name || t('flow.default')}</span>
+          <ChevronRight size={11} />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -276,7 +227,10 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
         onFocus={b.onFocus}
         colorOf={(tag) => tagColor(tag, sheet.tagColors)}
         onColor={(tag, color) => applySheet((s) => so.setSheetTagColor(s, tag, color))}
+        onRename={(from, to) => applySheet((s) => so.renameSheetTag(s, from, to))}
+        colors={sheet.tagColors}
       />
+      <PersonaFlows sheet={sheet} />
     </section>
   );
 }
@@ -327,29 +281,24 @@ function Chips(props: {
   onRemove: (tag: string) => void;
   onFocus: () => void;
   colorOf: (tag: string) => { bg: string; fg: string };
-  /** When given, clicking a tag offers the tag colours. */
+  /** When given with `colors`, clicking a tag edits its name and colour. */
   onColor?: (tag: string, color: number) => void;
+  onRename?: (from: string, to: string) => void;
+  colors?: Record<string, number>;
 }) {
   const t = useT();
-  const { tags, onAdd, onRemove, onFocus, colorOf, onColor } = props;
+  const { tags, onAdd, onRemove, onFocus, colorOf, onColor, onRename, colors } = props;
   const [draft, setDraft] = useState('');
-  const [picking, setPicking] = useState<string | null>(null);
-  useEffect(() => {
-    if (!picking) return;
-    const onDown = (e: MouseEvent) => {
-      if (!(e.target as Element).closest('.tag-pickable')) setPicking(null);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [picking]);
+  const [editing, setEditing] = useState<string | null>(null);
+  const editable = Boolean(onColor && onRename);
   return (
     <div className="sheet-chips">
       {tags.map((tag) => {
         const c = colorOf(tag);
         return (
-          <span key={tag} className={cls('tag', onColor && 'tag-pickable')} style={{ background: c.bg, color: c.fg }}>
-            {onColor ? (
-              <button className="tag-name" aria-label={t('tags.color', { tag })} title={t('tags.color', { tag })} aria-expanded={picking === tag} onClick={() => setPicking(picking === tag ? null : tag)}>
+          <span key={tag} className={cls('tag', editable && 'tag-pickable')} style={{ background: c.bg, color: c.fg }}>
+            {editable ? (
+              <button className="tag-name" aria-label={t('tags.edit', { tag })} title={t('tags.edit', { tag })} aria-expanded={editing === tag} onClick={() => setEditing(tag)}>
                 {tag}
               </button>
             ) : (
@@ -358,21 +307,8 @@ function Chips(props: {
             <button className="tag-x no-export" aria-label={t('board.removeTag', { tag })} onClick={() => onRemove(tag)}>
               <CloseIcon size={9} />
             </button>
-            {onColor && picking === tag && (
-              <span className="tag-palette no-export" role="group" aria-label={t('tags.color', { tag })}>
-                {TAG_PALETTE.map((p, i) => (
-                  <button
-                    key={i}
-                    className={cls('swatch swatch-xs', p.bg === c.bg && 'is-on')}
-                    style={{ background: p.bg, borderColor: p.fg }}
-                    aria-label={`${t('tags.color', { tag })} ${i + 1}`}
-                    onClick={() => {
-                      onColor(tag, i);
-                      setPicking(null);
-                    }}
-                  />
-                ))}
-              </span>
+            {editable && editing === tag && (
+              <TagEditor tag={tag} colors={colors} onRename={(from, to) => onRename!(from, to)} onColor={onColor!} uses={() => 1} onClose={() => setEditing(null)} />
             )}
           </span>
         );

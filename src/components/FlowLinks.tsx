@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useStore, useT } from '../store';
 import type { FlowSource, Id } from '../model/types';
 import { addDetailFlow, flowsDetailing, setFlowSource } from '../model/links';
@@ -11,20 +11,23 @@ import { ChevronRight, FlowIcon, LinkIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
 
 /**
- * The flows detailing a phase, a step or an activity of the map shown: a
+ * The flows detailing a phase or a step of the map shown: a
  * chip per flow, that opens it, and a menu to detail it in a new flow or
  * link an existing one.
  */
-export function FlowLinks({ kind, id, className }: { kind: FlowSource['kind']; id: Id; className?: string }) {
+export const FlowLinks = memo(function FlowLinks({ kind, id, className }: { kind: FlowSource['kind']; id: Id; className?: string }) {
   const t = useT();
   const docId = useStore((s) => s.docId);
-  const project = useStore((s) => s.project);
   const setDoc = useStore((s) => s.setDoc);
   const applyProject = useStore((s) => s.applyProject);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const linked = flowsDetailing(project, docId, kind, id);
-  const others = project.docs.filter((d) => d.kind === 'flow' && !linked.includes(d));
+  // The linked flows as a string, so typing elsewhere in the project doesn't redraw every chip.
+  const key = useStore((s) => flowsDetailing(s.project, s.docId, kind, id).map((f) => `${f.id}\u0000${f.name}`).join('\u0001'));
+  const linked = key ? key.split('\u0001').map((x) => { const [fid, name] = x.split('\u0000'); return { id: fid, name }; }) : [];
+  // Read when drawn: the menu is open, or the chips' labels.
+  const project = useStore.getState().project;
+  const others = open ? project.docs.filter((d) => d.kind === 'flow' && !linked.some((l) => l.id === d.id)) : [];
 
   useEffect(() => {
     if (!open) return;
@@ -90,4 +93,4 @@ export function FlowLinks({ kind, id, className }: { kind: FlowSource['kind']; i
       )}
     </div>
   );
-}
+});

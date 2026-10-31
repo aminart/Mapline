@@ -159,7 +159,7 @@ export function TagRow(props: {
 }
 
 /** A tag's name and colour, edited from the card: renamed on this card or on all of them. */
-function TagEditor(props: {
+export function TagEditor(props: {
   tag: string;
   colors: Record<string, number> | undefined;
   onRename: (from: string, to: string, everywhere: boolean) => void;
@@ -192,7 +192,18 @@ function TagEditor(props: {
   });
 
   return (
-    <div ref={ref} className="tag-editor no-export" role="dialog" aria-label={t('tags.edit', { tag })}>
+    <div
+      ref={ref}
+      className="tag-editor no-export"
+      role="dialog"
+      aria-label={t('tags.edit', { tag })}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          done();
+        }
+      }}
+    >
       <input
         className="text-field"
         autoFocus
