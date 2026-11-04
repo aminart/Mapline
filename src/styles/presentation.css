@@ -1,0 +1,102 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Presentation mode */
+
+.app.is-presenting .canvas {
+  padding-bottom: 120px;
+}
+/* Presenting a sheet or a flow: no editing controls. */
+.app.is-presenting .canvas .no-export,
+.app.is-presenting .canvas .card-btn {
+  display: none !important;
+}
+.app.is-presenting .canvas ::placeholder {
+  color: transparent;
+}
+.board.presenting {
+  pointer-events: none;
+}
+.board.presenting .no-export,
+.board.presenting .insert-btn,
+.board.presenting .card-btn {
+  display: none !important;
+}
+.board.presenting ::placeholder {
+  color: transparent;
+}
+.board.presenting [data-step],
+.board.presenting [data-link-steps] {
+  transition: opacity 0.3s;
+}
+.present-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: #191b20;
+  color: #fff;
+  box-shadow: 0 12px 40px rgba(20, 24, 32, 0.35);
+}
+.present-btn {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.present-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+.present-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  max-width: 460px;
+  padding: 0 6px;
+}
+.present-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b9bfca;
+}
+.present-name {
+  font-size: 17px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.present-flow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.present-flow:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.present-hint {
+  font-size: 12px;
+  color: #b9bfca;
+  white-space: nowrap;
+}

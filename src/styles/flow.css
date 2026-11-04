@@ -1,0 +1,250 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Flows */
+
+.flow {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(20, 24, 32, 0.06);
+}
+.flow-card {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  border-width: 1px;
+  border-top-width: 3px;
+  border-radius: 10px;
+}
+.flow-card-content {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+.flow-card .flow-text {
+  flex: none;
+  width: 100%;
+  padding: 10px 28px 8px 12px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  line-height: 1.4;
+  overflow: hidden;
+}
+.flow-card .tags {
+  padding: 0 30px 8px 10px;
+}
+.flow-card:hover .tags-empty,
+.flow-card:focus-within .tags-empty,
+.flow-card:hover .note-btn,
+.flow-card:focus-within .note-btn {
+  opacity: 1;
+}
+.flow-card.is-dimmed {
+  opacity: 0.25;
+}
+/* The persona doing it: their photo or initial, on the card's corner. */
+.flow-persona {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.flow-persona img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.flow-choice {
+  background: #fffbeb;
+  border-color: #d9a93b;
+  border-top-width: 3px;
+}
+.flow-choice .flow-text {
+  padding-top: 2px;
+  font-weight: 600;
+}
+.flow-choice-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #854d0e;
+}
+.flow-start,
+.flow-end {
+  justify-content: center;
+  border: 0;
+  border-radius: 22px;
+  background: #191b20;
+}
+.flow-start .flow-pill-text,
+.flow-end .flow-pill-text {
+  display: block;
+  width: 100%;
+  padding: 12px 10px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.35;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff !important;
+}
+.flow-start .flow-pill-text::placeholder,
+.flow-end .flow-pill-text::placeholder {
+  color: #c9cdd6;
+}
+.flow-start.is-selected,
+.flow-end.is-selected {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
+}
+.flow-card:hover .card-btn,
+.flow-card:focus-within .card-btn {
+  opacity: 1;
+}
+.flow-start .card-btn,
+.flow-end .card-btn {
+  color: #c9cdd6;
+}
+.flow-start .card-del,
+.flow-end .card-del {
+  top: -10px;
+  right: -10px;
+  background: #191b20;
+  border-radius: 11px;
+}
+.flow-grip {
+  top: 4px;
+  right: 28px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.flow-start .flow-grip,
+.flow-end .flow-grip {
+  display: none;
+}
+.flow-handle {
+  position: absolute;
+  z-index: 7;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flow-handle:hover {
+  transform: scale(1.1);
+}
+.flow-handle-up {
+  left: calc(50% - 12px);
+  top: -34px;
+}
+.flow-handle-down {
+  left: calc(50% - 12px);
+  bottom: -34px;
+}
+.flow-handle-left {
+  top: calc(50% - 12px);
+  left: -34px;
+}
+.flow-handle-right {
+  top: calc(50% - 12px);
+  right: -34px;
+}
+.flow-drop {
+  position: absolute;
+  z-index: 1;
+  border-radius: 10px;
+  pointer-events: none;
+}
+body.is-dragging .flow-drop {
+  border: 1.5px dashed #c9ced6;
+  pointer-events: auto;
+}
+.flow-drop.is-drop-target,
+.flow-card.is-drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.flow-insert {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.flow:hover .flow-insert {
+  opacity: 0.6;
+}
+.flow-insert:hover,
+.flow-insert.is-open,
+.flow-insert:focus-within {
+  opacity: 1 !important;
+}
+.flow-insert-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #c7ccd4;
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flow-insert-btn:hover,
+.flow-insert.is-open .flow-insert-btn {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.flow-insert-menu {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: #191b20;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 24, 32, 0.25);
+}
+.flow .links {
+  z-index: 3;
+}
+.flow .link-label {
+  z-index: 6;
+}
+.flow-card.is-selected {
+  /* Its + handles above neighbouring arrows' ⊕. */
+  z-index: 8;
+}

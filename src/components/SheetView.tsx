@@ -58,7 +58,7 @@ function PersonaFlows({ sheet }: { sheet: PersonaSheet }) {
   );
 }
 
-/** Height of an empty row of the blocks grid, in CSS pixels; matches styles.css. */
+/** Height of an empty row of the blocks grid, in CSS pixels; matches styles/sheet.css. */
 const ROW_MIN = 72;
 
 /**
