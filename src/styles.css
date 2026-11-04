@@ -3389,6 +3389,7 @@ body.is-dragging .flow-drop {
 .flow-base-card:hover .removed-restore,
 .flow-base-card .removed-restore:focus-visible {
   opacity: 1;
+}
 
 /* Resolved notes */
 
