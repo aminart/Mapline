@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore, useT } from '../store';
 import { open, save } from '../actions';
 import type { Lang } from '../i18n';
-import { CheckIcon, DownloadIcon, FolderIcon, LogoIcon, PlayIcon, PlusIcon, RedoIcon, UndoIcon } from './Icons';
+import { CheckIcon, DownloadIcon, FolderIcon, LogoIcon, NoteIcon, PlayIcon, PlusIcon, RedoIcon, UndoIcon } from './Icons';
+import { projectComments } from '../model/comments';
 import { startPresentation } from './Presentation';
 import { AboutDialog } from './About';
 import { ProjectSwitcher } from './ProjectSwitcher';
@@ -44,6 +45,7 @@ export function TopBar() {
           <button className="icon-btn icon-btn-lg" aria-label={t('top.redo')} title={`${t('top.redo')} (Ctrl+Shift+Z)`} disabled={!canRedo} onClick={redo}>
             <RedoIcon />
           </button>
+          <CommentsButton />
           <button className="btn" onClick={startPresentation} title={`${t('present.start')} (F5)`}>
             <PlayIcon size={14} /> {t('present.start')}
           </button>
@@ -56,6 +58,20 @@ export function TopBar() {
       <HelpButton />
       <LangSwitch />
     </header>
+  );
+}
+
+/** Opens the comments panel; shows how many notes are still to deal with. */
+function CommentsButton() {
+  const t = useT();
+  const open = useStore((s) => s.commentsOpen);
+  const setOpen = useStore((s) => s.setCommentsOpen);
+  const todo = useStore((s) => projectComments(s.project).filter((c) => !c.resolved).length);
+  return (
+    <button className={cls('btn comments-btn', open && 'is-on')} aria-pressed={open} onClick={() => setOpen(!open)} title={t('comments.open')} aria-label={t('comments.title')}>
+      <NoteIcon size={15} />
+      {todo > 0 && <span className="comments-count">{todo}</span>}
+    </button>
   );
 }
 

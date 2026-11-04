@@ -16,6 +16,7 @@ import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
 import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
 import { BusyOverlay } from './components/BusyOverlay';
+import { CommentsPanel } from './components/CommentsPanel';
 import { ExportDialog } from './components/ExportDialog';
 import { PresentationBar, presentGo, startPresentation, stopPresentation } from './components/Presentation';
 import { removeLink } from './model/ops';
@@ -61,7 +62,8 @@ export function App() {
   const lang = useStore((s) => s.lang);
   const presenting = useStore((s) => s.presentStep !== null);
   const kind = useStore((s) => findDoc(s.project, s.docId)?.kind);
-  const previewing = useStore((s) => s.sheetPreview !== null) && kind === 'mission-map' && !presenting;
+  const commenting = useStore((s) => s.commentsOpen) && activeId !== null && !presenting;
+  const previewing = (useStore((s) => s.sheetPreview !== null) && kind === 'mission-map' && !presenting) || commenting;
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -145,6 +147,7 @@ export function App() {
           {activeId ? <DocView /> : <StartScreen />}
         </main>
         {activeId && kind === 'mission-map' && !presenting && <SheetPreview />}
+        {commenting && <CommentsPanel />}
       </div>
       {presenting && <PresentationBar />}
       {activeId && !presenting && (

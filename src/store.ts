@@ -58,6 +58,8 @@ interface State extends DocState {
   presentStep: number | null;
   /** Sheet shown in the side panel over the mission map. */
   sheetPreview: Id | null;
+  /** The side panel listing every note of the project. */
+  commentsOpen: boolean;
   /** New sheet dialog: closed, or open with a persona (of the map `mapDocId`) already picked, or none. */
   newSheet: { personaId: Id | null; mapDocId?: Id } | null;
   newFlowOpen: boolean;
@@ -76,6 +78,7 @@ interface State extends DocState {
   /** Shows another document of the project. */
   setDoc: (docId: Id) => void;
   setSheetPreview: (docId: Id | null) => void;
+  setCommentsOpen: (open: boolean) => void;
   setNewSheet: (open: { personaId: Id | null; mapDocId?: Id } | null) => void;
   setNewFlowOpen: (open: boolean) => void;
   setNewMapOpen: (open: boolean) => void;
@@ -222,6 +225,7 @@ export const useStore = create<State>((set, get) => ({
   tagFilter: [],
   presentStep: null,
   sheetPreview: null,
+  commentsOpen: false,
   newSheet: null,
   newFlowOpen: false,
   newMapOpen: false,
@@ -247,7 +251,9 @@ export const useStore = create<State>((set, get) => ({
     if (docId === s.docId || !findDoc(s.project, docId)) return;
     set({ docId, sel: null, tool: 'select', linkFrom: null, pendingFocus: null, presentStep: null, sheetPreview: null, tagFilter: [] });
   },
-  setSheetPreview: (sheetPreview) => set({ sheetPreview }),
+  // The sheet preview and the comments panel share the side of the window.
+  setSheetPreview: (sheetPreview) => set(sheetPreview ? { sheetPreview, commentsOpen: false } : { sheetPreview }),
+  setCommentsOpen: (commentsOpen) => set(commentsOpen ? { commentsOpen, sheetPreview: null } : { commentsOpen }),
   setNewSheet: (newSheet) => set({ newSheet }),
   setNewFlowOpen: (newFlowOpen) => set({ newFlowOpen }),
   setNewMapOpen: (newMapOpen) => set({ newMapOpen }),
