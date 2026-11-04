@@ -197,8 +197,23 @@ export function setNodeNote(flow: Flow, id: Id, note: string): Flow {
     ...flow,
     nodes: flow.nodes.map((n) => {
       if (n.id !== id) return n;
-      const { note: _old, ...rest } = n;
-      return note.trim() ? { ...rest, note } : rest;
+      const { note: _old, noteResolved: resolved, ...rest } = n;
+      // A deleted note takes its resolved mark with it.
+      return note.trim() ? { ...rest, note, ...(resolved ? { noteResolved: true } : {}) } : rest;
+    }),
+  };
+}
+
+/** Marks a card's note as resolved, or open again. */
+export function setNodeNoteResolved(flow: Flow, id: Id, resolved: boolean): Flow {
+  const node = findNode(flow, id);
+  if (!node?.note?.trim() || Boolean(node.noteResolved) === resolved) return flow;
+  return {
+    ...flow,
+    nodes: flow.nodes.map((n) => {
+      if (n.id !== id) return n;
+      const { noteResolved: _old, ...rest } = n;
+      return resolved ? { ...rest, noteResolved: true } : rest;
     }),
   };
 }

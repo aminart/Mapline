@@ -180,6 +180,22 @@ export function addPhase(doc: Blueprint): Blueprint {
   return { ...doc, steps, phases };
 }
 
+/**
+ * Inserts a new phase before phase `index` (or at the end). It comes with
+ * a new empty step, so the phases around it keep all their steps.
+ */
+export function insertPhase(doc: Blueprint, index: number): { doc: Blueprint; phaseId: Id; stepId: Id } {
+  const phases = normalizePhases(doc.phases, doc.steps.length);
+  const at = Math.max(0, Math.min(index, phases.length));
+  const stepIndex = phases.slice(0, at).reduce((n, p) => n + p.span, 0);
+  const stepId = uid();
+  const phaseId = uid();
+  const steps = doc.steps.slice();
+  steps.splice(stepIndex, 0, { id: stepId, title: '', slots: [uid()] });
+  phases.splice(at, 0, { id: phaseId, title: '', span: 1 });
+  return { doc: { ...doc, steps, phases }, phaseId, stepId };
+}
+
 /** Removes a phase by merging its steps into the neighbouring phase. */
 export function removePhase(doc: Blueprint, index: number): Blueprint {
   const phases = normalizePhases(doc.phases, doc.steps.length);
@@ -250,9 +266,18 @@ export function setActivityKind(doc: Blueprint, key: string, kind: 'activity' | 
 export function setActivityNote(doc: Blueprint, key: string, note: string): Blueprint {
   const act = doc.activities[key];
   if (!act) return doc;
-  const { note: _old, ...rest } = act;
-  const next = note.trim() ? { ...rest, note } : rest;
+  const { note: _old, noteResolved: resolved, ...rest } = act;
+  // A deleted note takes its resolved mark with it.
+  const next = note.trim() ? { ...rest, note, ...(resolved ? { noteResolved: true } : {}) } : rest;
   return { ...doc, activities: { ...doc.activities, [key]: next } };
+}
+
+/** Marks an activity's note as resolved, or open again. */
+export function setActivityNoteResolved(doc: Blueprint, key: string, resolved: boolean): Blueprint {
+  const act = doc.activities[key];
+  if (!act?.note?.trim() || Boolean(act.noteResolved) === resolved) return doc;
+  const { noteResolved: _old, ...rest } = act;
+  return { ...doc, activities: { ...doc.activities, [key]: resolved ? { ...rest, noteResolved: true } : rest } };
 }
 
 export interface NoteEntry {

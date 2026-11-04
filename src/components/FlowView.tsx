@@ -415,7 +415,14 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
           {change && before !== undefined && <BeforeText text={before} />}
         </div>
       )}
-      {!pill && <NoteButton note={node.note ?? ''} onChange={(v, live) => applyFlow((f) => fo.setNodeNote(f, node.id, v), live ? { coalesce: `fnote:${node.id}` } : undefined)} />}
+      {!pill && (
+        <NoteButton
+          note={node.note ?? ''}
+          onChange={(v, live) => applyFlow((f) => fo.setNodeNote(f, node.id, v), live ? { coalesce: `fnote:${node.id}` } : undefined)}
+          resolved={Boolean(node.noteResolved)}
+          onResolve={(r) => applyFlow((f) => fo.setNodeNoteResolved(f, node.id, r))}
+        />
+      )}
       <span className="grip flow-grip card-btn no-export" title={t('flow.drag')} aria-hidden="true" onPointerDown={(e) => startDrag(e, { kind: 'fnode', id: node.id }, ref.current)}>
         <GripIcon size={12} />
       </span>

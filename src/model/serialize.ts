@@ -209,6 +209,7 @@ function parseFlow(input: unknown): Flow {
       ...(typeof n.personaId === 'string' ? { personaId: n.personaId } : {}),
       ...(Array.isArray(n.tags) ? { tags: n.tags.filter((t): t is string => typeof t === 'string') } : {}),
       ...(typeof n.note === 'string' && n.note ? { note: n.note } : {}),
+      ...(typeof n.note === 'string' && n.note && n.noteResolved === true ? { noteResolved: true } : {}),
     };
     // Two cards in one cell can't be shown: the later one is dropped.
     const cell = `${node.col}:${node.row}`;

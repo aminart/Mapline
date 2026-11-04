@@ -35,6 +35,8 @@ export interface Activity {
   tags?: string[];
   /** Longer comment, kept off the board (shown on demand). */
   note?: string;
+  /** The note has been dealt with: listed apart in the comments panel. */
+  noteResolved?: boolean;
   /** On an alternative card: the word shown above it ("or" when unset). */
   joiner?: string;
   /** A decision point rather than an activity, drawn like a flow's choice card. */
@@ -212,6 +214,8 @@ export interface FlowNode {
   tags?: string[];
   /** Longer comment, kept off the card (shown on demand). */
   note?: string;
+  /** The note has been dealt with: listed apart in the comments panel. */
+  noteResolved?: boolean;
 }
 
 /** An arrow between two cards; choices label theirs ("Yes", "No"…). */

@@ -23,6 +23,24 @@ test('creates a project and inserts a step in the middle', async ({ page }) => {
   await expect(names.nth(3)).toHaveValue('Après');
 });
 
+test('inserts a phase between two phases', async ({ page }) => {
+  await startProject(page);
+  const phases = page.locator('.phase');
+  const names = phases.getByRole('textbox', { name: 'Nom de la phase' });
+  const before = await phases.count();
+  expect(before).toBeGreaterThan(1);
+  const steps = await page.locator('.step[data-step]').count();
+  await names.nth(0).fill('Avant');
+  await names.nth(1).fill('Après');
+  await phases.nth(1).getByRole('button', { name: 'Insérer une phase ici' }).click();
+  await expect(phases).toHaveCount(before + 1);
+  await expect(page.locator('.step[data-step]')).toHaveCount(steps + 1);
+  await expect(names.nth(0)).toHaveValue('Avant');
+  await expect(names.nth(1)).toHaveValue('');
+  await expect(names.nth(1)).toBeFocused();
+  await expect(names.nth(2)).toHaveValue('Après');
+});
+
 test('a card grows with its text and never spills over the next row', async ({ page }) => {
   await startProject(page);
   await addActivity(page, 0, 1, 'Une activité au texte long, qui doit agrandir la carte et toute la ligne du persona pour rester lisible à l’export. '.repeat(3));
