@@ -67,6 +67,8 @@ interface State extends DocState {
   newMapOpen: boolean;
   /** Something slow under way (an image import, an export): shown as a spinner. */
   busy: string | null;
+  /** On a target state: show what changed since its current state. */
+  compare: boolean;
 
   /** Changes the mission map shown, as one undo step (or merged into the last with the same `coalesce`). */
   apply: (fn: (map: Blueprint) => Blueprint, opts?: { coalesce?: string }) => void;
@@ -84,6 +86,7 @@ interface State extends DocState {
   setNewFlowOpen: (open: boolean) => void;
   setNewMapOpen: (open: boolean) => void;
   setBusy: (busy: string | null) => void;
+  setCompare: (compare: boolean) => void;
   /** Presentation: shows `step` (-1: the whole document) of another document. */
   presentAt: (docId: Id, step: number) => void;
   undo: () => void;
@@ -231,6 +234,7 @@ export const useStore = create<State>((set, get) => ({
   newFlowOpen: false,
   newMapOpen: false,
   busy: null,
+  compare: true,
 
   apply: (fn, opts) => {
     const { docId, applyProject } = get();
@@ -260,6 +264,7 @@ export const useStore = create<State>((set, get) => ({
   setNewFlowOpen: (newFlowOpen) => set({ newFlowOpen }),
   setNewMapOpen: (newMapOpen) => set({ newMapOpen }),
   setBusy: (busy) => set({ busy }),
+  setCompare: (compare) => set({ compare }),
   presentAt: (docId, step) => {
     if (!findDoc(get().project, docId)) return;
     set({ docId, presentStep: step, sel: null, linkFrom: null, sheetPreview: null, tagFilter: [] });

@@ -21,6 +21,8 @@ import { ChevronLeft, CloseIcon, GripIcon, PlusIcon } from './Icons';
 import { resolveSource, setFlowPersona } from '../model/links';
 import { docLabel } from '../actions';
 import { cls } from './cls';
+import { useFlowDiff } from './useDiff';
+import { BeforeText, ChangeTag } from './ChangeMarks';
 
 const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
 
@@ -45,6 +47,8 @@ export function FlowView() {
   const routed = routeFlow(flow, layout);
   const empty: [number, number][] = [];
   for (let r = 0; r <= rows; r++) for (let c = 0; c <= cols; c++) if (!fo.nodeAt(flow, c, r)) empty.push([c, r]);
+  // Cards of the current state removed since, where they were while their cell is free.
+
   return (
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="flow-doc" ref={boardRef} style={{ width: Math.max(size.w, 640) }}>
@@ -292,6 +296,9 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
   const dimmed = tagFilter.length > 0 && !tags.some((tag) => tagFilter.includes(tag.toLowerCase()));
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
   const pill = node.kind === 'start' || node.kind === 'end';
+  const compared = useFlowDiff();
+  const change = compared?.diff.changes[node.id];
+  const before = compared?.diff.before[node.id];
 
   const add = (dir: fo.Direction) => {
     let id: string | null = null;
@@ -345,7 +352,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
   return (
     <div
       ref={ref}
-      className={cls('box flow-card', `flow-${node.kind}`, b.selected && 'is-selected', drop.over && 'is-drop-target', dimmed && 'is-dimmed')}
+      className={cls('box flow-card', `flow-${node.kind}`, b.selected && 'is-selected', drop.over && 'is-drop-target', dimmed && 'is-dimmed', change && `diff-${change}`)}
       style={{
         left: box.x,
         top: box.y,
@@ -367,6 +374,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
         </div>
       ) : (
         <div className="flow-card-content" ref={content}>
+          {change && <ChangeTag change={change} />}
           {node.kind === 'choice' && (
         <span className="flow-choice-tag" aria-hidden="true">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" stroke="currentColor" strokeWidth="2.5">
@@ -404,6 +412,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
               return f ? fo.flowTagUses(f, tag) : 0;
             }}
           />
+          {change && before !== undefined && <BeforeText text={before} />}
         </div>
       )}
       {!pill && (

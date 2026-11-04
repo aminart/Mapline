@@ -1,0 +1,151 @@
+// Mapline Copyright (C) 2026 Albane Minart
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+/**
+ * Current state and target state: a map or a flow can be copied as the
+ * target state of another (its current state). The copy keeps the ids of
+ * its cards, so the two can be compared card by card.
+ */
+
+import type { Activity, Blueprint, Flow, FlowDoc, FlowNode, Id, MissionMapDoc, Project } from './types';
+import { addDoc, findDoc } from './project';
+import { activityKeyOf, isAltKey, uid } from './ops';
+import { insertColumn } from './flow';
+
+export type StateDoc = MissionMapDoc | FlowDoc;
+
+const isStateDoc = (d: unknown): d is StateDoc => !!d && ((d as StateDoc).kind === 'mission-map' || (d as StateDoc).kind === 'flow');
+
+/** The current state a target document is compared with, while it exists. */
+export function baselineOf(project: Project, docId: Id): StateDoc | undefined {
+  const doc = findDoc(project, docId);
+  if (!isStateDoc(doc) || !doc.baseline) return undefined;
+  const base = findDoc(project, doc.baseline);
+  return isStateDoc(base) && base.kind === doc.kind && base.id !== doc.id ? base : undefined;
+}
+
+/** The target states made from `docId`. */
+export function targetsOf(project: Project, docId: Id): StateDoc[] {
+  return project.docs.filter((d): d is StateDoc => isStateDoc(d) && d.baseline === docId && d.id !== docId);
+}
+
+/**
+ * Copies a map or a flow as its target state, right after the last target
+ * made from it (or after it). The copy keeps its cards' ids.
+ */
+export function makeTarget(project: Project, docId: Id, name: string): { project: Project; docId: Id | null } {
+  const doc = findDoc(project, docId);
+  if (!isStateDoc(doc)) return { project, docId: null };
+  const copy = { ...structuredClone(doc), id: uid(), name, baseline: doc.id } as StateDoc;
+  const after = targetsOf(project, docId).at(-1)?.id ?? docId;
+  return { project: addDoc(project, copy, after), docId: copy.id };
+}
+
+/** Stops comparing a target with its current state: both stay. */
+export function detachTarget(project: Project, docId: Id): Project {
+  const doc = findDoc(project, docId);
+  if (!isStateDoc(doc) || !doc.baseline) return project;
+  const { baseline: _gone, ...rest } = doc;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? (rest as StateDoc) : d)) };
+}
+
+export type Change = 'added' | 'modified';
+
+/** How a target differs from its current state, card by card. */
+export interface Diff<T> {
+  /** Cards of the target that are new or changed, by id. */
+  changes: Record<Id, Change>;
+  /** For changed cards, their text in the current state when it differs. */
+  before: Record<Id, string>;
+  /** Cards of the current state the target no longer has. */
+  removed: T[];
+}
+
+const sameTags = (a: string[] | undefined, b: string[] | undefined) => (a ?? []).join('\n') === (b ?? []).join('\n');
+
+/**
+ * Activities added, changed (text, kind, tags, or moved to another cell) or
+ * removed. Removed ones come with the cell they were in.
+ */
+export function diffMap(base: Blueprint, target: Blueprint): Diff<{ key: string; activity: Activity }> {
+  const before = new Map<Id, { key: string; activity: Activity }>();
+  for (const [key, activity] of Object.entries(base.activities)) before.set(activity.id, { key, activity });
+  const diff: Diff<{ key: string; activity: Activity }> = { changes: {}, before: {}, removed: [] };
+  const kept = new Set<Id>();
+  for (const [key, act] of Object.entries(target.activities)) {
+    const old = before.get(act.id);
+    if (!old) {
+      diff.changes[act.id] = 'added';
+      continue;
+    }
+    kept.add(act.id);
+    const moved = old.key !== key;
+    const textChanged = old.activity.text.trim() !== act.text.trim();
+    if (moved || textChanged || (old.activity.kind ?? '') !== (act.kind ?? '') || !sameTags(old.activity.tags, act.tags)) {
+      diff.changes[act.id] = 'modified';
+      if (textChanged) diff.before[act.id] = old.activity.text;
+    }
+  }
+  for (const [id, entry] of before) if (!kept.has(id)) diff.removed.push(entry);
+  return diff;
+}
+
+/** Cards added, changed (text, kind, tags, persona) or removed; moving a card on the grid isn't a change. */
+export function diffFlow(base: Flow, target: Flow): Diff<FlowNode> {
+  const before = new Map(base.nodes.map((n) => [n.id, n]));
+  const diff: Diff<FlowNode> = { changes: {}, before: {}, removed: [] };
+  const kept = new Set<Id>();
+  for (const node of target.nodes) {
+    const old = before.get(node.id);
+    if (!old) {
+      diff.changes[node.id] = 'added';
+      continue;
+    }
+    kept.add(node.id);
+    const textChanged = old.text.trim() !== node.text.trim();
+    if (textChanged || old.kind !== node.kind || (old.personaId ?? null) !== (node.personaId ?? null) || !sameTags(old.tags, node.tags)) {
+      diff.changes[node.id] = 'modified';
+      if (textChanged) diff.before[node.id] = old.text;
+    }
+  }
+  for (const node of base.nodes) if (!kept.has(node.id)) diff.removed.push(node);
+  return diff;
+}
+
+/** How many cards were added, changed and removed. */
+export function diffCounts(diff: Diff<unknown>): { added: number; modified: number; removed: number } {
+  const values = Object.values(diff.changes);
+  return {
+    added: values.filter((c) => c === 'added').length,
+    modified: values.filter((c) => c === 'modified').length,
+    removed: diff.removed.length,
+  };
+}
+
+/** The cell an activity key is in: an alternative's key without its suffix. */
+export function cellKey(key: string): string {
+  return isAltKey(key) ? key.slice(0, key.lastIndexOf(':')) : key;
+}
+
+/** Puts a removed activity back in its cell, when the cell still exists and is empty. */
+export function restoreActivity(map: Blueprint, key: string, activity: Activity): Blueprint {
+  const cell = cellKey(key);
+  if (map.activities[cell] || map.activities[activityKeyOf(map, activity.id) ?? '']) return map;
+  const [personaId, slot] = cell.split(':');
+  if (!map.personas.some((p) => p.id === personaId) || !map.steps.some((s) => s.slots.includes(slot))) return map;
+  const { joiner: _joiner, ...card } = activity;
+  return { ...map, activities: { ...map.activities, [cell]: card } };
+}
+
+/**
+ * Puts a removed card back where it was, with its arrows to cards still
+ * there. When another card took its place, a column is inserted for it.
+ */
+export function restoreNode(flow: Flow, base: Flow, node: FlowNode): Flow {
+  if (flow.nodes.some((n) => n.id === node.id)) return flow;
+  if (flow.nodes.some((n) => n.col === node.col && n.row === node.row)) flow = insertColumn(flow, node.col);
+  const ids = new Set(flow.nodes.map((n) => n.id).concat(node.id));
+  const linkIds = new Set(flow.links.map((l) => l.id));
+  const links = base.links.filter((l) => (l.from === node.id || l.to === node.id) && ids.has(l.from) && ids.has(l.to) && !linkIds.has(l.id));
+  return { ...flow, nodes: flow.nodes.concat([node]), links: flow.links.concat(links) };
+}

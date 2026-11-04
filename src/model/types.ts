@@ -120,6 +120,8 @@ export interface MissionMapDoc {
   /** Shown on the document's tab; the translated default when empty. */
   name: string;
   map: Blueprint;
+  /** On a target state: the map of the current state it is compared with. */
+  baseline?: Id;
 }
 
 /** How a sheet block shows its content. */
@@ -257,6 +259,8 @@ export interface FlowDoc {
   /** Shown on the document's tab; the translated default when empty. */
   name: string;
   flow: Flow;
+  /** On a target state: the flow of the current state it is compared with. */
+  baseline?: Id;
 }
 
 /** A document of a project. */

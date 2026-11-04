@@ -50,13 +50,15 @@ export function parse(text: string): Project {
 function parseDoc(raw: unknown): ProjectDoc {
   if (!isObject(raw)) throw new ProjectFileError('invalid');
   const base = { id: typeof raw.id === 'string' && raw.id ? raw.id : uid(), name: String(raw.name ?? '') };
+  // A target state names the document of its current state.
+  const baseline = typeof raw.baseline === 'string' && raw.baseline ? { baseline: raw.baseline } : {};
   switch (raw.kind) {
     case 'mission-map':
-      return { ...base, kind: 'mission-map', map: parseMap(raw.map) };
+      return { ...base, kind: 'mission-map', map: parseMap(raw.map), ...baseline };
     case 'persona':
       return { ...base, kind: 'persona', sheet: parseSheet(raw.sheet) };
     case 'flow':
-      return { ...base, kind: 'flow', flow: parseFlow(raw.flow) };
+      return { ...base, kind: 'flow', flow: parseFlow(raw.flow), ...baseline };
     default:
       // A kind of document this version doesn't know: made by a newer app.
       throw new ProjectFileError('newer');

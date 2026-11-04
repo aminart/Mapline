@@ -16,6 +16,7 @@ import { addDoc, findDoc, missionMapOf, removeDoc, sheetIdentity } from './model
 import type { Id, MissionMapDoc, Project } from './model/types';
 import { withLinksKept } from './model/links';
 import { uid } from './model/ops';
+import { makeTarget } from './model/states';
 import { collectNotes } from './model/ops';
 
 function report(err: unknown) {
@@ -112,6 +113,21 @@ export function docLabel(project: Project, id: Id): string {
   if (doc.kind === 'mission-map') return doc.name || t('doc.missionMap');
   if (doc.kind === 'flow') return doc.name ? t('flow.named', { name: doc.name }) : t('flow.default');
   return t('doc.sheet', { name: sheetIdentity(project, doc.sheet).name || t('doc.unnamed') });
+}
+
+/** Copies a map or a flow as its target state, and shows the copy. */
+export function makeTargetDoc(id: Id) {
+  const { project, applyProject, setDoc } = useStore.getState();
+  const doc = findDoc(project, id);
+  if (!doc || doc.kind === 'persona') return;
+  const name = doc.name || (doc.kind === 'mission-map' ? t('doc.missionMap') : '');
+  let made: Id | null = null;
+  applyProject((p) => {
+    const r = makeTarget(p, id, name ? t('state.targetName', { name }) : t('state.targetWord'));
+    made = r.docId;
+    return r.project;
+  });
+  if (made) setDoc(made);
 }
 
 /** Removes a document from the active project, after asking. */
