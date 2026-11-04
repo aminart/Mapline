@@ -37,3 +37,8 @@ export function useFlowDiff(): { diff: FlowDiff; base: Flow } | null {
   });
   return diff && flowMemo ? { diff, base: flowMemo.base } : null;
 }
+
+/** A flow's target state shown under its current state, while comparing. */
+export function useFlowSplit(): boolean {
+  return useStore((s) => s.compare && findDoc(s.project, s.docId)?.kind === 'flow' && baselineOf(s.project, s.docId)?.kind === 'flow');
+}

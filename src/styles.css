@@ -3326,21 +3326,58 @@ body.is-dragging .flow-drop {
 .removed-restore:focus-visible {
   opacity: 1;
 }
-.removed-node {
-  position: absolute;
-  z-index: 4;
-  overflow: hidden;
-}
-.removed-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 0 48px;
-}
-.removed-chip {
-  flex: 0 0 180px;
-  min-height: 0;
-}
 .removed-empty {
   font-style: italic;
+}
+
+/* A flow's target under its current state. */
+.split {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.canvas-pane {
+  flex: 1 1 50%;
+  min-height: 0;
+}
+.canvas-base {
+  border-bottom: 2px solid var(--line);
+  background-color: var(--surface-2);
+}
+.flow-base-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.flow-base-card {
+  box-shadow: none;
+}
+.flow-base-card .flow-text {
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.flow-base-card.flow-start .flow-pill-text,
+.flow-base-card.flow-end .flow-pill-text {
+  white-space: normal;
+}
+.box.diff-removed {
+  border-style: dashed;
+  border-color: #98a2b3;
+  opacity: 0.75;
+  box-shadow: 0 0 0 2px #98a2b3;
+}
+.flow-base-label {
+  pointer-events: none;
+}
+.flow-base-card .flow-text.is-empty {
+  color: var(--placeholder);
+}
+.flow-base-card .removed-restore {
+  margin: 0 6px 4px;
+}
+.flow-base-card:hover .removed-restore,
+.flow-base-card .removed-restore:focus-visible {
+  opacity: 1;
 }

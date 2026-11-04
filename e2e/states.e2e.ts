@@ -64,24 +64,35 @@ test('compares a flow’s target state with its current state', async ({ page })
   await expect(page.locator('.doc-tab.is-active')).toContainText('Cible');
 
   const cards = page.locator('.flow [data-node]');
-  const activity = page.locator('.flow .flow-activity').first();
+  const activity = page.locator('.flow [data-node].flow-activity').first();
   await activity.locator('textarea').fill('Ouvre l’app');
   await expect(activity).toHaveClass(/diff-modified/);
-  const last = page.locator('.flow .flow-activity').last();
+  const last = page.locator('.flow [data-node].flow-activity').last();
   await last.hover();
   await last.getByRole('button', { name: 'Supprimer la carte' }).click();
-  const choice = page.locator('.flow .flow-choice').first();
+  const choice = page.locator('.flow [data-node].flow-choice').first();
   await choice.locator('textarea').click();
   await choice.getByRole('button', { name: 'Ajouter une carte en dessous' }).click();
   await page.keyboard.type('Nouvelle étape');
-  await expect(page.locator('.flow .diff-added')).toHaveCount(1);
-  // Its column closed up: it is listed above the flow.
-  await expect(page.locator('.removed-strip .removed-card')).toHaveCount(1);
+  await expect(page.locator('.flow [data-node].diff-added')).toHaveCount(1);
+  // The current state is shown above, read only, the removed card marked.
+  const base = page.locator('.canvas-base');
+  await expect(base.locator('[data-base-node]')).toHaveCount(7);
+  await expect(base.locator('.diff-removed')).toHaveCount(1);
+  await expect(base.locator('.diff-modified')).toHaveCount(1);
   await expect(page.locator('.state-legend')).toHaveText(/1 ajoutée.*1 modifiée.*1 supprimée/);
   await expect(cards).toHaveCount(7);
   await shot(page, 'flow-compare');
-  await page.locator('.removed-strip .removed-card').hover();
-  await page.getByRole('button', { name: 'Restaurer' }).click();
-  await expect(page.locator('.removed-card')).toHaveCount(0);
-  await expect(cards).toHaveCount(8);
+  // Both panes scroll sideways together.
+  const bottom = page.locator('.canvas-pane').nth(1);
+  await bottom.evaluate((el) => (el.scrollLeft = 120));
+  await expect.poll(() => base.evaluate((el) => el.scrollLeft)).toBe(await bottom.evaluate((el) => el.scrollLeft));
+  // The removed card can be put back from there.
+  await base.locator('.diff-removed').hover();
+  await base.getByRole('button', { name: 'Restaurer' }).click();
+  await expect(base.locator('.diff-removed')).toHaveCount(0);
+  await expect(page.locator('.flow [data-node]')).toHaveCount(8);
+  // Without comparing, the flow is shown alone.
+  await page.getByLabel('Comparer avec l’état actuel').uncheck();
+  await expect(page.locator('.canvas-base')).toHaveCount(0);
 });

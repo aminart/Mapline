@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useStore, useT } from './store';
 import { closeTab, open, save } from './actions';
 import { TopBar } from './components/TopBar';
@@ -13,6 +13,8 @@ import { FlowToolbar } from './components/FlowToolbar';
 import { SheetPreview } from './components/SheetPreview';
 import { DocBar } from './components/DocBar';
 import { StateBar } from './components/StateBar';
+import { BaseFlow } from './components/FlowCompare';
+import { useFlowSplit } from './components/useDiff';
 import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
 import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
@@ -54,6 +56,38 @@ function DocView() {
   }
 }
 
+/**
+ * A flow's target state compared with its current state: the current state
+ * above, read only, the target below; scrolling one sideways scrolls both.
+ */
+function SplitView() {
+  const t = useT();
+  const top = useRef<HTMLElement>(null);
+  const bottom = useRef<HTMLElement>(null);
+  const syncing = useRef(false);
+  const sync = (from: HTMLElement | null, to: HTMLElement | null) => {
+    if (!from || !to) return;
+    if (syncing.current) {
+      syncing.current = false;
+      return;
+    }
+    if (to.scrollLeft !== from.scrollLeft) {
+      syncing.current = true;
+      to.scrollLeft = from.scrollLeft;
+    }
+  };
+  return (
+    <div className="split">
+      <main ref={top} className="canvas canvas-pane canvas-base" aria-label={t('state.current')} onScroll={() => sync(top.current, bottom.current)}>
+        <BaseFlow />
+      </main>
+      <main ref={bottom} className="canvas canvas-pane" onPointerDown={onCanvasPointerDown} onScroll={() => sync(bottom.current, top.current)}>
+        <DocView />
+      </main>
+    </div>
+  );
+}
+
 export function App() {
   const t = useT();
   const activeId = useStore((s) => s.activeId);
@@ -63,6 +97,7 @@ export function App() {
   const presenting = useStore((s) => s.presentStep !== null);
   const kind = useStore((s) => findDoc(s.project, s.docId)?.kind);
   const previewing = useStore((s) => s.sheetPreview !== null) && kind === 'mission-map' && !presenting;
+  const split = useFlowSplit() && !presenting;
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -143,9 +178,13 @@ export function App() {
       {activeId && !presenting && (kind === 'persona' ? <SheetToolbar /> : kind === 'flow' ? <FlowToolbar /> : <FormatToolbar />)}
       {activeId && !presenting && kind !== 'persona' && <StateBar />}
       <div className="workspace">
-        <main className="canvas" onPointerDown={onCanvasPointerDown}>
-          {activeId ? <DocView /> : <StartScreen />}
-        </main>
+        {split ? (
+          <SplitView />
+        ) : (
+          <main className="canvas" onPointerDown={onCanvasPointerDown}>
+            {activeId ? <DocView /> : <StartScreen />}
+          </main>
+        )}
         {activeId && kind === 'mission-map' && !presenting && <SheetPreview />}
       </div>
       {presenting && <PresentationBar />}
