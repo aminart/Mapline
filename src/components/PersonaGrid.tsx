@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { activeMap, useMap, useStore, useT } from '../store';
+import { activeMap, t as translate, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
 import type { Divider, Id, Persona } from '../model/types';
 import { CHOICE_STYLE, LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
 import { useBox } from './useBox';
 import { CloseIcon, DiamondIcon, GripIcon, LineAboveIcon, LineIcon, PersonIcon, PlusIcon, SplitIcon } from './Icons';
 import { NoteButton, TagRow, TagSuggestions as TagList } from './CardExtras';
-import { sheetFor } from '../model/project';
+import { sheetFor, sheetIdentity } from '../model/project';
+import { personaLinks } from '../model/links';
 import { cls } from './cls';
 import { GAP, ROW_GAP } from './layout';
 import { midpoint, roundedPath, routeArrow, type Rect } from '../lib/arrows';
@@ -107,7 +108,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
           />
         </div>
         <div className="persona-actions no-export">
-          <button className="icon-btn" aria-label={t('board.removePersona')} onClick={() => apply((d) => ops.removePersona(d, persona.id))}>
+          <button className="icon-btn" aria-label={t('board.removePersona')} onClick={() => removePersona(persona.id)}>
             <CloseIcon />
           </button>
           <button
@@ -525,4 +526,20 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
         ))}
     </>
   );
+}
+
+/**
+ * Removes a map persona. When it has a sheet or is in flows, asks first: the
+ * sheet stays with its own copy of the persona, the flows lose its colour.
+ */
+function removePersona(personaId: Id) {
+  const { project, docId, apply } = useStore.getState();
+  const { sheet, flows } = personaLinks(project, docId, personaId);
+  if (sheet || flows.length > 0) {
+    const parts: string[] = [];
+    if (sheet) parts.push(translate('links.personaSheet', { name: sheetIdentity(project, sheet.sheet).name || translate('doc.unnamed') }));
+    if (flows.length > 0) parts.push(translate('links.personaFlows', { n: flows.length, names: flows.map((f) => f.name || translate('flow.default')).join(', ') }));
+    if (!window.confirm(translate('links.confirmRemovePersona', { what: parts.join(translate('links.and')) }))) return;
+  }
+  apply((d) => ops.removePersona(d, personaId));
 }

@@ -14,6 +14,7 @@ import { ProjectFileError } from './model/serialize';
 import { createFlowDoc, createFlowProject, createFromTemplate, createMap, createSheet, createSheetProject, sheetDoc, type FlowTemplateId, type SheetTemplateId, type TemplateId } from './model/templates';
 import { addDoc, findDoc, missionMapOf, removeDoc, sheetIdentity } from './model/project';
 import type { Id, MissionMapDoc, Project } from './model/types';
+import { withLinksKept } from './model/links';
 import { uid } from './model/ops';
 import { collectNotes } from './model/ops';
 
@@ -118,7 +119,7 @@ export function removeDocument(id: Id) {
   const { project, applyProject } = useStore.getState();
   if (project.docs.length <= 1) return;
   if (!window.confirm(t('doc.confirmRemove', { name: docLabel(project, id) }))) return;
-  applyProject((p) => removeDoc(p, id));
+  applyProject((p) => withLinksKept(p, (q) => removeDoc(q, id)));
 }
 
 export async function save(saveAs = false): Promise<boolean> {

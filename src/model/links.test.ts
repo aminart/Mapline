@@ -3,11 +3,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { exampleProject } from './fixtures';
-import { addDetailFlow, flowsDetailing, personaFlows, removeDetailed, resolveSource, setFlowPersona, setFlowSource } from './links';
+import { addDetailFlow, flowsDetailing, personaFlows, personaLinks, resolveSource, setFlowPersona, setFlowSource, withLinksKept } from './links';
 import { renameSheetTag } from './sheet';
-import { addDoc, flowOf, removeDoc, updateMap } from './project';
+import { addDoc, flowOf, removeDoc, sheetIdentity, sheetOf, updateMap } from './project';
 import { parse, serialize } from './serialize';
-import { createFlowDoc } from './templates';
+import { createFlowDoc, createSheet, sheetDoc } from './templates';
 import * as fo from './flow';
 import * as ops from './ops';
 import type { MissionMapDoc } from './types';
@@ -78,9 +78,54 @@ describe('removing a detailed step', () => {
     const doc = createFlowDoc('blank', 'fr');
     const step = map.steps[1];
     const p = addDetailFlow(project, doc, { docId: mapId, kind: 'step', id: step.id });
-    const next = removeDetailed(p, mapId, 'step', step.id, (q) => updateMap(q, mapId, (m) => ops.removeStep(m, 1)));
+    const next = withLinksKept(p, (q) => updateMap(q, mapId, (m) => ops.removeStep(m, 1)));
     expect(flowOf(next, doc.id)!.flow.source).toBeUndefined();
     expect((next.docs[0] as MissionMapDoc).map.steps.some((s) => s.id === step.id)).toBe(false);
+  });
+});
+
+describe('removing what a link points to', () => {
+  function withPersonaLinks() {
+    const { project, map, mapId } = setup();
+    const persona = map.personas[0];
+    const sheet = sheetDoc(createSheet('blank', 'fr', { persona, mapDocId: mapId }));
+    const flow = createFlowDoc('blank', 'fr');
+    flow.flow = { ...flow.flow, personaId: persona.id, nodes: flow.flow.nodes.map((n) => ({ ...n, personaId: persona.id })) };
+    let p = addDoc(addDoc(project, sheet), flow);
+    // Renamed on the map only: the sheet's own copy is out of date.
+    p = updateMap(p, mapId, (m) => ops.setPersona(m, persona.id, { name: 'Nouveau nom', role: 'Nouveau rôle' }));
+    return { p, mapId, persona, sheetId: sheet.id, flowId: flow.id };
+  }
+
+  it('lists what goes with a persona', () => {
+    const { p, mapId, persona, sheetId, flowId } = withPersonaLinks();
+    const links = personaLinks(p, mapId, persona.id);
+    expect(links.sheet?.id).toBe(sheetId);
+    expect(links.flows.map((f) => f.id)).toEqual([flowId]);
+  });
+
+  it('keeps the sheet as it showed, and takes the persona off its flows', () => {
+    const { p, mapId, persona, sheetId, flowId } = withPersonaLinks();
+    const next = withLinksKept(p, (q) => updateMap(q, mapId, (m) => ops.removePersona(m, persona.id)));
+    const sheet = sheetOf(next, sheetId)!.sheet;
+    expect(sheet.link).toBeNull();
+    expect(sheetIdentity(next, sheet)).toMatchObject({ name: 'Nouveau nom', role: 'Nouveau rôle', synced: false });
+    const flow = flowOf(next, flowId)!.flow;
+    expect(flow.personaId).toBeUndefined();
+    expect(flow.nodes.every((n) => !n.personaId)).toBe(true);
+  });
+
+  it('does the same when the whole map goes', () => {
+    const { p, mapId, sheetId, flowId } = withPersonaLinks();
+    const next = withLinksKept(p, (q) => removeDoc(q, mapId));
+    expect(sheetIdentity(next, sheetOf(next, sheetId)!.sheet)).toMatchObject({ name: 'Nouveau nom', synced: false });
+    expect(flowOf(next, flowId)!.flow.personaId).toBeUndefined();
+  });
+
+  it('changes nothing when no link is left dangling', () => {
+    const { p, mapId } = withPersonaLinks();
+    const next = withLinksKept(p, (q) => updateMap(q, mapId, (m) => ({ ...m, objective: 'Autre' })));
+    expect(next.docs.slice(1)).toEqual(p.docs.slice(1));
   });
 });
 

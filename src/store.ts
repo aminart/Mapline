@@ -8,6 +8,7 @@ import { parse } from './model/serialize';
 import { findDoc, firstDocId, flowOf, missionMapOf, projectFromMap, sheetOf, updateFlow, updateMap, updateSheet } from './model/project';
 import { initialLang, rememberLang, translate, type Lang, type MessageKey } from './i18n';
 import { readSession, writeSession } from './lib/session';
+import { withLinksKept } from './model/links';
 
 const HISTORY_LIMIT = 200;
 /** Edits with the same coalesce key closer than this form one undo step. */
@@ -233,7 +234,8 @@ export const useStore = create<State>((set, get) => ({
 
   apply: (fn, opts) => {
     const { docId, applyProject } = get();
-    applyProject((project) => updateMap(project, docId, fn), opts);
+    // A step, a phase or a persona removed takes the links to it along.
+    applyProject((project) => withLinksKept(project, (p) => updateMap(p, docId, fn)), opts);
   },
 
   applySheet: (fn, opts) => {
