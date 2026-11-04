@@ -60,7 +60,12 @@ export function removeDoc(project: Project, docId: Id): Project {
       // A flow detailing part of the removed map no longer does.
       if (d.kind === 'flow' && d.flow.source?.docId === docId) {
         const { source: _gone, ...flow } = d.flow;
-        return { ...d, flow };
+        d = { ...d, flow };
+      }
+      // A target state of the removed document is no longer compared with it.
+      if ((d.kind === 'mission-map' || d.kind === 'flow') && d.baseline === docId) {
+        const { baseline: _base, ...rest } = d;
+        return rest;
       }
       return d;
     });
@@ -80,11 +85,19 @@ export function updateSheet(project: Project, docId: Id, fn: (sheet: PersonaShee
   return { ...project, docs: project.docs.map((d) => (d.id === docId ? { ...doc, sheet } : d)) };
 }
 
-/** The sheet describing a mission map persona, if there is one. */
-export function sheetFor(project: Project, mapDocId: Id, personaId: Id): PersonaSheetDoc | undefined {
-  return project.docs.find(
+/**
+ * The sheet describing a mission map persona, if there is one. A target
+ * state's personas share the sheets of its current state's.
+ */
+export function sheetFor(project: Project, mapDocId: Id, personaId: Id, seen: Set<Id> = new Set()): PersonaSheetDoc | undefined {
+  const own = project.docs.find(
     (d): d is PersonaSheetDoc => d.kind === 'persona' && d.sheet.link?.docId === mapDocId && d.sheet.link.personaId === personaId,
   );
+  if (own) return own;
+  const baseline = missionMapOf(project, mapDocId)?.baseline;
+  if (!baseline || seen.has(mapDocId)) return undefined;
+  seen.add(mapDocId);
+  return sheetFor(project, baseline, personaId, seen);
 }
 
 /** The mission map persona a sheet describes, while it still exists. */
@@ -170,9 +183,13 @@ export function renameDoc(project: Project, docId: Id, name: string): Project {
 
 /** The personas of the project's mission maps, for colouring flow cards and showing their photo. */
 export function projectPersonas(project: Project): { persona: Persona; style: BoxStyle | undefined; photo: string | null }[] {
+  // A target state shares its personas with its current state: each one is listed once.
+  const seen = new Set<Id>();
   return project.docs.flatMap((d) =>
     d.kind === 'mission-map'
-      ? d.map.personas.map((persona) => ({ persona, style: d.map.styles[`persona:${persona.id}`], photo: sheetFor(project, d.id, persona.id)?.sheet.photo ?? null }))
+      ? d.map.personas
+          .filter((persona) => !seen.has(persona.id) && seen.add(persona.id))
+          .map((persona) => ({ persona, style: d.map.styles[`persona:${persona.id}`], photo: sheetFor(project, d.id, persona.id)?.sheet.photo ?? null }))
       : [],
   );
 }

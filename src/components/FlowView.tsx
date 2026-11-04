@@ -21,6 +21,9 @@ import { ChevronLeft, CloseIcon, GripIcon, PlusIcon } from './Icons';
 import { resolveSource, setFlowPersona } from '../model/links';
 import { docLabel } from '../actions';
 import { cls } from './cls';
+import { useFlowDiff } from './useDiff';
+import { restoreNode } from '../model/states';
+import { BeforeText, ChangeTag, RemovedCard } from './ChangeMarks';
 
 const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
 
@@ -31,6 +34,8 @@ let measureCanvas: HTMLCanvasElement | undefined;
 export function FlowView() {
   const zoom = useStore((s) => s.zoom);
   const flow = useStore((s) => activeFlow(s));
+  const compared = useFlowDiff();
+  const applyFlow = useStore((s) => s.applyFlow);
   // Height each card's text needs, measured once drawn: rows grow to fit.
   const [measured, setMeasured] = useState<Record<Id, number>>({});
   const onMeasure = useCallback((id: Id, h: number) => setMeasured((m) => (Math.abs((m[id] ?? 0) - h) < 1 ? m : { ...m, [id]: h })), []);
@@ -45,15 +50,42 @@ export function FlowView() {
   const routed = routeFlow(flow, layout);
   const empty: [number, number][] = [];
   for (let r = 0; r <= rows; r++) for (let c = 0; c <= cols; c++) if (!fo.nodeAt(flow, c, r)) empty.push([c, r]);
+  // Cards of the current state removed since, where they were while their cell is free.
+  const removed = compared?.diff.removed ?? [];
+  const inPlace = (n: FlowNode) => !fo.nodeAt(flow, n.col, n.row) && n.col <= cols && n.row <= rows;
+  const restore = (n: FlowNode) => compared && applyFlow((f) => restoreNode(f, compared.base, n));
   return (
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="flow-doc" ref={boardRef} style={{ width: Math.max(size.w, 640) }}>
       <FlowHeader flow={flow} />
       <FlowBrief flow={flow} />
+      {/* Removed cards whose place was taken, or closed up, when the flow tightened. */}
+      {removed.some((n) => !inPlace(n)) && (
+        <div className="removed-strip">
+          {removed
+            .filter((n) => !inPlace(n))
+            .map((n) => (
+              <RemovedCard key={n.id} className="removed-chip" text={n.text} choice={n.kind === 'choice'} onRestore={() => restore(n)} />
+            ))}
+        </div>
+      )}
       <div className="flow" style={{ width: size.w, height: size.h }}>
         {empty.map(([c, r]) => (
           <DropCell key={`${c}:${r}`} col={c} row={r} layout={layout} />
         ))}
+        {removed.filter(inPlace).map((n) => {
+          const box = cellBox(n.col, n.row, layout);
+          return (
+            <RemovedCard
+              key={n.id}
+              className="removed-node"
+              text={n.text}
+              choice={n.kind === 'choice'}
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
+              onRestore={() => restore(n)}
+            />
+          );
+        })}
         <Arrows routed={routed} width={size.w} height={size.h} />
         {flow.nodes.map((node) => (
           <FlowCard key={node.id} node={node} layout={layout} onMeasure={onMeasure} onMeasureWidth={onMeasureWidth} />
@@ -292,6 +324,9 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
   const dimmed = tagFilter.length > 0 && !tags.some((tag) => tagFilter.includes(tag.toLowerCase()));
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
   const pill = node.kind === 'start' || node.kind === 'end';
+  const compared = useFlowDiff();
+  const change = compared?.diff.changes[node.id];
+  const before = compared?.diff.before[node.id];
 
   const add = (dir: fo.Direction) => {
     let id: string | null = null;
@@ -345,7 +380,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
   return (
     <div
       ref={ref}
-      className={cls('box flow-card', `flow-${node.kind}`, b.selected && 'is-selected', drop.over && 'is-drop-target', dimmed && 'is-dimmed')}
+      className={cls('box flow-card', `flow-${node.kind}`, b.selected && 'is-selected', drop.over && 'is-drop-target', dimmed && 'is-dimmed', change && `diff-${change}`)}
       style={{
         left: box.x,
         top: box.y,
@@ -367,6 +402,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
         </div>
       ) : (
         <div className="flow-card-content" ref={content}>
+          {change && <ChangeTag change={change} />}
           {node.kind === 'choice' && (
         <span className="flow-choice-tag" aria-hidden="true">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" stroke="currentColor" strokeWidth="2.5">
@@ -404,6 +440,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
               return f ? fo.flowTagUses(f, tag) : 0;
             }}
           />
+          {change && before !== undefined && <BeforeText text={before} />}
         </div>
       )}
       {!pill && <NoteButton note={node.note ?? ''} onChange={(v, live) => applyFlow((f) => fo.setNodeNote(f, node.id, v), live ? { coalesce: `fnote:${node.id}` } : undefined)} />}

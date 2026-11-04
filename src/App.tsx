@@ -12,6 +12,7 @@ import { FlowView } from './components/FlowView';
 import { FlowToolbar } from './components/FlowToolbar';
 import { SheetPreview } from './components/SheetPreview';
 import { DocBar } from './components/DocBar';
+import { StateBar } from './components/StateBar';
 import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
 import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
@@ -140,6 +141,7 @@ export function App() {
       {!presenting && <TopBar />}
       {activeId && !presenting && <DocBar />}
       {activeId && !presenting && (kind === 'persona' ? <SheetToolbar /> : kind === 'flow' ? <FlowToolbar /> : <FormatToolbar />)}
+      {activeId && !presenting && kind !== 'persona' && <StateBar />}
       <div className="workspace">
         <main className="canvas" onPointerDown={onCanvasPointerDown}>
           {activeId ? <DocView /> : <StartScreen />}

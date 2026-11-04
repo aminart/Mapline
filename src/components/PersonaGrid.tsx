@@ -16,6 +16,9 @@ import { midpoint, roundedPath, routeArrow, type Rect } from '../lib/arrows';
 import { startDrag, useDropTarget } from './dnd';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
+import { useMapDiff } from './useDiff';
+import { cellKey, restoreActivity } from '../model/states';
+import { BeforeText, ChangeTag, RemovedCard } from './ChangeMarks';
 
 export function PersonaGrid() {
   const personas = useMap((m) => m.personas);
@@ -193,6 +196,9 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
   const apply = useStore((s) => s.apply);
   const focusLater = useStore((s) => s.focusLater);
   const drop = useDropTarget('act', (d) => apply((doc) => ops.moveActivity(doc, d.key, key)));
+  const diff = useMapDiff();
+  // A card of the current state removed from this cell: shown while the cell is empty.
+  const removed = !act && diff ? diff.removed.find((r) => cellKey(r.key) === key) : undefined;
   const create = (kind: 'activity' | 'choice') => {
     let id = '';
     apply((d) => {
@@ -215,6 +221,8 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
             </>
           )}
         </>
+      ) : removed ? (
+        <RemovedCard text={removed.activity.text} choice={removed.activity.kind === 'choice'} onRestore={() => apply((d) => restoreActivity(d, removed.key, removed.activity))} />
       ) : (
         <>
           <button className="ghost no-export" aria-label={t('board.addActivityHere')} onClick={() => create('activity')}>
@@ -259,6 +267,8 @@ function ActivityCard(props: {
   const { accent } = personaAccent(personaColor, personaStyle);
   const cardRef = useRef<HTMLDivElement>(null);
   const dimmed = tagFilter.length > 0 && !tags.some((tag) => tagFilter.includes(tag.toLowerCase()));
+  const diff = useMapDiff();
+  const change = diff?.changes[activityId];
 
   const addRight = () => {
     let id: string | null = null;
@@ -296,7 +306,7 @@ function ActivityCard(props: {
   return (
     <div
       ref={cardRef}
-      className={cls('box card', choice && 'card-choice', b.selected && 'is-selected', dimmed && 'is-dimmed')}
+      className={cls('box card', choice && 'card-choice', b.selected && 'is-selected', dimmed && 'is-dimmed', change && `diff-${change}`)}
       data-act={activityId}
       style={{
         ...b.box,
@@ -306,6 +316,7 @@ function ActivityCard(props: {
         borderTopColor: b.hasCustomBorder ? b.style.bc : accent,
       }}
     >
+      {change && <ChangeTag change={change} />}
       {choice && (
         <span className="choice-tag" aria-hidden="true">
           <DiamondIcon size={10} /> {t('flow.kind.choice')}
@@ -340,6 +351,7 @@ function ActivityCard(props: {
         onColor={(tag, i) => apply((d) => ops.setTagColor(d, tag, i))}
         uses={(tag) => ops.tagUses(activeMap(useStore.getState()), tag)}
       />
+      {change && diff?.before[activityId] !== undefined && <BeforeText text={diff.before[activityId]} />}
       <span
         className="grip grip-card card-btn no-export"
         title={t('board.dragActivity')}

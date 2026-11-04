@@ -8,6 +8,7 @@ import { renameDoc } from '../model/project';
 import type { ProjectDoc } from '../model/types';
 import { CloseIcon, FlowIcon, MapIcon, PencilIcon, PersonIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
+import { baselineOf, targetsOf } from '../model/states';
 
 /** The documents of the active project, as tabs: its maps, persona sheets and flows. */
 export function DocBar() {
@@ -44,6 +45,11 @@ export function DocBar() {
               >
                 {doc.kind === 'mission-map' ? <MapIcon /> : doc.kind === 'flow' ? <FlowIcon /> : <PersonIcon />}
                 {label}
+                {baselineOf(project, doc.id) ? (
+                  <span className="state-badge state-badge-target">{t('state.target')}</span>
+                ) : targetsOf(project, doc.id).length > 0 ? (
+                  <span className="state-badge">{t('state.current')}</span>
+                ) : null}
               </button>
             )}
             {renamable && editing !== doc.id && (
