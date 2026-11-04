@@ -845,6 +845,7 @@ select:focus-visible,
 }
 
 .phase {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -941,7 +942,15 @@ select:focus-visible,
   opacity: 0.35;
   transition: opacity 0.15s;
 }
+.insert-btn-sm {
+  left: -18px;
+  margin-top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+}
 .step:hover .insert-btn,
+.phase:hover .insert-btn,
 .insert-btn:focus-visible {
   opacity: 1;
 }

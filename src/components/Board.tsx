@@ -87,7 +87,17 @@ function PhaseRow() {
   const steps = useMap((m) => m.steps);
   const doc = { phases: rawPhases, steps };
   const apply = useStore((s) => s.apply);
+  const focusLater = useStore((s) => s.focusLater);
   const phases = ops.normalizePhases(doc.phases, doc.steps.length);
+  const insertAt = (k: number) => {
+    let id = '';
+    apply((d) => {
+      const r = ops.insertPhase(d, k);
+      id = r.phaseId;
+      return r.doc;
+    });
+    focusLater(`phase:${id}`);
+  };
   let cursor = 0;
   return (
     <div className="grid-row">
@@ -104,6 +114,7 @@ function PhaseRow() {
             span={Math.max(1, span)}
             isLast={k === phases.length - 1}
             canRemove={phases.length > 1}
+            onInsertBefore={() => insertAt(k)}
           />
         );
       })}
@@ -114,13 +125,16 @@ function PhaseRow() {
   );
 }
 
-function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: boolean; canRemove: boolean }) {
+function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: boolean; canRemove: boolean; onInsertBefore: () => void }) {
   const t = useT();
-  const { phase, index, span, isLast, canRemove } = props;
+  const { phase, index, span, isLast, canRemove, onInsertBefore } = props;
   const apply = useStore((s) => s.apply);
   const b = useBox<HTMLTextAreaElement>(`phase:${phase.id}`, 'phase');
   return (
     <div className={cls('box phase', b.selected && 'is-selected')} style={{ ...b.box, gridColumn: `span ${span}` }}>
+      <button className="insert-btn insert-btn-sm no-export" title={t('board.insertPhase')} aria-label={t('board.insertPhase')} onClick={onInsertBefore}>
+        <PlusIcon size={14} />
+      </button>
       <FitText
         ref={b.ref}
         singleLine
