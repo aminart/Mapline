@@ -9,6 +9,7 @@ import type { Flow, LinkStyle } from '../model/types';
 import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
 import { cls } from './cls';
+import { TargetButton } from './StateBar';
 
 /** Flow tools: select or connect, the flow's name, and the selected card or arrow. */
 export function FlowToolbar() {
@@ -62,6 +63,7 @@ export function FlowToolbar() {
       ) : (
         <span className="hint">{t('flow.hint')}</span>
       )}
+      <TargetButton />
     </div>
   );
 }

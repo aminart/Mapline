@@ -8,6 +8,7 @@ import { BORDER_SWATCHES, FILL_SWATCHES, FONTS, LINK_COLORS, SIZES, TAG_PALETTE,
 import { useEffect, useRef } from 'react';
 import { CloseIcon, CursorIcon, LinkIcon, TagIcon } from './Icons';
 import { cls } from './cls';
+import { TargetButton } from './StateBar';
 
 export function FormatToolbar() {
   const t = useT();
@@ -50,6 +51,7 @@ export function FormatToolbar() {
       ) : (
         <StyleControls />
       )}
+      <TargetButton />
     </div>
   );
 }

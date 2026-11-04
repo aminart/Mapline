@@ -3169,6 +3169,227 @@ body.is-dragging .flow-drop {
   white-space: nowrap;
 }
 
+/* Current state and target state */
+.state-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.state-badge-target {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.toolbar-end {
+  margin-left: auto;
+}
+.state-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 6px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.state-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+.state-base strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.state-base:hover {
+  background: var(--surface-2);
+}
+.state-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+.state-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.state-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.state-count::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.state-added::before {
+  background: #12b76a;
+}
+.state-modified::before {
+  background: #f79009;
+}
+.state-removed::before {
+  background: #98a2b3;
+}
+
+/* Cards added or changed since the current state: a coloured ring, and a label. */
+.box.diff-added {
+  box-shadow: 0 0 0 2px #12b76a;
+}
+.box.diff-modified {
+  box-shadow: 0 0 0 2px #f79009;
+}
+.box.diff-added.is-selected,
+.box.diff-modified.is-selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.change-tag {
+  align-self: flex-start;
+  display: inline-block;
+  margin: 8px 10px -4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.change-added {
+  background: #e7f8ef;
+  color: #067647;
+}
+.change-modified {
+  background: #fef0e1;
+  color: #93370d;
+}
+.change-removed {
+  background: #eaecf0;
+  color: #344054;
+}
+.change-before {
+  margin: -2px 10px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.flow-card .change-tag {
+  margin-left: 12px;
+}
+.flow-card .change-before {
+  margin-left: 12px;
+}
+
+/* A card of the current state removed from the target, where it was. */
+.removed-card {
+  position: relative;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 0 6px;
+  border: 1.5px dashed #98a2b3;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  min-height: 72px;
+}
+.removed-card .change-tag {
+  margin-bottom: 0;
+}
+.removed-text {
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.removed-restore {
+  align-self: flex-start;
+  height: 26px;
+  margin: auto 4px 0;
+  font-size: 12px;
+  opacity: 0;
+}
+.removed-card:hover .removed-restore,
+.removed-restore:focus-visible {
+  opacity: 1;
+}
+.removed-empty {
+  font-style: italic;
+}
+
+/* A flow's target under its current state. */
+.split {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.canvas-pane {
+  flex: 1 1 50%;
+  min-height: 0;
+}
+.canvas-base {
+  border-bottom: 2px solid var(--line);
+  background-color: var(--surface-2);
+}
+.flow-base-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.flow-base-card {
+  box-shadow: none;
+}
+.flow-base-card .flow-text {
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.flow-base-card.flow-start .flow-pill-text,
+.flow-base-card.flow-end .flow-pill-text {
+  white-space: normal;
+}
+.box.diff-removed {
+  border-style: dashed;
+  border-color: #98a2b3;
+  opacity: 0.75;
+  box-shadow: 0 0 0 2px #98a2b3;
+}
+.flow-base-label {
+  pointer-events: none;
+}
+.flow-base-card .flow-text.is-empty {
+  color: var(--placeholder);
+}
+.flow-base-card .removed-restore {
+  margin: 0 6px 4px;
+}
+.flow-base-card:hover .removed-restore,
+.flow-base-card .removed-restore:focus-visible {
+  opacity: 1;
+
 /* Resolved notes */
 
 .note.has-note.is-resolved .note-btn {
