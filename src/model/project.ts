@@ -56,7 +56,12 @@ export function removeDoc(project: Project, docId: Id): Project {
   const docs = project.docs
     .filter((d) => d.id !== docId)
     .map((d) => {
-      if (d.kind === 'persona' && d.sheet.link?.docId === docId) return { ...d, sheet: { ...d.sheet, link: null } };
+      if (d.kind === 'persona' && d.sheet.link?.docId === docId) {
+        // The sheet keeps the name, role and colour it showed.
+        const was = d.sheet.sync ? linkedPersona(project, d.sheet)?.persona : undefined;
+        const identity = was ? { name: was.name, role: was.role, color: was.color } : {};
+        return { ...d, sheet: { ...d.sheet, ...identity, link: null } };
+      }
       // A flow detailing part of the removed map no longer does.
       if (d.kind === 'flow' && d.flow.source?.docId === docId) {
         const { source: _gone, ...flow } = d.flow;

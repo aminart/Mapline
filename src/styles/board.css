@@ -1,0 +1,743 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Canvas & board */
+
+.canvas {
+  flex-grow: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 32px;
+  background-color: var(--ground);
+  background-image: radial-gradient(var(--dots) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.board-zoom {
+  width: max-content;
+}
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: max-content;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px 28px 28px;
+  box-shadow: 0 1px 2px rgba(20, 24, 32, 0.06);
+}
+.grid-row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--gap);
+  align-items: stretch;
+}
+.row-label {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.row-label-end {
+  align-items: flex-end;
+  padding-bottom: 8px;
+}
+.row-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+/* Editable title and description of an optional row. */
+.row-head-title,
+.row-head-text {
+  width: 100%;
+  margin: 0 -4px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+}
+.row-head-text {
+  line-height: 1.35;
+}
+.row-head-title:hover,
+.row-head-text:hover,
+.row-head-title:focus,
+.row-head-text:focus {
+  background: rgba(20, 24, 32, 0.05);
+}
+.board.is-exporting .row-head-title,
+.board.is-exporting .row-head-text {
+  background: transparent;
+}
+.row-head .chip {
+  margin-top: auto;
+  align-self: flex-start;
+}
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.eyebrow-accent {
+  color: var(--accent);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.box {
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+}
+.box.is-selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.box input,
+.box textarea {
+  border: 0;
+  background: transparent;
+  min-width: 0;
+  width: 100%;
+  padding: 2px 0;
+  resize: none;
+  line-height: 1.35;
+}
+
+.objective {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  margin-bottom: 8px;
+}
+.objective textarea {
+  min-height: 1.4em;
+}
+
+.phase {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 10px;
+}
+.phase textarea {
+  flex: 1;
+}
+.box-actions {
+  display: flex;
+  align-items: center;
+}
+.box-actions .icon-btn {
+  color: inherit;
+}
+
+.add-dashed {
+  border: 1.5px dashed #b9bfca;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.add-dashed:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.add-step {
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+}
+.add-persona,
+.add-text-row {
+  height: 52px;
+  font-size: 14px;
+}
+.add-text-row {
+  margin-top: 4px;
+}
+
+.step-row {
+  margin-bottom: 4px;
+}
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 10px 8px 14px;
+}
+.step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.step-num {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.step-slots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.insert-btn {
+  position: absolute;
+  left: -23px;
+  top: 50%;
+  margin-top: -16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 2;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.insert-btn-sm {
+  left: -18px;
+  margin-top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+}
+.step:hover .insert-btn,
+.phase:hover .insert-btn,
+.insert-btn:focus-visible {
+  opacity: 1;
+}
+.chip {
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chip-icon {
+  width: 26px;
+  padding: 0;
+  justify-content: center;
+}
+.chip-raised {
+  height: 28px;
+  box-shadow: 0 1px 3px rgba(20, 24, 32, 0.2);
+}
+
+/* Storyboard */
+
+.info {
+  display: flex;
+  padding: 8px;
+}
+.box.info textarea {
+  flex: 1 0 auto;
+  min-height: 56px;
+  padding: 2px;
+  line-height: 1.45;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.scene {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.scene-img {
+  position: relative;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+.scene-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.scene-img-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+}
+.file-label {
+  position: relative;
+  cursor: pointer;
+}
+.file-label input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.scene-drop {
+  height: 150px;
+  border: 1.5px dashed var(--dots);
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.scene-drop:hover,
+.scene-drop.is-over {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.scene textarea {
+  /* Room for three lines at least; longer text makes the box taller. */
+  height: calc(4.2em + 8px);
+  padding: 4px;
+  line-height: 1.4;
+}
+
+/* Personas & activities */
+
+.persona-grid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+}
+.persona-row {
+  /* At least the default card height; taller when a card's text needs it. */
+  grid-template-rows: minmax(120px, auto);
+  flex-shrink: 0;
+}
+.persona {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+}
+.avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  overflow: hidden;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.persona-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex-grow: 1;
+}
+.persona-fields textarea {
+  line-height: 1.4;
+  padding: 0;
+}
+/* Cells are stretched by the grid and cards fill them with flex: no percentage
+   heights, which Safari resolves wrongly in rows sized by their content. */
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.ghost {
+  position: absolute;
+  inset: 0;
+  border: 1.5px dashed #d3d7de;
+  border-radius: 10px;
+  background: #fafbfc;
+  color: var(--placeholder);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+}
+.ghost:hover,
+.ghost:focus-visible {
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ghost-choice {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #e9d38f;
+  border-radius: 7px;
+  background: #fffbeb;
+  color: #a16207;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cell:hover .ghost-choice,
+.ghost-choice:focus-visible {
+  opacity: 1;
+}
+.ghost-choice:hover {
+  border-color: #a16207;
+}
+.choice-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #854d0e;
+}
+.card-choice textarea {
+  font-weight: 600;
+}
+.card {
+  position: relative;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-width: 1px;
+  border-top-width: 3px;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(20, 24, 32, 0.05);
+}
+.box.card textarea {
+  /* Its min-height is set to fit the text (see ActivityCard); it grows to fill the card. */
+  flex: 1 0 auto;
+  width: auto;
+  padding: 10px 26px 10px 10px;
+  line-height: 1.4;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 7px;
+  flex-shrink: 0;
+}
+.tags-empty {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.card:hover .tags-empty,
+.card:focus-within .tags-empty {
+  opacity: 1;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  padding: 0 4px 0 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.tag-x {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+.tag-x:hover {
+  opacity: 1;
+  background: rgba(20, 24, 32, 0.08);
+}
+.tag-add {
+  height: 20px;
+  padding: 0 7px;
+  border: 1px dashed var(--dots);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tag-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tag-add-icon {
+  width: 20px;
+  padding: 0;
+  justify-content: center;
+}
+.box.card .tag-input {
+  width: auto;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1;
+}
+.card-btn {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.card:hover .card-btn,
+.card:focus-within .card-btn,
+.card-btn:focus-visible {
+  opacity: 1;
+}
+.card-del {
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.card-del:hover {
+  background: rgba(20, 24, 32, 0.07);
+}
+.card-add {
+  right: -19px;
+  top: 50%;
+  margin-top: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  z-index: 5;
+}
+.card-alt {
+  left: 50%;
+  bottom: -13px;
+  margin-left: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  z-index: 5;
+}
+/* Two cards sharing a cell: alternatives at the same moment. */
+.alt-or {
+  align-self: center;
+  min-width: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  text-align: center;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 18px;
+  color: var(--muted);
+}
+.cell.has-alt .card {
+  /* The two cards share the height equally, unless one needs more. */
+  flex: 1 1 0;
+}
+.cell.has-alt .box.card textarea {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.alt-or:hover,
+.alt-or:focus {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+/* Keep split cards compact: the "+ Tag" button floats over the bottom. */
+.cell.has-alt .tags-empty {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+}
+.link-target {
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 2px dashed #8ea3e8;
+  background: transparent;
+  cursor: crosshair;
+  z-index: 6;
+}
+.link-target:hover {
+  border-color: var(--accent);
+  background: rgba(47, 85, 212, 0.06);
+}
+.link-target.is-source {
+  border-style: solid;
+  border-color: var(--accent);
+  background: rgba(47, 85, 212, 0.1);
+}
+
+.links {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4;
+}
+.link-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.link-hit:hover {
+  stroke: rgba(47, 85, 212, 0.18);
+}
+.link-label {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  max-width: 160px;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  /* Long labels wrap rather than being cut off. */
+  width: max-content;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.link-label.is-selected {
+  box-shadow: 0 0 0 3px #c9d5f6;
+}
+
+/* Zoom */
+
+.zoom-ctl {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(20, 24, 32, 0.08);
+  z-index: 20;
+}
+.zoom-ctl button {
+  min-width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 16px;
+}
+.zoom-ctl button:hover {
+  background: var(--surface-2);
+}
+.zoom-ctl .zoom-value {
+  min-width: 56px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Export: flat rendering, no shadows (WebKit draws them as grey bands). */
+
+.is-exporting,
+.is-exporting * {
+  box-shadow: none !important;
+}
+.export-flat {
+  border-radius: 0 !important;
+}
+.export-transparent {
+  background: transparent;
+  border-color: transparent;
+}
+.board.export-no-storyboard .storyboard-row,
+.board.export-no-info .info-row {
+  display: none;
+}

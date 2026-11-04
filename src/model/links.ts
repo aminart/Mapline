@@ -7,9 +7,9 @@
  * to the flows that persona is in.
  */
 
-import type { Flow, FlowDoc, FlowSource, Id, Project } from './types';
+import type { Flow, FlowDoc, FlowSource, Id, PersonaSheetDoc, Project } from './types';
 import { activityKeyOf, normalizePhases } from './ops';
-import { addDoc, missionMapOf, updateFlow } from './project';
+import { addDoc, linkedPersona, missionMapOf, updateFlow } from './project';
 
 /** The flows detailing a phase, a step or an activity of the map `docId`. */
 export function flowsDetailing(project: Project, docId: Id, kind: FlowSource['kind'], id: Id): FlowDoc[] {
@@ -83,10 +83,47 @@ export function personaFlows(project: Project, personaId: Id): FlowDoc[] {
 }
 
 /**
- * Removes a phase or a step of the map `docId` with `remove`, and unlinks the
- * flows that detailed it: one undo step for both.
+ * Applies `change`, a removal, then drops the links it left pointing at
+ * nothing: a flow's source and personas, a sheet's persona. A sheet losing
+ * its persona keeps the name, role and colour it showed until then.
  */
-export function removeDetailed(project: Project, docId: Id, kind: FlowSource['kind'], id: Id, remove: (project: Project) => Project): Project {
-  const unlinked = flowsDetailing(project, docId, kind, id).reduce((p, f) => setFlowSource(p, f.id, null), project);
-  return remove(unlinked);
+export function withLinksKept(project: Project, change: (project: Project) => Project): Project {
+  const next = change(project);
+  if (next === project) return project;
+  const personaIds = new Set(next.docs.flatMap((d) => (d.kind === 'mission-map' ? d.map.personas.map((p) => p.id) : [])));
+  const known = (id: Id | null | undefined) => !id || personaIds.has(id);
+  let changed = false;
+  const docs = next.docs.map((d) => {
+    if (d.kind === 'persona') {
+      if (!d.sheet.link || linkedPersona(next, d.sheet)) return d;
+      changed = true;
+      const before = project.docs.find((b): b is PersonaSheetDoc => b.id === d.id && b.kind === 'persona');
+      const was = before?.sheet.sync ? linkedPersona(project, before.sheet) : undefined;
+      const identity = was ? { name: was.persona.name, role: was.persona.role, color: was.persona.color } : {};
+      return { ...d, sheet: { ...d.sheet, ...identity, link: null } };
+    }
+    if (d.kind !== 'flow') return d;
+    let flow = d.flow;
+    if (flow.source && !resolveSource(next, flow.source)) {
+      const { source: _gone, ...rest } = flow;
+      flow = rest;
+    }
+    if (!known(flow.personaId)) flow = setFlowPersona(flow, null);
+    if (flow.nodes.some((n) => !known(n.personaId))) {
+      flow = { ...flow, nodes: flow.nodes.map((n) => (known(n.personaId) ? n : { ...n, personaId: null })) };
+    }
+    if (flow === d.flow) return d;
+    changed = true;
+    return { ...d, flow };
+  });
+  return changed ? { ...next, docs } : next;
+}
+
+/** What else goes with a map persona: its sheet and the flows it is in. */
+export function personaLinks(project: Project, mapDocId: Id, personaId: Id): { sheet: PersonaSheetDoc | undefined; flows: FlowDoc[] } {
+  const elsewhere = project.docs.some((d) => d.kind === 'mission-map' && d.id !== mapDocId && d.map.personas.some((p) => p.id === personaId));
+  return {
+    sheet: project.docs.find((d): d is PersonaSheetDoc => d.kind === 'persona' && d.sheet.link?.docId === mapDocId && d.sheet.link.personaId === personaId),
+    flows: elsewhere ? [] : personaFlows(project, personaId),
+  };
 }

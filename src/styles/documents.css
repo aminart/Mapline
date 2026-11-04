@@ -1,0 +1,116 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Documents of a project */
+
+.docbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 12px 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  /* Every tab stays in view with its whole name: more tabs make more rows. */
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.doc-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 36px;
+  padding-right: 4px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+.doc-tab.is-active {
+  height: 37px;
+  margin-bottom: -1px;
+  background: var(--surface);
+  border-color: var(--line);
+}
+.doc-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px 0 12px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.doc-tab-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.doc-tab-btn:hover {
+  background: transparent;
+}
+.doc-tab:not(.is-active):hover {
+  background: rgba(20, 24, 32, 0.04);
+}
+.doc-tab.is-active .doc-tab-btn {
+  color: var(--ink);
+  font-weight: 600;
+}
+.doc-tab-action {
+  opacity: 0;
+  margin-left: -4px;
+}
+.doc-tab-action + .doc-tab-action {
+  margin-left: -6px;
+}
+.doc-tab:hover .doc-tab-action,
+.doc-tab.is-active .doc-tab-action,
+.doc-tab-action:focus-visible {
+  opacity: 1;
+}
+.doc-tab-input {
+  height: 26px;
+  margin: 0 6px;
+  padding: 0 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  outline: none;
+}
+.doc-add {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  height: 28px;
+  margin: 0 0 4px 4px;
+  padding: 0 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.doc-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* New project and new sheet dialogs */
+
+.kind-switch {
+  align-self: flex-start;
+  margin-bottom: 14px;
+}
+.tpl-card.is-on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}

@@ -12,8 +12,7 @@ import { PresentationFocus } from './Presentation';
 import { StoryboardRow } from './Storyboard';
 import { TextRows } from './InfoRow';
 import { FlowLinks } from './FlowLinks';
-import { flowsDetailing, removeDetailed } from '../model/links';
-import { updateMap } from '../model/project';
+import { flowsDetailing } from '../model/links';
 import { FitText } from './FitText';
 import { PersonaGrid, TagSuggestions } from './PersonaGrid';
 import { cls } from './cls';
@@ -263,15 +262,15 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
 }
 
 /**
- * Removes a phase or a step. When flows detail it, asks first, and unlinks
- * them in the same undo step.
+ * Removes a phase or a step. When flows detail it, asks first; they are
+ * unlinked in the same undo step.
  */
 function removeLinked(kind: FlowSource['kind'], id: Id, fn: (map: Blueprint) => Blueprint) {
-  const { project, docId, applyProject } = useStore.getState();
+  const { project, docId, apply } = useStore.getState();
   const flows = flowsDetailing(project, docId, kind, id);
   if (flows.length > 0) {
     const names = flows.map((f) => f.name || translate('flow.default')).join(', ');
     if (!window.confirm(translate(kind === 'phase' ? 'links.confirmRemovePhase' : 'links.confirmRemoveStep', { n: flows.length, names }))) return;
   }
-  applyProject((p) => removeDetailed(p, docId, kind, id, (q) => updateMap(q, docId, fn)));
+  apply(fn);
 }
