@@ -87,6 +87,20 @@ describe('phases', () => {
     expect(spans(ops.addPhase(merged))).toEqual([4, 1, 1]);
   });
 
+  it('inserts a phase between two phases, with its own new step', () => {
+    const doc = exampleBlueprint(); // spans 3, 1, 1
+    const { doc: next, phaseId, stepId } = ops.insertPhase(doc, 1);
+    expect(spans(next)).toEqual([3, 1, 1, 1]);
+    expect(next.phases[1].id).toBe(phaseId);
+    expect(next.steps).toHaveLength(6);
+    expect(next.steps[3].id).toBe(stepId);
+    // The steps of the phases around it don't move between phases.
+    expect(next.steps.map((s) => s.id).filter((id) => id !== stepId)).toEqual(doc.steps.map((s) => s.id));
+    expect(next.activities).toEqual(doc.activities);
+    expect(spans(ops.insertPhase(doc, 0).doc)).toEqual([1, 3, 1, 1]);
+    expect(ops.insertPhase(doc, 0).doc.steps[0].id).not.toBe(doc.steps[0].id);
+  });
+
   it('normalizes broken spans', () => {
     expect(ops.normalizePhases([{ id: 'a', title: '', span: 10 }], 3).map((p) => p.span)).toEqual([3]);
     expect(
