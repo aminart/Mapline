@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useT } from '../store';
 import { MAX_TAG_LENGTH } from '../model/ops';
 import { TAG_PALETTE, tagColor } from '../model/theme';
-import { CloseIcon, NoteIcon, PlusIcon } from './Icons';
+import { CheckIcon, CloseIcon, NoteIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
 
 /**
@@ -13,7 +13,18 @@ import { cls } from './cls';
  * bubble. `onChange` is told when the change comes from typing (`live`), to
  * merge keystrokes into one undo step.
  */
-export function NoteButton({ note, onChange }: { note: string; onChange: (note: string, live: boolean) => void }) {
+export function NoteButton({
+  note,
+  onChange,
+  resolved = false,
+  onResolve,
+}: {
+  note: string;
+  onChange: (note: string, live: boolean) => void;
+  /** The note was dealt with: its marker is greyed and ticked. */
+  resolved?: boolean;
+  onResolve?: (resolved: boolean) => void;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -29,7 +40,7 @@ export function NoteButton({ note, onChange }: { note: string; onChange: (note: 
 
   const has = note.trim().length > 0;
   return (
-    <div ref={ref} className={cls('note no-export', has && 'has-note', open && 'is-open')}>
+    <div ref={ref} className={cls('note no-export', has && 'has-note', has && resolved && 'is-resolved', open && 'is-open')}>
       <button
         className="note-btn"
         aria-label={has ? t('note.edit', { note }) : t('note.add')}
@@ -37,12 +48,15 @@ export function NoteButton({ note, onChange }: { note: string; onChange: (note: 
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <NoteIcon size={12} />
+        {has && resolved ? <CheckIcon size={12} /> : <NoteIcon size={12} />}
       </button>
       {open && (
         <div className="note-panel" role="dialog" aria-label={t('note.title')}>
           <div className="note-head">
-            <span>{t('note.title')}</span>
+            <span>
+              {t('note.title')}
+              {has && resolved && <span className="note-state"> · {t('note.resolved')}</span>}
+            </span>
             <button className="icon-btn" aria-label={t('note.close')} onClick={() => setOpen(false)}>
               <CloseIcon size={12} />
             </button>
@@ -61,15 +75,22 @@ export function NoteButton({ note, onChange }: { note: string; onChange: (note: 
             }}
           />
           {has && (
-            <button
-              className="text-btn"
-              onClick={() => {
-                onChange('', false);
-                setOpen(false);
-              }}
-            >
-              {t('note.delete')}
-            </button>
+            <div className="note-actions">
+              {onResolve && (
+                <button className="text-btn" onClick={() => onResolve(!resolved)}>
+                  {!resolved && <CheckIcon size={12} />} {resolved ? t('note.reopen') : t('note.resolve')}
+                </button>
+              )}
+              <button
+                className="text-btn"
+                onClick={() => {
+                  onChange('', false);
+                  setOpen(false);
+                }}
+              >
+                {t('note.delete')}
+              </button>
+            </div>
           )}
         </div>
       )}

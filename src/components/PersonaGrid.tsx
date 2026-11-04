@@ -207,11 +207,11 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
     <div className={cls('cell', drop.over && 'is-drop-target', alt && 'has-alt')} data-step={stepId} {...drop.props}>
       {act ? (
         <>
-          <ActivityCard {...props} activityKey={key} activityId={act.id} choice={act.kind === 'choice'} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} canAddAlt={!alt} />
+          <ActivityCard {...props} activityKey={key} activityId={act.id} choice={act.kind === 'choice'} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} noteResolved={Boolean(act.noteResolved)} canAddAlt={!alt} />
           {alt && (
             <>
               <JoinerInput activityKey={ops.altKey(key)} joiner={alt.joiner} />
-              <ActivityCard {...props} activityKey={ops.altKey(key)} activityId={alt.id} choice={alt.kind === 'choice'} text={alt.text} tags={alt.tags ?? []} note={alt.note ?? ''} canAddAlt={false} />
+              <ActivityCard {...props} activityKey={ops.altKey(key)} activityId={alt.id} choice={alt.kind === 'choice'} text={alt.text} tags={alt.tags ?? []} note={alt.note ?? ''} noteResolved={Boolean(alt.noteResolved)} canAddAlt={false} />
             </>
           )}
         </>
@@ -241,11 +241,12 @@ function ActivityCard(props: {
   text: string;
   tags: string[];
   note: string;
+  noteResolved: boolean;
   /** Show the button that adds an alternative below. */
   canAddAlt: boolean;
 }) {
   const t = useT();
-  const { personaId, personaColor, stepId, slotId, activityKey, activityId, choice, text, tags, note, canAddAlt } = props;
+  const { personaId, personaColor, stepId, slotId, activityKey, activityId, choice, text, tags, note, noteResolved, canAddAlt } = props;
   const apply = useStore((s) => s.apply);
   const focusLater = useStore((s) => s.focusLater);
   const tool = useStore((s) => s.tool);
@@ -348,7 +349,12 @@ function ActivityCard(props: {
       >
         <GripIcon size={12} />
       </span>
-      <NoteButton note={note} onChange={(v, live) => apply((d) => ops.setActivityNote(d, activityKey, v), live ? { coalesce: `note:${activityKey}` } : undefined)} />
+      <NoteButton
+        note={note}
+        onChange={(v, live) => apply((d) => ops.setActivityNote(d, activityKey, v), live ? { coalesce: `note:${activityKey}` } : undefined)}
+        resolved={noteResolved}
+        onResolve={(r) => apply((d) => ops.setActivityNoteResolved(d, activityKey, r))}
+      />
       <button className="card-btn card-del no-export" aria-label={t('board.removeActivity')} onClick={() => apply((d) => ops.removeActivity(d, activityKey))}>
         <CloseIcon size={12} />
       </button>

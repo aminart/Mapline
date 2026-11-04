@@ -250,9 +250,18 @@ export function setActivityKind(doc: Blueprint, key: string, kind: 'activity' | 
 export function setActivityNote(doc: Blueprint, key: string, note: string): Blueprint {
   const act = doc.activities[key];
   if (!act) return doc;
-  const { note: _old, ...rest } = act;
-  const next = note.trim() ? { ...rest, note } : rest;
+  const { note: _old, noteResolved: resolved, ...rest } = act;
+  // A deleted note takes its resolved mark with it.
+  const next = note.trim() ? { ...rest, note, ...(resolved ? { noteResolved: true } : {}) } : rest;
   return { ...doc, activities: { ...doc.activities, [key]: next } };
+}
+
+/** Marks an activity's note as resolved, or open again. */
+export function setActivityNoteResolved(doc: Blueprint, key: string, resolved: boolean): Blueprint {
+  const act = doc.activities[key];
+  if (!act?.note?.trim() || Boolean(act.noteResolved) === resolved) return doc;
+  const { noteResolved: _old, ...rest } = act;
+  return { ...doc, activities: { ...doc.activities, [key]: resolved ? { ...rest, noteResolved: true } : rest } };
 }
 
 export interface NoteEntry {
