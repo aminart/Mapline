@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { ReactNode } from 'react';
+import logoMapline from '../assets/mapline.svg';
 
 function Svg({ size = 16, width = 2, children }: { size?: number; width?: number; children: ReactNode }) {
   return (
@@ -102,13 +103,8 @@ export const ImageIcon = ({ size = 26 }: P) => (
     <path d="m21 16-5-5-9 9" />
   </Svg>
 );
-export const LogoIcon = ({ size = 26 }: P) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#2F55D4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-    <rect x="14" y="3" width="7" height="7" rx="1.5" />
-    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-    <path d="M17.5 14v7M14 17.5h7" />
-  </svg>
+export const LogoIcon = ({ size = 28 }: P) => (
+  <img src={logoMapline} alt="" width={size} height={size} style={{ display: 'block', flexShrink: 0 }} />
 );
 export const GripIcon = ({ size = 14 }: P) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
