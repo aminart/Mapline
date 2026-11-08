@@ -936,9 +936,9 @@ export function initialLang(): Lang {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved === 'fr' || saved === 'en') return saved;
   } catch {
-    // Storage unavailable: fall back to the system language.
+    // Storage unavailable: French, the suite's default language.
   }
-  return typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  return 'fr';
 }
 
 export function rememberLang(lang: Lang) {

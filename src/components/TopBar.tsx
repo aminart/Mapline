@@ -23,12 +23,11 @@ export function TopBar() {
   const setExportOpen = useStore((s) => s.setExportOpen);
 
   return (
-    <header className="topbar">
-      <div className="brand">
-        <LogoIcon />
+    <header className="topbar nn-appbar">
+      <div className="nn-appbar-brand">
+        <LogoIcon size={32} />
         <span>Mapline</span>
       </div>
-      <div className="divider" />
       <ProjectSwitcher />
       <button className="btn btn-primary" onClick={() => setNewProjectOpen(true)} title={`${t('top.newProject')} (Ctrl+N)`} aria-label={t('top.newProject')}>
         <PlusIcon /> <span className="btn-label">{t('top.newProject')}</span>
@@ -55,8 +54,10 @@ export function TopBar() {
           <SaveButton />
         </>
       )}
-      <HelpButton />
-      <LangSwitch />
+      <div className="nn-appbar-tools">
+        <HelpButton />
+        <LangSwitch />
+      </div>
     </header>
   );
 }
@@ -114,8 +115,12 @@ function HelpButton() {
   return (
     <>
       <details className="help" ref={ref}>
-        <summary className="icon-btn icon-btn-lg" aria-label={t('side.shortcuts')} title={t('side.shortcuts')}>
-          ?
+        <summary className="nn-icon-btn" aria-label={t('side.shortcuts')} title={t('side.shortcuts')}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+            <path d="M12 17h.01" />
+          </svg>
         </summary>
         <div className="help-panel">
           <h2>{t('side.shortcuts')}</h2>
@@ -146,7 +151,7 @@ function LangSwitch() {
     { id: 'en', label: 'EN' },
   ];
   return (
-    <div className="segmented segmented-sm" role="group" aria-label={t('top.language')}>
+    <div className="nn-segmented" role="group" aria-label={t('top.language')}>
       {options.map((o) => (
         <button key={o.id} className={cls(lang === o.id && 'is-on')} aria-pressed={lang === o.id} lang={o.id} onClick={() => setLang(o.id)}>
           {o.label}

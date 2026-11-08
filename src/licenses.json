@@ -30,6 +30,12 @@
     "url": "https://fontsource.org/fonts/lora"
   },
   {
+    "name": "@fontsource/roboto",
+    "version": "5.3.0",
+    "license": "OFL-1.1",
+    "url": "https://fontsource.org/fonts/roboto"
+  },
+  {
     "name": "@tauri-apps/api",
     "version": "2.12.4",
     "license": "Apache-2.0 OR MIT",
@@ -190,6 +196,12 @@
     "version": "3.3.0",
     "license": "MIT",
     "url": "https://github.com/calvinmetcalf/lie.git"
+  },
+  {
+    "name": "night-navy",
+    "version": "1.1.0",
+    "license": "UNLICENSED",
+    "url": "https://github.com/aminart/Design-system-.git"
   },
   {
     "name": "pako",
