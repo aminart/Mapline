@@ -229,6 +229,8 @@ test('moves a block to any cell and resizes it across columns and rows', async (
   await expect(page.locator('.sheet-drop-ghost')).toBeVisible();
   await page.mouse.up();
   await expect(blocks.first().locator('.sheet-block-title')).toHaveValue('Scénario');
+  // The goals block took the place the scenario block left, at the end.
+  await expect(blocks.last().locator('.sheet-block-title')).toHaveValue('Objectifs');
   const moved = (await blocks.first().boundingBox())!;
   expect(Math.abs(moved.x - start.x)).toBeLessThan(2);
   expect(Math.abs(moved.y - start.y)).toBeLessThan(2);
