@@ -7,7 +7,7 @@
  * its cards, so the two can be compared card by card.
  */
 
-import type { Activity, Blueprint, Flow, FlowDoc, FlowNode, Id, MissionMapDoc, Project } from './types';
+import type { Activity, Blueprint, Flow, FlowDoc, FlowLink, FlowNode, Id, MissionMapDoc, Project } from './types';
 import { addDoc, findDoc } from './project';
 import { activityKeyOf, cellKey, uid } from './ops';
 import { insertColumn } from './flow';
@@ -133,6 +133,71 @@ export function diffFlow(base: Flow, target: Flow): Diff<FlowNode> {
   }
   for (const node of base.nodes) if (!kept.has(node.id)) diff.removed.push(node);
   return diff;
+}
+
+/** How a target's arrows differ from its current state's. */
+export interface LinkDiff {
+  /** Arrows of the target between two cards the current state didn't link. */
+  added: Id[];
+  /** Arrows of both whose label changed. */
+  modified: Id[];
+  /** Arrows of the current state the target no longer has. */
+  removed: FlowLink[];
+}
+
+/**
+ * Arrows added, relabelled or removed. An arrow is the same in both when it
+ * links the same two cards the same way, even redrawn.
+ */
+export function diffFlowLinks(base: Flow, target: Flow): LinkDiff {
+  const key = (l: FlowLink) => `${l.from}>${l.to}`;
+  const before = new Map(base.links.map((l) => [key(l), l]));
+  const after = new Set(target.links.map(key));
+  const diff: LinkDiff = { added: [], modified: [], removed: [] };
+  for (const link of target.links) {
+    const old = before.get(key(link));
+    if (!old) diff.added.push(link.id);
+    else if ((old.label ?? '').trim() !== (link.label ?? '').trim()) diff.modified.push(link.id);
+  }
+  for (const link of base.links) if (!after.has(key(link))) diff.removed.push(link);
+  return diff;
+}
+
+/** One change of a flow, where it is, to go from one to the next. */
+export interface FlowChange {
+  id: Id;
+  change: Change | 'removed';
+  col: number;
+  row: number;
+}
+
+/** A flow's changed cards, column by column, top to bottom; removed ones where they were. */
+export function flowChanges(target: Flow, diff: Diff<FlowNode>): FlowChange[] {
+  const list: FlowChange[] = target.nodes.filter((n) => diff.changes[n.id]).map((n) => ({ id: n.id, change: diff.changes[n.id], col: n.col, row: n.row }));
+  for (const n of diff.removed) list.push({ id: n.id, change: 'removed', col: n.col, row: n.row });
+  return list.sort((a, b) => a.col - b.col || a.row - b.row);
+}
+
+/**
+ * Where the removed cards are drawn over the target: in their cell when it
+ * is free, otherwise in the same column, in a row under the flow.
+ */
+export function placeGhosts(target: Flow, removed: FlowNode[]): FlowNode[] {
+  const taken = new Set(target.nodes.map((n) => `${n.col}:${n.row}`));
+  const spare = Math.max(-1, ...target.nodes.map((n) => n.row), ...removed.map((n) => n.row)) + 1;
+  const placed: FlowNode[] = [];
+  for (const node of removed) {
+    if (!taken.has(`${node.col}:${node.row}`)) {
+      taken.add(`${node.col}:${node.row}`);
+      placed.push(node);
+      continue;
+    }
+    let row = spare;
+    while (taken.has(`${node.col}:${row}`)) row++;
+    taken.add(`${node.col}:${row}`);
+    placed.push({ ...node, row });
+  }
+  return placed;
 }
 
 /** How many cards were added, changed and removed. */

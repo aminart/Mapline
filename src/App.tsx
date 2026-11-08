@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore, useT } from './store';
 import { closeTab, open, save } from './actions';
 import { TopBar } from './components/TopBar';
@@ -15,6 +15,7 @@ import { DocBar } from './components/DocBar';
 import { StateBar } from './components/StateBar';
 import { BaseFlow } from './components/FlowCompare';
 import { useFlowSplit } from './components/useDiff';
+import { ChevronDown, ChevronRight } from './components/Icons';
 import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
 import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
@@ -57,15 +58,26 @@ function DocView() {
   }
 }
 
+/** Share of the height the current state takes over the target, kept while the app runs. */
+let splitShare = 0.5;
+let splitCollapsed = false;
+const clampShare = (v: number) => Math.min(0.85, Math.max(0.15, v));
+
 /**
  * A flow's target state compared with its current state: the current state
  * above, read only, the target below; scrolling one sideways scrolls both.
+ * The bar between them resizes them, or folds the current state away.
  */
 function SplitView() {
   const t = useT();
+  const root = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLElement>(null);
   const bottom = useRef<HTMLElement>(null);
   const syncing = useRef(false);
+  const [share, setShareState] = useState(splitShare);
+  const [collapsed, setCollapsedState] = useState(splitCollapsed);
+  const setShare = (v: number) => setShareState((splitShare = clampShare(v)));
+  const setCollapsed = (v: boolean) => setCollapsedState((splitCollapsed = v));
   const sync = (from: HTMLElement | null, to: HTMLElement | null) => {
     if (!from || !to) return;
     if (syncing.current) {
@@ -77,11 +89,54 @@ function SplitView() {
       to.scrollLeft = from.scrollLeft;
     }
   };
+  // Unfolded, the current state comes back where the target is scrolled.
+  useEffect(() => {
+    if (!collapsed && top.current && bottom.current) top.current.scrollLeft = bottom.current.scrollLeft;
+  }, [collapsed]);
+  const drag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (collapsed || (e.target as HTMLElement).closest('button')) return;
+    const box = root.current?.getBoundingClientRect();
+    if (!box) return;
+    e.preventDefault();
+    const move = (ev: PointerEvent) => setShare((ev.clientY - box.top) / box.height);
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   return (
-    <div className="split">
-      <main ref={top} className="canvas canvas-pane canvas-base" aria-label={t('state.current')} onScroll={() => sync(top.current, bottom.current)}>
-        <BaseFlow />
-      </main>
+    <div className="split" ref={root}>
+      {!collapsed && (
+        <main
+          ref={top}
+          className="canvas canvas-pane canvas-base"
+          style={{ flex: `0 0 ${share * 100}%` }}
+          aria-label={t('state.current')}
+          onScroll={() => sync(top.current, bottom.current)}
+        >
+          <BaseFlow />
+        </main>
+      )}
+      <div
+        className={cls('split-handle', collapsed && 'is-collapsed')}
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label={t('state.resize')}
+        aria-valuenow={Math.round(share * 100)}
+        tabIndex={collapsed ? -1 : 0}
+        onPointerDown={drag}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp') setShare(share - 0.05);
+          else if (e.key === 'ArrowDown') setShare(share + 0.05);
+        }}
+      >
+        <button className="split-fold" aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+          {t(collapsed ? 'state.expand' : 'state.collapse')}
+        </button>
+      </div>
       <main ref={bottom} className="canvas canvas-pane" onPointerDown={onCanvasPointerDown} onScroll={() => sync(bottom.current, top.current)}>
         <DocView />
       </main>
