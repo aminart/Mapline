@@ -122,6 +122,8 @@ export interface MissionMapDoc {
   map: Blueprint;
   /** On a target state: the map of the current state it is compared with. */
   baseline?: Id;
+  /** On a copy: the map it was copied from, whose persona sheets its personas share. */
+  origin?: Id;
 }
 
 /** How a sheet block shows its content. */

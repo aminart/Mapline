@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { clippedFields, fillWithLongText, startProject, openProjects } from './helpers';
+import { addActivity, clippedFields, fillWithLongText, startProject, openProjects } from './helpers';
 
 /** Creates the sheet of the first persona of the map, from its button. */
 async function createFirstSheet(page: Page) {
@@ -258,4 +258,27 @@ test('moves a block to any cell and resizes it across columns and rows', async (
   // Undo puts it back to its first size.
   await page.keyboard.press('ControlOrMeta+z');
   await expect.poll(async () => (await blocks.first().boundingBox())!.width).toBeLessThan(wide.width);
+});
+
+test('reuses the personas of a map on a new map, sharing their sheets', async ({ page }) => {
+  await startProject(page);
+  await page.locator('.persona-row').first().getByRole('textbox', { name: 'Nom du persona' }).fill('Patient');
+  await addActivity(page, 0, 0, 'Prendre rendez-vous');
+  await createFirstSheet(page);
+  await docTab(page, 'Map').click();
+  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await page.getByRole('button', { name: 'Reprendre les personas · Map' }).click();
+  await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Map (copie)', 'Fiche · Patient']);
+  await expect(page.locator('.doc-tab.is-active')).toHaveText('Map (copie)');
+  await expect(page.locator('.persona-row')).toHaveCount(3);
+  await expect(page.locator('.persona-row').first().getByRole('textbox', { name: 'Nom du persona' })).toHaveValue('Patient');
+  await expect(page.locator('.persona-grid [data-act]')).toHaveCount(0);
+  // The persona's sheet is the original's.
+  await expect(page.getByRole('button', { name: /Voir la fiche de/ })).toHaveCount(1);
+
+  await docTab(page, 'Map').first().click();
+  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await page.getByRole('button', { name: 'Dupliquer toute la map · Map', exact: true }).click();
+  await expect(page.locator('.doc-tab.is-active')).toHaveText('Map (copie)');
+  await expect(page.locator('.persona-grid [data-act]')).toHaveCount(1);
 });

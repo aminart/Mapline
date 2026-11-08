@@ -57,6 +57,9 @@ export function removeDoc(project: Project, docId: Id): Project {
     .filter((d) => d.id !== docId)
     .map((d) => {
       if (d.kind === 'persona' && d.sheet.link?.docId === docId) {
+        // A copy or a target state of the removed map sharing the persona takes the sheet over.
+        const heir = sharingMap(project, docId, d.sheet.link.personaId);
+        if (heir) return { ...d, sheet: { ...d.sheet, link: { docId: heir, personaId: d.sheet.link.personaId } } };
         // The sheet keeps the name, role and colour it showed.
         const was = d.sheet.sync ? linkedPersona(project, d.sheet)?.persona : undefined;
         const identity = was ? { name: was.name, role: was.role, color: was.color } : {};
@@ -70,11 +73,58 @@ export function removeDoc(project: Project, docId: Id): Project {
       // A target state of the removed document is no longer compared with it.
       if ((d.kind === 'mission-map' || d.kind === 'flow') && d.baseline === docId) {
         const { baseline: _base, ...rest } = d;
-        return rest;
+        d = rest as typeof d;
+      }
+      // Nor is a copy of it still sharing its sheets.
+      if (d.kind === 'mission-map' && d.origin === docId) {
+        const { origin: _origin, ...rest } = d;
+        d = rest;
       }
       return d;
     });
   return { ...project, docs };
+}
+
+/** A map made from `docId` (a copy or a target state) that has the persona `personaId`. */
+function sharingMap(project: Project, docId: Id, personaId: Id): Id | undefined {
+  return project.docs.find(
+    (d) => d.kind === 'mission-map' && d.id !== docId && (d.baseline === docId || d.origin === docId) && d.map.personas.some((p) => p.id === personaId),
+  )?.id;
+}
+
+/** What a map copy holds: everything, or only its personas on an empty board. */
+export type CopyKind = 'all' | 'personas';
+
+/**
+ * Copies a map right after it, named `name`. Its personas keep their ids,
+ * so they share the original's sheets and stay in its flows; a copy of
+ * only the personas starts with an empty objective, one empty step, and
+ * the persona column (names, roles, colours, styles, divider lines).
+ */
+export function duplicateMap(project: Project, docId: Id, name: string, kind: CopyKind): { project: Project; docId: Id | null } {
+  const doc = missionMapOf(project, docId);
+  if (!doc) return { project, docId: null };
+  const source = structuredClone(doc.map);
+  const ids = new Set(source.personas.map((p) => p.id));
+  const map: Blueprint =
+    kind === 'all'
+      ? source
+      : {
+          objective: '',
+          phases: [{ id: uid(), title: '', span: 1 }],
+          steps: [{ id: uid(), title: '', slots: [uid()] }],
+          personas: source.personas,
+          activities: {},
+          scenes: {},
+          links: [],
+          dividers: source.dividers.map((d) => ({ ...d, id: uid() })),
+          tagColors: {},
+          styles: Object.fromEntries(Object.entries(source.styles).filter(([key]) => key === 'obj' || (key.startsWith('persona:') && ids.has(key.slice(8))))),
+          storyboard: source.storyboard,
+          textRows: [],
+        };
+  const copy: MissionMapDoc = { id: uid(), kind: 'mission-map', name, map, origin: doc.id };
+  return { project: addDoc(project, copy, docId), docId: copy.id };
 }
 
 export function sheetOf(project: Project, docId: Id): PersonaSheetDoc | undefined {
@@ -92,17 +142,19 @@ export function updateSheet(project: Project, docId: Id, fn: (sheet: PersonaShee
 
 /**
  * The sheet describing a mission map persona, if there is one. A target
- * state's personas share the sheets of its current state's.
+ * state's personas share the sheets of its current state's, and a copy's
+ * those of the map it was copied from.
  */
 export function sheetFor(project: Project, mapDocId: Id, personaId: Id, seen: Set<Id> = new Set()): PersonaSheetDoc | undefined {
   const own = project.docs.find(
     (d): d is PersonaSheetDoc => d.kind === 'persona' && d.sheet.link?.docId === mapDocId && d.sheet.link.personaId === personaId,
   );
   if (own) return own;
-  const baseline = missionMapOf(project, mapDocId)?.baseline;
-  if (!baseline || seen.has(mapDocId)) return undefined;
+  const doc = missionMapOf(project, mapDocId);
+  const from = doc?.baseline ?? doc?.origin;
+  if (!from || seen.has(mapDocId)) return undefined;
   seen.add(mapDocId);
-  return sheetFor(project, baseline, personaId, seen);
+  return sheetFor(project, from, personaId, seen);
 }
 
 /** The mission map persona a sheet describes, while it still exists. */
