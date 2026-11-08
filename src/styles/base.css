@@ -2,22 +2,23 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 :root {
-  --ink: #191b20;
-  --ink-2: #4a505c;
-  --muted: #5b6270;
-  --placeholder: #8a909c;
-  --line: #dde1e7;
-  --line-soft: #e6e9ee;
-  --ground: #eef0f3;
-  --dots: #c9ced6;
-  --surface: #ffffff;
-  --surface-2: #f4f6fa;
-  --accent: #2f55d4;
-  --accent-ink: #1e3a9e;
-  --accent-soft: #e8edfb;
-  --danger: #b42318;
+  /* Couleurs et police du design system commun Night Navy (night-navy.css), thème clair. */
+  --ink: var(--nn-ink);
+  --ink-2: var(--nn-ink-body);
+  --muted: var(--nn-ink-muted);
+  --placeholder: var(--nn-ink-subtle);
+  --line: var(--nn-line);
+  --line-soft: var(--nn-surface-3);
+  --ground: var(--nn-bg);
+  --dots: #c9cdd9;
+  --surface: var(--nn-surface);
+  --surface-2: var(--nn-surface-2);
+  --accent: var(--nn-accent);
+  --accent-ink: var(--nn-primary-hover);
+  --accent-soft: var(--nn-accent-soft);
+  --danger: var(--nn-danger);
   --radius: 12px;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--nn-font-sans);
   color: var(--ink);
   background: var(--ground);
 }

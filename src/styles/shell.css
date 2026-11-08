@@ -8,23 +8,20 @@
   display: flex;
   flex-direction: column;
 }
+/* En-tête commun de la suite (nn-appbar, design system Night Navy) : Mapline n'a pas d'onglets, sa zone de
+   navigation porte les actions du fichier ; les utilitaires (aide, langue) restent à droite. */
 .topbar {
-  min-height: 56px;
   flex-shrink: 0;
-  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 0 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 16px;
+.topbar .nn-appbar-brand {
+  min-height: 64px;
+  margin-right: 20px;
+}
+.topbar .nn-appbar-tools {
+  margin-left: 8px;
 }
 .divider {
   width: 1px;

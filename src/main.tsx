@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { installCloseGuard } from './lib/closeGuard';
 import { restoreSession } from './store';
+import 'night-navy/night-navy.css';
 import './fonts.css';
 import './styles.css';
 
