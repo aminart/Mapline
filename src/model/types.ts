@@ -86,8 +86,8 @@ export interface Blueprint {
   steps: Step[];
   personas: Persona[];
   /**
-   * Keyed by activityKey(personaId, slotId), or altKey(...) for a second card
-   * sharing the cell (an alternative, e.g. two possible choices).
+   * Keyed by activityKey(personaId, slotId), or altKey(key, n) for the extra
+   * cards sharing the cell (alternatives, e.g. several possible choices).
    */
   activities: Record<string, Activity>;
   /** Keyed by step id. */

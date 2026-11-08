@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { Id, Project } from './types';
-import { activityKey, altKey, setActivityNoteResolved } from './ops';
+import { activityKey, cellCardKeys, setActivityNoteResolved } from './ops';
 import { setNodeNoteResolved } from './flow';
 import { updateFlow, updateMap } from './project';
 
@@ -34,7 +34,7 @@ export function projectComments(project: Project): Comment[] {
         for (const persona of map.personas) {
           for (const slot of step.slots) {
             const key = activityKey(persona.id, slot);
-            for (const k of [key, altKey(key)]) {
+            for (const k of cellCardKeys(map.activities, key)) {
               const act = map.activities[k];
               if (!act?.note?.trim()) continue;
               out.push({

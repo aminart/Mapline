@@ -8,15 +8,20 @@ import { useLayoutEffect, type RefObject } from 'react';
  * is typed. Measured rather than left to CSS: percentage heights in rows sized
  * by their content are resolved differently by Safari's engine.
  */
-export function useFitText(ref: RefObject<HTMLTextAreaElement | null>, deps: unknown[]) {
+export function useFitText(ref: RefObject<HTMLTextAreaElement | null>, deps: unknown[], opts: { unstretched?: boolean } = {}) {
+  const { unstretched = false } = opts;
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const fit = () => {
       el.style.minHeight = '0px';
       el.style.height = '0px';
+      // A textarea stretched by its flex parent would count the room it was
+      // given as room its text needs: measure it unstretched when asked.
+      if (unstretched) el.style.flexGrow = '0';
       const needed = el.scrollHeight;
       el.style.height = '';
+      if (unstretched) el.style.flexGrow = '';
       el.style.minHeight = `${needed}px`;
     };
     fit();
@@ -33,5 +38,5 @@ export function useFitText(ref: RefObject<HTMLTextAreaElement | null>, deps: unk
     return () => ro.disconnect();
     // The caller lists what changes the text's size.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ref, ...deps]);
+  }, [ref, unstretched, ...deps]);
 }

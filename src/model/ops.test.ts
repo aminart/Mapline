@@ -294,14 +294,12 @@ describe('templates', () => {
 });
 
 describe('alternatives', () => {
-  it('adds a second card to a cell, once, and promotes it when the first goes', () => {
+  it('adds a second card to a cell and promotes it when the first goes', () => {
     let doc = exampleBlueprint();
     const key = ops.activityKey(doc.personas[0].id, doc.steps[0].slots[0]);
     const first = doc.activities[key].id;
     const r = ops.addAlternative(doc, key);
     expect(r.activityId).not.toBeNull();
-    expect(ops.addAlternative(r.doc, key).activityId).toBeNull();
-    expect(ops.addAlternative(r.doc, ops.altKey(key)).activityId).toBeNull();
     doc = ops.setActivityText(r.doc, ops.altKey(key), 'ou par téléphone');
     doc = ops.toggleLink(doc, first, r.activityId!);
     const removed = ops.removeActivity(doc, key);
@@ -320,6 +318,52 @@ describe('alternatives', () => {
     doc = ops.moveActivity(doc, key, to);
     expect(doc.activities[key].id).toBe(altId);
     expect(doc.activities[ops.altKey(key)]).toBeUndefined();
+  });
+});
+
+describe('more than two cards in a cell', () => {
+  it('stacks cards at the bottom of the cell, in order', () => {
+    let doc = exampleBlueprint();
+    const key = ops.activityKey(doc.personas[0].id, doc.steps[0].slots[0]);
+    const ids = [doc.activities[key].id];
+    for (let i = 0; i < 3; i++) {
+      // Adding from any card of the cell appends at the bottom.
+      const from = i === 0 ? key : ops.altKey(key, i);
+      const r = ops.addAlternative(doc, from);
+      ids.push(r.activityId!);
+      doc = r.doc;
+    }
+    const keys = ops.cellCardKeys(doc.activities, key);
+    expect(keys).toEqual([key, ops.altKey(key), ops.altKey(key, 2), ops.altKey(key, 3)]);
+    expect(keys.map((k) => doc.activities[k].id)).toEqual(ids);
+    expect(ops.cellKey(ops.altKey(key, 3))).toBe(key);
+    expect(ops.isAltKey(ops.altKey(key, 2))).toBe(true);
+    expect(ops.isAltKey(key)).toBe(false);
+  });
+
+  it('moves the cards below up when one in the middle is removed or dragged away', () => {
+    let doc = exampleBlueprint();
+    const persona = doc.personas[0].id;
+    const key = ops.activityKey(persona, doc.steps[0].slots[0]);
+    for (let i = 0; i < 3; i++) doc = ops.addAlternative(doc, key).doc;
+    doc = ops.setJoiner(doc, ops.altKey(key, 3), 'sinon');
+    const [, second, third, fourth] = ops.cellCardKeys(doc.activities, key).map((k) => doc.activities[k]);
+    const removed = ops.removeActivity(doc, ops.altKey(key));
+    expect(ops.cellCardKeys(removed.activities, key).map((k) => removed.activities[k].id)).toEqual([doc.activities[key].id, third.id, fourth.id]);
+    expect(removed.activities[ops.altKey(key, 2)].joiner).toBe('sinon');
+    const to = ops.activityKey(persona, doc.steps[1].slots[0]);
+    const emptied = ops.removeActivity(doc, to);
+    const moved = ops.moveActivity(emptied, ops.altKey(key, 2), to);
+    expect(moved.activities[to].id).toBe(third.id);
+    expect(ops.cellCardKeys(moved.activities, key).map((k) => moved.activities[k].id)).toEqual([doc.activities[key].id, second.id, fourth.id]);
+  });
+
+  it('lists every card of a cell in notes and comments', () => {
+    let doc = exampleBlueprint();
+    const key = ops.activityKey(doc.personas[0].id, doc.steps[0].slots[0]);
+    for (let i = 0; i < 2; i++) doc = ops.addAlternative(doc, key).doc;
+    doc = ops.setActivityNote(doc, ops.altKey(key, 2), 'troisième carte');
+    expect(ops.collectNotes(doc).some((n) => n.note === 'troisième carte')).toBe(true);
   });
 });
 
