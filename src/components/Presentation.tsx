@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useEffect } from 'react';
-import { activeMap, useMap, useStore, useT } from '../store';
+import { activeFlow, activeMap, useMap, useStore, useT } from '../store';
+import { flowColumns } from '../model/flow';
 import { normalizePhases, phaseIndexOf } from '../model/ops';
 import { findDoc } from '../model/project';
-import type { Project } from '../model/types';
+import type { Flow, Project } from '../model/types';
 import { docLabel } from '../actions';
 import { boardRef } from './Board';
 import { isDesktop } from '../lib/fileio';
@@ -85,16 +86,18 @@ export function stopPresentation() {
   setFullscreen(false);
 }
 
-/** The last position in a document: a map's last step; -1 (the whole page) for the others. */
+/** The last position in a document: a map's last step, a flow's last column; -1 (the whole page) for a sheet. */
 function lastStep(project: Project, docId: string): number {
   const doc = findDoc(project, docId);
-  return doc?.kind === 'mission-map' ? doc.map.steps.length - 1 : -1;
+  if (doc?.kind === 'mission-map') return doc.map.steps.length - 1;
+  if (doc?.kind === 'flow') return flowColumns(doc.flow).length - 1;
+  return -1;
 }
 
 /**
  * Moves through the presentation, which covers the whole project: each
- * document in turn, a map as its overview (-1) and then each step, a sheet
- * or a flow as one page.
+ * document in turn, a map as its overview (-1) and then each step, a flow
+ * as its overview and then each column of cards, a sheet as one page.
  */
 export function presentGo(delta: number | 'overview') {
   const s = useStore.getState();
@@ -125,6 +128,14 @@ function fitZoom(): number {
   return Math.min(1, w, h);
 }
 
+/** Zooms a flow so that its cards fill the window's height, a bit larger than life. */
+function flowZoom(): number {
+  const flow = boardRef.current?.querySelector('.flow');
+  const canvas = boardRef.current?.closest('.canvas');
+  if (!(flow instanceof HTMLElement) || !(canvas instanceof HTMLElement)) return 1;
+  return Math.max(0.8, Math.min(1.6, (canvas.clientHeight - 160) / flow.offsetHeight, (canvas.clientWidth - 64) / 640));
+}
+
 /** Bottom bar and board focus while presenting. */
 export function PresentationBar() {
   const t = useT();
@@ -135,7 +146,12 @@ export function PresentationBar() {
   const setZoom = useStore((s) => s.setZoom);
   useStore((s) => s.lang);
 
-  // A whole document fits the window; a map's step is shown at full size and centred.
+  const flow = useStore((s) => activeFlow(s));
+  const isFlow = findDoc(project, docId)?.kind === 'flow';
+  const columns = isFlow && flow ? flowColumns(flow) : [];
+
+  // A whole document fits the window; a map's step is shown at full size and
+  // centred; a flow's column larger, centred, the cards after it still hidden.
   useEffect(() => {
     if (step === null) return;
     if (step < 0) {
@@ -143,6 +159,16 @@ export function PresentationBar() {
       requestAnimationFrame(() => {
         setZoom(fitZoom());
         boardRef.current?.closest('.canvas')?.scrollTo({ left: 0, top: 0 });
+      });
+      return;
+    }
+    if (isFlow) {
+      const col = columns[step];
+      requestAnimationFrame(() => {
+        setZoom(flowZoom());
+        requestAnimationFrame(() => {
+          boardRef.current?.querySelector(`.flow [data-reveal="${col}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        });
       });
       return;
     }
@@ -176,7 +202,15 @@ export function PresentationBar() {
         <ChevronLeft size={18} />
       </button>
       <div className="present-title" aria-live="polite">
-        {current ? (
+        {isFlow && step >= 0 ? (
+          <>
+            <span className="present-kicker">
+              {project.docs.length > 1 ? `${label} · ` : ''}
+              {t('present.step', { n: step + 1, total: columns.length })}
+            </span>
+            <span className="present-name">{flowStepName(flow, columns[step]) || label}</span>
+          </>
+        ) : current ? (
           <>
             <span className="present-kicker">
               {project.docs.length > 1 ? `${label} · ` : ''}
@@ -187,7 +221,7 @@ export function PresentationBar() {
           </>
         ) : (
           <>
-            <span className="present-kicker">{isMap ? `${where} · ${t('present.overview')}` : where}</span>
+            <span className="present-kicker">{isMap || (isFlow && columns.length > 0) ? `${where} · ${t('present.overview')}` : where}</span>
             <span className="present-name">{project.title || t('app.untitled')}</span>
           </>
         )}
@@ -217,4 +251,29 @@ export function PresentationFocus() {
   const dim = `.board.presenting [data-step]:not([data-step="${stepId}"])`;
   const hide = `.board.presenting [data-link-steps]:not([data-link-steps~="${stepId}"])`;
   return <style>{`${dim} { opacity: 0.18; } ${hide} { opacity: 0; }`}</style>;
+}
+
+/** What a flow's column says: its first card with text, top to bottom. */
+function flowStepName(flow: Flow | null | undefined, col: number): string {
+  const cards = (flow?.nodes ?? []).filter((n) => n.col === col && n.text.trim()).sort((a, b) => a.row - b.row);
+  const text = cards[0]?.text.trim().split('\n')[0] ?? '';
+  return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+}
+
+/**
+ * Presenting a flow column by column: the column shown stands out, those
+ * before it fade, those after it are not shown yet, nor their arrows.
+ */
+export function FlowPresentationFocus() {
+  const step = useStore((s) => s.presentStep);
+  const flow = useStore((s) => (s.presentStep !== null && s.presentStep >= 0 ? activeFlow(s) : null));
+  if (step === null || step < 0 || !flow) return null;
+  const columns = flowColumns(flow);
+  const current = columns[step];
+  if (current === undefined) return null;
+  const rules = columns.map((c) => {
+    const at = `.app.is-presenting .flow [data-reveal="${c}"]`;
+    return c > current ? `${at} { opacity: 0; visibility: hidden; }` : c < current ? `${at} { opacity: 0.4; }` : '';
+  });
+  return <style>{rules.join(' ')}</style>;
 }

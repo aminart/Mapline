@@ -223,14 +223,42 @@ test('presents every document of the project in turn', async ({ page }) => {
   await expect(kicker).toHaveText('Map · 1/2 · Vue d’ensemble');
   // The map's five steps, then the flow.
   for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
-  await expect(kicker).toHaveText('Flow · 2/2');
+  await expect(kicker).toHaveText('Flow · 2/2 · Vue d’ensemble');
   await expect(page.locator('.flow')).toBeVisible();
   await expect(page.locator('.flow .flow-handle')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Suivant' })).toBeDisabled();
   await page.keyboard.press('ArrowLeft');
   await expect(kicker).toHaveText('Map · Étape 5 / 5 · Après');
   await page.keyboard.press('Escape');
   await expect(page.locator('.present-bar')).toHaveCount(0);
+});
+
+test('presents a flow column by column, zoomed in', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.start').getByRole('button', { name: 'Flow', exact: true }).click();
+  await page.locator('.start .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
+  await page.locator('.flow [data-node].flow-activity').first().locator('textarea').fill('Ouvre l’app');
+  await page.getByRole('button', { name: 'Présenter', exact: true }).click();
+  const kicker = page.locator('.present-kicker');
+  await expect(kicker).toHaveText('Flow · Vue d’ensemble');
+  const cols = await page.locator('.flow [data-node]').evaluateAll((els) => [...new Set(els.map((e) => Number(e.getAttribute('data-reveal'))))].length);
+  // The start, then the first activity, larger than life; the end isn't shown yet.
+  await page.keyboard.press('ArrowRight');
+  await expect(kicker).toHaveText(`Étape 1 / ${cols}`);
+  await page.keyboard.press('ArrowRight');
+  await expect(kicker).toHaveText(`Étape 2 / ${cols}`);
+  await expect(page.locator('.present-name')).toHaveText('Ouvre l’app');
+  await expect.poll(() => page.evaluate(() => Number(getComputedStyle(document.querySelector('.board-zoom')!).zoom))).toBeGreaterThan(1);
+  await expect(page.locator('.flow [data-node].flow-end')).toBeHidden();
+  await expect(page.locator('.flow [data-node].flow-start')).toBeVisible();
+  if (process.env.STATE_SHOTS) await page.screenshot({ path: `${process.env.STATE_SHOTS}/flow-present.png` });
+  // To the last column: everything is shown.
+  for (let i = 2; i < cols; i++) await page.keyboard.press('ArrowRight');
+  await expect(kicker).toHaveText(`Étape ${cols} / ${cols}`);
+  await expect(page.locator('.flow [data-node].flow-end')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Suivant' })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.present-bar')).toHaveCount(0);
+  await expect(page.locator('.flow [data-node].flow-end')).toBeVisible();
 });
 
 /** The alpha of a few pixels of a downloaded PNG: a corner, and the middle. */

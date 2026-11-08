@@ -25,6 +25,7 @@ import { useFlowDiff, useFlowFocus, useFlowMerged } from './useDiff';
 import { BaseArrows, BaseCard } from './FlowCompare';
 import { showTwin } from './compareNav';
 import { placeGhosts, type LinkDiff } from '../model/states';
+import { FlowPresentationFocus } from './Presentation';
 import { BeforeText, ChangeTag } from './ChangeMarks';
 
 const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
@@ -43,7 +44,8 @@ export function FlowView() {
   const [widths, setWidths] = useState<Record<Id, number>>({});
   const onMeasureWidth = useCallback((id: Id, w: number) => setWidths((m) => (Math.abs((m[id] ?? 0) - w) < 1 ? m : { ...m, [id]: w })), []);
   const compared = useFlowDiff();
-  const merged = useFlowMerged();
+  const presenting = useStore((s) => s.presentStep !== null);
+  const merged = useFlowMerged() && !presenting;
   const focus = useFlowFocus();
   if (!flow) return null;
   // Compared with its removed cards drawn over it: they take part in the layout.
@@ -60,12 +62,16 @@ export function FlowView() {
   const empty: [number, number][] = [];
   for (let r = 0; r <= rows; r++) for (let c = 0; c <= cols; c++) if (!fo.nodeAt(flow, c, r)) empty.push([c, r]);
   const original = new Map(compared?.diff.removed.map((n) => [n.id, n]));
+  // Presenting column by column, an arrow shows with the later of its two cards.
+  const colOf = new Map(shown.nodes.map((n) => [n.id, n.col]));
+  const reveal = (link: { from: Id; to: Id }) => Math.max(colOf.get(link.from) ?? 0, colOf.get(link.to) ?? 0);
 
   return (
     <div className="board-zoom" style={{ zoom } as CSSProperties}>
       <div className="flow-doc" ref={boardRef} style={{ width: Math.max(size.w, 640) }}>
       <FlowHeader flow={flow} />
       <FlowBrief flow={flow} />
+      <FlowPresentationFocus />
       <div className={cls('flow', focus && 'diff-focus')} style={{ width: size.w, height: size.h }}>
         {empty.map(([c, r]) => (
           <DropCell key={`${c}:${r}`} col={c} row={r} layout={layout} />
@@ -73,7 +79,7 @@ export function FlowView() {
         {ghostRouted.length > 0 && (
           <BaseArrows routed={ghostRouted} removed={new Set(ghostLinks.map((l) => l.id))} comparing prefix="ghost" width={size.w} height={size.h} />
         )}
-        <Arrows routed={routed} width={size.w} height={size.h} links={compared?.links} />
+        <Arrows routed={routed} width={size.w} height={size.h} links={compared?.links} reveal={reveal} />
         {flow.nodes.map((node) => (
           <FlowCard key={node.id} node={node} layout={layout} onMeasure={onMeasure} onMeasureWidth={onMeasureWidth} />
         ))}
@@ -83,7 +89,7 @@ export function FlowView() {
           ))}
         <TagSuggestions id={FLOW_TAG_LIST} tags={fo.flowTagCounts(flow).map((x) => x.tag)} />
         {routed.map((r) => (
-          <ArrowExtras key={r.link.id} routed={r} change={linkChange(compared?.links, r.link.id)} />
+          <ArrowExtras key={r.link.id} routed={r} change={linkChange(compared?.links, r.link.id)} reveal={reveal(r.link)} />
         ))}
       </div>
       </div>
@@ -209,7 +215,8 @@ function DropCell({ col, row, layout }: { col: number; row: number; layout: Flow
   return <div className={cls('flow-drop no-export', drop.over && 'is-drop-target')} style={{ left: box.x, top: box.y, width: box.w, height: box.h }} {...drop.props} />;
 }
 
-function Arrows({ routed, width, height, links }: { routed: RoutedLink[]; width: number; height: number; links?: LinkDiff }) {
+function Arrows(props: { routed: RoutedLink[]; width: number; height: number; links?: LinkDiff; reveal: (link: { from: Id; to: Id }) => number }) {
+  const { routed, width, height, links, reveal } = props;
   const t = useT();
   const sel = useStore((s) => s.sel);
   const select = useStore((s) => s.select);
@@ -229,7 +236,7 @@ function Arrows({ routed, width, height, links }: { routed: RoutedLink[]; width:
         const change = linkChange(links, link.id);
         const marked = change === 'added' || change === 'modified' ? change : null;
         return (
-          <g key={link.id} className={cls(change && `diff-${change}-link`, change === 'same' && 'diff-same')} data-link={link.id}>
+          <g key={link.id} className={cls(change && `diff-${change}-link`, change === 'same' && 'diff-same')} data-link={link.id} data-reveal={reveal(link)}>
             {marked && !selected ? (
               <path d={d} className="link-halo link-diff-halo" fill="none" stroke={LINK_DIFF_COLORS[marked]} strokeWidth={7} strokeLinecap="round" />
             ) : (
@@ -256,7 +263,7 @@ function Arrows({ routed, width, height, links }: { routed: RoutedLink[]; width:
 }
 
 /** An arrow's label, and the ⊕ that inserts a card on it. */
-function ArrowExtras({ routed, change }: { routed: RoutedLink; change?: 'added' | 'modified' | 'same' }) {
+function ArrowExtras({ routed, change, reveal }: { routed: RoutedLink; change?: 'added' | 'modified' | 'same'; reveal: number }) {
   const t = useT();
   const sel = useStore((s) => s.sel);
   const select = useStore((s) => s.select);
@@ -281,7 +288,7 @@ function ArrowExtras({ routed, change }: { routed: RoutedLink; change?: 'added' 
   return (
     <>
       {link.label && (
-        <button className={cls('link-label', sel === `flink:${link.id}` && 'is-selected', change && `diff-${change}-label`, change === 'same' && 'diff-same')} style={{ left: at.x, top: at.y, color, borderColor: color }} onClick={() => select(`flink:${link.id}`)}>
+        <button className={cls('link-label', sel === `flink:${link.id}` && 'is-selected', change && `diff-${change}-label`, change === 'same' && 'diff-same')} style={{ left: at.x, top: at.y, color, borderColor: color }} data-reveal={reveal} onClick={() => select(`flink:${link.id}`)}>
           {link.label}
         </button>
       )}
@@ -395,6 +402,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
         ...(pill ? {} : { ...b.box, borderTopColor: accent }),
       }}
       data-node={node.id}
+      data-reveal={node.col}
       {...drop.props}
       onPointerEnter={compared ? () => showTwin(node.id, 'target', true) : undefined}
       onPointerLeave={compared ? () => showTwin(node.id, 'target', false) : undefined}

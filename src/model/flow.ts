@@ -22,6 +22,11 @@ export function extent(flow: Flow): { cols: number; rows: number } {
   };
 }
 
+/** The columns that hold a card, left to right: a flow's steps when presenting it. */
+export function flowColumns(flow: Flow): number[] {
+  return [...new Set(flow.nodes.map((n) => n.col))].sort((a, b) => a - b);
+}
+
 /** Makes room: every card from column `at` on moves one column right. */
 export function insertColumn(flow: Flow, at: number): Flow {
   return { ...flow, nodes: flow.nodes.map((n) => (n.col >= at ? { ...n, col: n.col + 1 } : n)) };
