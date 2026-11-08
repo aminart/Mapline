@@ -3,10 +3,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
-import { addFlow, addMap, newFlowProject, newProject, newSheetProject, open } from '../actions';
+import { addFlow, addMap, docLabel, duplicateMapDoc, newFlowProject, newProject, newSheetProject, open } from '../actions';
 import { FLOW_TEMPLATES, SHEET_TEMPLATES, TEMPLATES, flowTemplateLabel, sheetTemplateLabel, templateLabel, type FlowTemplateId, type SheetTemplateId, type TemplateId } from '../model/templates';
 import { cls } from './cls';
-import { FolderIcon } from './Icons';
+import { FolderIcon, MapIcon } from './Icons';
 
 /** Miniature of a template's layout, for recognising it at a glance. */
 function TemplateThumb({ id }: { id: TemplateId }) {
@@ -197,7 +197,41 @@ export function NewMapDialog() {
   return (
     <AddDocDialog id="new-map-title" title={t('map.new.title')} isOpen={isOpen} setOpen={setOpen}>
       <TemplateList onPick={addMap} />
+      <MapCopyList />
     </AddDocDialog>
+  );
+}
+
+/** The project's maps, each with its two ways of being copied: whole, or only its personas. */
+function MapCopyList() {
+  const t = useT();
+  const project = useStore((s) => s.project);
+  const maps = project.docs.filter((d) => d.kind === 'mission-map');
+  if (maps.length === 0) return null;
+  return (
+    <section className="map-copy" aria-labelledby="map-copy-title">
+      <h3 id="map-copy-title" className="map-copy-title">
+        {t('map.copy.title')}
+      </h3>
+      <ul className="map-copy-list">
+        {maps.map((doc) => {
+          const name = docLabel(project, doc.id);
+          return (
+            <li key={doc.id} className="map-copy-row">
+              <span className="map-copy-name">
+                <MapIcon /> {name}
+              </span>
+              <button className="btn btn-sm" title={t('map.copy.allHint')} aria-label={`${t('map.copy.all')} · ${name}`} onClick={() => duplicateMapDoc(doc.id, 'all')}>
+                {t('map.copy.all')}
+              </button>
+              <button className="btn btn-sm" title={t('map.copy.personasHint')} aria-label={`${t('map.copy.personas')} · ${name}`} onClick={() => duplicateMapDoc(doc.id, 'personas')}>
+                {t('map.copy.personas')}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

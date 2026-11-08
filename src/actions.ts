@@ -12,7 +12,7 @@ import { copyPng, jpegBlob, pngBlob, type ExportFormat } from './lib/exportForma
 import { buildCsv } from './lib/exportCsv';
 import { ProjectFileError } from './model/serialize';
 import { createFlowDoc, createFlowProject, createFromTemplate, createMap, createSheet, createSheetProject, sheetDoc, type FlowTemplateId, type SheetTemplateId, type TemplateId } from './model/templates';
-import { addDoc, findDoc, missionMapOf, removeDoc, sheetIdentity } from './model/project';
+import { addDoc, duplicateMap, findDoc, missionMapOf, removeDoc, sheetIdentity, type CopyKind } from './model/project';
 import type { Id, MissionMapDoc, Project } from './model/types';
 import { withLinksKept } from './model/links';
 import { uid } from './model/ops';
@@ -88,6 +88,20 @@ export function addMap(template: TemplateId) {
   applyProject((p) => addDoc(p, doc));
   setNewMapOpen(false);
   setDoc(doc.id);
+}
+
+/** Copies a map of the active project (all of it, or only its personas) and shows the copy. */
+export function duplicateMapDoc(id: Id, kind: CopyKind) {
+  const { applyProject, setDoc, setNewMapOpen, project } = useStore.getState();
+  if (!missionMapOf(project, id)) return;
+  let made: Id | null = null;
+  applyProject((p) => {
+    const r = duplicateMap(p, id, t('map.copyName', { name: docLabel(p, id) }), kind);
+    made = r.docId;
+    return r.project;
+  });
+  setNewMapOpen(false);
+  if (made) setDoc(made);
 }
 
 /**

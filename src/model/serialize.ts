@@ -54,7 +54,7 @@ function parseDoc(raw: unknown): ProjectDoc {
   const baseline = typeof raw.baseline === 'string' && raw.baseline ? { baseline: raw.baseline } : {};
   switch (raw.kind) {
     case 'mission-map':
-      return { ...base, kind: 'mission-map', map: parseMap(raw.map), ...baseline };
+      return { ...base, kind: 'mission-map', map: parseMap(raw.map), ...baseline, ...(typeof raw.origin === 'string' && raw.origin ? { origin: raw.origin } : {}) };
     case 'persona':
       return { ...base, kind: 'persona', sheet: parseSheet(raw.sheet) };
     case 'flow':
