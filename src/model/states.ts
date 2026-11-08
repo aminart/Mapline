@@ -9,7 +9,7 @@
 
 import type { Activity, Blueprint, Flow, FlowDoc, FlowNode, Id, MissionMapDoc, Project } from './types';
 import { addDoc, findDoc } from './project';
-import { activityKeyOf, isAltKey, uid } from './ops';
+import { activityKeyOf, cellKey, uid } from './ops';
 import { insertColumn } from './flow';
 
 export type StateDoc = MissionMapDoc | FlowDoc;
@@ -122,10 +122,7 @@ export function diffCounts(diff: Diff<unknown>): { added: number; modified: numb
   };
 }
 
-/** The cell an activity key is in: an alternative's key without its suffix. */
-export function cellKey(key: string): string {
-  return isAltKey(key) ? key.slice(0, key.lastIndexOf(':')) : key;
-}
+export { cellKey };
 
 /** Puts a removed activity back in its cell, when the cell still exists and is empty. */
 export function restoreActivity(map: Blueprint, key: string, activity: Activity): Blueprint {

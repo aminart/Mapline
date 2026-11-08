@@ -418,3 +418,23 @@ test('exports PowerPoint slides: one per document, a map cut into its phases, it
   await options(() => page.getByRole('button', { name: 'Ce document' }).click());
   expect(await exportSlides()).toHaveLength(1);
 });
+
+test('stacks more than two cards under a step', async ({ page }) => {
+  await startProject(page);
+  const c = cell(page, 0, 0);
+  if (!(await c.locator('[data-act]').count())) await addActivity(page, 0, 0, 'Par mail');
+  for (const text of ['Par téléphone', 'Au guichet']) {
+    await c.locator('[data-act]').last().hover();
+    await c.getByRole('button', { name: 'Ajouter une alternative dessous (un autre choix possible)' }).click();
+    await page.keyboard.type(text);
+  }
+  await expect(c.locator('[data-act]')).toHaveCount(3);
+  await expect(c.locator('.alt-or')).toHaveCount(2);
+  // Only the last card offers to add another one below.
+  await expect(c.getByRole('button', { name: 'Ajouter une alternative dessous (un autre choix possible)' })).toHaveCount(1);
+  // Removing the middle card moves the last one up.
+  await c.locator('[data-act]').nth(1).hover();
+  await c.locator('[data-act]').nth(1).getByRole('button', { name: 'Supprimer l’activité' }).click();
+  await expect(c.locator('[data-act]')).toHaveCount(2);
+  await expect(c.locator('[data-act] textarea').last()).toHaveValue('Au guichet');
+});

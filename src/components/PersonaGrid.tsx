@@ -193,7 +193,9 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
   const { personaId, slotId, stepId } = props;
   const key = ops.activityKey(personaId, slotId);
   const act = useMap((m) => m.activities[key]);
-  const alt = useMap((m) => m.activities[ops.altKey(key)]);
+  // Keys of the extra cards (alternatives) under the main one, top to bottom.
+  const altKeys = useMap((m) => ops.cellCardKeys(m.activities, key).slice(1).join('|'));
+  const alts = altKeys ? altKeys.split('|') : [];
   const apply = useStore((s) => s.apply);
   const focusLater = useStore((s) => s.focusLater);
   const drop = useDropTarget('act', (d) => apply((doc) => ops.moveActivity(doc, d.key, key)));
@@ -211,16 +213,13 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
   };
 
   return (
-    <div className={cls('cell', drop.over && 'is-drop-target', alt && 'has-alt')} data-step={stepId} {...drop.props}>
+    <div className={cls('cell', drop.over && 'is-drop-target', alts.length > 0 && 'has-alt', alts.length > 1 && 'has-alts')} data-step={stepId} {...drop.props}>
       {act ? (
         <>
-          <ActivityCard {...props} activityKey={key} activityId={act.id} choice={act.kind === 'choice'} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} noteResolved={Boolean(act.noteResolved)} canAddAlt={!alt} />
-          {alt && (
-            <>
-              <JoinerInput activityKey={ops.altKey(key)} joiner={alt.joiner} />
-              <ActivityCard {...props} activityKey={ops.altKey(key)} activityId={alt.id} choice={alt.kind === 'choice'} text={alt.text} tags={alt.tags ?? []} note={alt.note ?? ''} noteResolved={Boolean(alt.noteResolved)} canAddAlt={false} />
-            </>
-          )}
+          <ActivityCard {...props} activityKey={key} activityId={act.id} choice={act.kind === 'choice'} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} noteResolved={Boolean(act.noteResolved)} canAddAlt={alts.length === 0} />
+          {alts.map((k, i) => (
+            <AltCard key={k} {...props} activityKey={k} last={i === alts.length - 1} />
+          ))}
         </>
       ) : removed ? (
         <RemovedCard text={removed.activity.text} choice={removed.activity.kind === 'choice'} onRestore={() => apply((d) => restoreActivity(d, removed.key, removed.activity))} />
@@ -235,6 +234,19 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
         </>
       )}
     </div>
+  );
+}
+
+/** An extra card sharing a cell, with the word ("or"…) above it. */
+function AltCard(props: { personaId: Id; personaColor: number; stepId: Id; slotId: Id; activityKey: string; last: boolean }) {
+  const { activityKey, last, ...rest } = props;
+  const alt = useMap((m) => m.activities[activityKey]);
+  if (!alt) return null;
+  return (
+    <>
+      <JoinerInput activityKey={activityKey} joiner={alt.joiner} />
+      <ActivityCard {...rest} activityKey={activityKey} activityId={alt.id} choice={alt.kind === 'choice'} text={alt.text} tags={alt.tags ?? []} note={alt.note ?? ''} noteResolved={Boolean(alt.noteResolved)} canAddAlt={last} />
+    </>
   );
 }
 
@@ -302,7 +314,9 @@ function ActivityCard(props: {
   };
 
   // The card grows with its text.
-  useFitText(b.ref, [text, b.text.fontFamily, b.text.fontSize, b.text.fontWeight]);
+  // Measured unstretched: a card that filled its cell alone must shrink back
+  // when other cards join it.
+  useFitText(b.ref, [text, b.text.fontFamily, b.text.fontSize, b.text.fontWeight], { unstretched: true });
 
   const isSource = linkFrom === activityId;
   return (

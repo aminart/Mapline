@@ -12,29 +12,67 @@ export function activityKey(personaId: Id, slotId: Id): string {
   return `${personaId}:${slotId}`;
 }
 
-/** Phases always cover every step exactly once, in order. */
-const ALT = ':b';
+const ALT = 'b';
 
-/** Key of the second card (alternative) sharing a cell with the card at `key`. */
-export function altKey(key: string): string {
-  return key + ALT;
+/**
+ * Key of the n-th extra card (alternative) sharing a cell with the card at
+ * `key`: `:b` for the second card of the cell, then `:b2`, `:b3`…
+ */
+export function altKey(key: string, n = 1): string {
+  return `${key}:${ALT}${n > 1 ? n : ''}`;
+}
+
+/** Position of an alternative in its cell (1 for the second card), or 0 for a main card. */
+function altIndex(key: string): number {
+  const parts = key.split(':');
+  if (parts.length < 3) return 0;
+  const m = /^b(\d*)$/.exec(parts[parts.length - 1]);
+  return m ? (m[1] ? Number(m[1]) : 1) : 0;
 }
 
 export function isAltKey(key: string): boolean {
-  return key.endsWith(ALT);
+  return altIndex(key) > 0;
 }
 
-/** An alternative whose main card is gone takes its place. */
+/** The cell an activity key is in: an alternative's key without its suffix. */
+export function cellKey(key: string): string {
+  return isAltKey(key) ? key.slice(0, key.lastIndexOf(':')) : key;
+}
+
+/** Keys of the cards in the cell at `key`, top to bottom (main card first). */
+export function cellCardKeys(activities: Blueprint['activities'], key: string): string[] {
+  const out: string[] = [];
+  if (activities[key]) out.push(key);
+  for (let n = 1; activities[altKey(key, n)]; n++) out.push(altKey(key, n));
+  return out;
+}
+
+/**
+ * Keeps each cell's cards numbered without gaps: when a card is removed or
+ * moved away, the ones below move up, and the first alternative takes the
+ * main card's place (dropping its joiner).
+ */
 function promoteAlternatives(activities: Blueprint['activities']): Blueprint['activities'] {
-  const out = { ...activities };
-  for (const key of Object.keys(out)) {
-    if (!isAltKey(key)) continue;
-    const main = key.slice(0, -ALT.length);
-    if (!out[main]) {
-      const { joiner: _joiner, ...card } = out[key];
-      out[main] = card;
-      delete out[key];
-    }
+  const cells = new Map<string, { n: number; key: string }[]>();
+  for (const key of Object.keys(activities)) {
+    const n = altIndex(key);
+    const cell = n ? cellKey(key) : key;
+    if (!cells.has(cell)) cells.set(cell, []);
+    cells.get(cell)!.push({ n, key });
+  }
+  const out: Blueprint['activities'] = {};
+  for (const [cell, cards] of cells) {
+    cards.sort((a, b) => a.n - b.n);
+    cards.forEach(({ n, key }, i) => {
+      const card = activities[key];
+      if (i === 0) {
+        if (n === 0) out[cell] = card;
+        else {
+          const { joiner: _joiner, ...rest } = card;
+          out[cell] = rest;
+        }
+      } else out[altKey(cell, i)] = card;
+    });
   }
   return out;
 }
@@ -230,11 +268,13 @@ export function createActivity(doc: Blueprint, personaId: Id, slotId: Id, kind: 
   return { doc: { ...doc, activities }, activityId };
 }
 
-/** Adds a second card under the one at `key`, for an alternative at the same moment. */
+/** Adds a card at the bottom of the cell at `key`, for an alternative at the same moment. */
 export function addAlternative(doc: Blueprint, key: string): { doc: Blueprint; activityId: Id | null } {
-  if (!doc.activities[key] || isAltKey(key) || doc.activities[altKey(key)]) return { doc, activityId: null };
+  const cell = cellKey(key);
+  if (!doc.activities[cell]) return { doc, activityId: null };
+  const n = cellCardKeys(doc.activities, cell).length;
   const activityId = uid();
-  return { doc: { ...doc, activities: { ...doc.activities, [altKey(key)]: { id: activityId, text: '' } } }, activityId };
+  return { doc: { ...doc, activities: { ...doc.activities, [altKey(cell, n)]: { id: activityId, text: '' } } }, activityId };
 }
 
 /** The word above an alternative card, e.g. "or", "else", "if refused". */
@@ -295,7 +335,7 @@ export function collectNotes(doc: Blueprint): NoteEntry[] {
     for (const persona of doc.personas) {
       for (const slot of step.slots) {
         const key = activityKey(persona.id, slot);
-        for (const act of [doc.activities[key], doc.activities[altKey(key)]]) {
+        for (const act of cellCardKeys(doc.activities, key).map((k) => doc.activities[k])) {
           if (act?.note?.trim()) {
             out.push({ stepIndex, stepTitle: step.title, persona: persona.name, activity: act.text.trim(), note: act.note.trim() });
           }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { Blueprint } from '../model/types';
-import { activityKey, altKey, DIVIDER_TOP, normalizePhases } from '../model/ops';
+import { activityKey, cellCardKeys, DIVIDER_TOP, normalizePhases } from '../model/ops';
 
 export interface CsvLabels {
   objective: string;
@@ -43,7 +43,7 @@ export function buildCsv(doc: Blueprint, labels: CsvLabels, sep: ',' | ';'): str
       s.slots
         .flatMap((slot) => {
           const key = activityKey(p.id, slot);
-          return [{ a: doc.activities[key], alt: false }, { a: doc.activities[altKey(key)], alt: true }];
+          return cellCardKeys(doc.activities, key).map((k, i) => ({ a: doc.activities[k], alt: i > 0 }));
         })
         .filter(({ a }) => a && (a.text.trim() || a.tags?.length || a.note?.trim()))
         .map(({ a, alt }) => {
