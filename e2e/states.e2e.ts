@@ -98,4 +98,13 @@ test('compares a flow’s target state with its current state', async ({ page })
   // Without comparing, the flow is shown alone.
   await page.getByLabel('Comparer avec l’état actuel').uncheck();
   await expect(page.locator('.canvas-base')).toHaveCount(0);
+  await page.getByLabel('Comparer avec l’état actuel').check();
+  // No longer compared, the target can be compared again.
+  page.once('dialog', (d) => d.accept());
+  await page.locator('.state-bar').getByRole('button', { name: 'Ne plus comparer' }).click();
+  await expect(page.locator('.state-bar')).toHaveCount(0);
+  await expect(page.locator('.canvas-base')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Comparer à nouveau' }).click();
+  await expect(page.locator('.state-bar')).toContainText('Comparé à');
+  await expect(page.locator('.canvas-base [data-base-node]')).toHaveCount(7);
 });

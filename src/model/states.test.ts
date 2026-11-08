@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { exampleProject } from './fixtures';
 import { addDoc, missionMapOf, projectPersonas, removeDoc, sheetFor, updateFlow, updateMap } from './project';
-import { baselineOf, detachTarget, diffCounts, diffFlow, diffMap, makeTarget, restoreActivity, restoreNode, targetsOf } from './states';
+import { baselineOf, detachTarget, detachedBaseOf, diffCounts, diffFlow, diffMap, makeTarget, reattachTarget, restoreActivity, restoreNode, targetsOf } from './states';
 import { parse, serialize } from './serialize';
 import * as ops from './ops';
 import * as fo from './flow';
@@ -87,6 +87,18 @@ describe('target states', () => {
     expect(baselineOf(removeDoc(project, current), target)).toBeUndefined();
     expect(baselineOf(detachTarget(project, target), target)).toBeUndefined();
     expect(missionMapOf(detachTarget(project, target), target)).toBeDefined();
+  });
+
+  it('compares again a target no longer compared, even after saving', () => {
+    const { project, current, target } = withTarget();
+    const detached = parse(serialize(detachTarget(project, target)));
+    expect(detachedBaseOf(detached, target)?.id).toBe(current);
+    const again = reattachTarget(detached, target);
+    expect(baselineOf(again, target)?.id).toBe(current);
+    expect(detachedBaseOf(again, target)).toBeUndefined();
+    // Not once its current state is removed.
+    expect(detachedBaseOf(removeDoc(detached, current), target)).toBeUndefined();
+    expect(reattachTarget(removeDoc(detached, current), target)).toEqual(removeDoc(detached, current));
   });
 
   it('shares the persona sheets and lists each persona once', () => {

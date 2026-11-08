@@ -3,21 +3,38 @@
 
 import { useStore, useT } from '../store';
 import { docLabel, makeTargetDoc } from '../actions';
-import { baselineOf, detachTarget, diffCounts, targetsOf } from '../model/states';
+import { baselineOf, detachTarget, detachedBaseOf, diffCounts, reattachTarget, targetsOf } from '../model/states';
 import { useFlowDiff, useMapDiff } from './useDiff';
 import { ChevronLeft } from './Icons';
 
 /**
  * In a map's or a flow's toolbar: copies it as its target state, or, once it
- * has one, goes to it.
+ * has one, goes to it. On a target no longer compared, compares it again.
  */
 export function TargetButton() {
   const t = useT();
   const docId = useStore((s) => s.docId);
   const target = useStore((s) => targetsOf(s.project, s.docId).at(-1)?.id);
   const isTarget = useStore((s) => !!baselineOf(s.project, s.docId));
+  const formerBase = useStore((s) => detachedBaseOf(s.project, s.docId));
+  const project = useStore((s) => s.project);
   const setDoc = useStore((s) => s.setDoc);
+  const applyProject = useStore((s) => s.applyProject);
+  const setCompare = useStore((s) => s.setCompare);
   if (isTarget) return null;
+  if (formerBase && !target)
+    return (
+      <button
+        className="btn btn-sm toolbar-end"
+        title={t('state.reattachHint', { name: docLabel(project, formerBase.id) })}
+        onClick={() => {
+          applyProject((p) => reattachTarget(p, docId));
+          setCompare(true);
+        }}
+      >
+        {t('state.reattach')}
+      </button>
+    );
   return target ? (
     <button className="btn btn-sm toolbar-end" onClick={() => setDoc(target)}>
       {t('state.openTarget')}

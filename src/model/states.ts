@@ -36,17 +36,40 @@ export function targetsOf(project: Project, docId: Id): StateDoc[] {
 export function makeTarget(project: Project, docId: Id, name: string): { project: Project; docId: Id | null } {
   const doc = findDoc(project, docId);
   if (!isStateDoc(doc)) return { project, docId: null };
-  const copy = { ...structuredClone(doc), id: uid(), name, baseline: doc.id } as StateDoc;
+  const { detachedFrom: _was, ...source } = structuredClone(doc);
+  const copy = { ...source, id: uid(), name, baseline: doc.id } as StateDoc;
   const after = targetsOf(project, docId).at(-1)?.id ?? docId;
   return { project: addDoc(project, copy, after), docId: copy.id };
 }
 
-/** Stops comparing a target with its current state: both stay. */
+/**
+ * Stops comparing a target with its current state: both stay, and the
+ * target remembers its current state, to compare them again.
+ */
 export function detachTarget(project: Project, docId: Id): Project {
   const doc = findDoc(project, docId);
   if (!isStateDoc(doc) || !doc.baseline) return project;
-  const { baseline: _gone, ...rest } = doc;
-  return { ...project, docs: project.docs.map((d) => (d.id === docId ? (rest as StateDoc) : d)) };
+  const { baseline, ...rest } = doc;
+  const detached = { ...rest, detachedFrom: baseline } as StateDoc;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? detached : d)) };
+}
+
+/** The current state a former target was compared with, while it exists. */
+export function detachedBaseOf(project: Project, docId: Id): StateDoc | undefined {
+  const doc = findDoc(project, docId);
+  if (!isStateDoc(doc) || doc.baseline || !doc.detachedFrom) return undefined;
+  const base = findDoc(project, doc.detachedFrom);
+  return isStateDoc(base) && base.kind === doc.kind && base.id !== doc.id ? base : undefined;
+}
+
+/** Compares a former target with its current state again. */
+export function reattachTarget(project: Project, docId: Id): Project {
+  const base = detachedBaseOf(project, docId);
+  if (!base) return project;
+  const doc = findDoc(project, docId) as StateDoc;
+  const { detachedFrom: _was, ...rest } = doc;
+  const attached = { ...rest, baseline: base.id } as StateDoc;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? attached : d)) };
 }
 
 export type Change = 'added' | 'modified';
