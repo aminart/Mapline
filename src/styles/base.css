@@ -59,8 +59,13 @@ button:disabled {
 }
 button:focus-visible,
 select:focus-visible,
-.file-label:focus-within,
-.swatch-custom:focus-within {
+.file-label:has(:focus-visible),
+.swatch-custom:has(:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+/* After a click, no focus ring: it only shows while the keyboard is used (see lib/inputModality). */
+:root[data-input='pointer'] :focus-visible:not(input, textarea),
+:root[data-input='pointer'] :is(.file-label, .swatch-custom, .sheet-photo-btn, .format-option) {
+  outline: none;
 }
