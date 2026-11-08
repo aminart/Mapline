@@ -80,6 +80,9 @@ test('compares a flow’s target state with its current state', async ({ page })
   await expect(base.locator('[data-base-node]')).toHaveCount(7);
   await expect(base.locator('.diff-removed')).toHaveCount(1);
   await expect(base.locator('.diff-modified')).toHaveCount(1);
+  // Its cards keep their outline, as in the flow below.
+  const baseActivity = base.locator('[data-base-node].flow-activity:not(.diff-removed)').last();
+  await expect(baseActivity).toHaveCSS('border-left-color', 'rgb(221, 225, 231)');
   await expect(page.locator('.state-legend')).toHaveText(/1 ajoutée.*1 modifiée.*1 supprimée/);
   await expect(cards).toHaveCount(7);
   await shot(page, 'flow-compare');

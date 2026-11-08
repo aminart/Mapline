@@ -10,7 +10,7 @@ import { baselineOf, restoreNode, type Change } from '../model/states';
 import type { Flow, FlowNode, Id } from '../model/types';
 import { routeFlow } from '../lib/flowRoute';
 import { pointAlong, roundedPath } from '../lib/arrows';
-import { LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
+import { LINK_COLORS, LINK_DASH, boxStyle, personaAccent, resolveStyle, textStyle } from '../model/theme';
 import { useFlowDiff } from './useDiff';
 import { ChangeTag } from './ChangeMarks';
 import { cls } from './cls';
@@ -110,6 +110,11 @@ function BaseCard(props: { flow: Flow; node: FlowNode; layout: FlowLayout; chang
   const personaId = node.personaId ?? flow.personaId;
   const persona = personaId ? projectPersonas(project).find((p) => p.persona.id === personaId) : undefined;
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
+  // The card's fill, border and text, resolved as in the editable flow.
+  const style = resolveStyle('node', flow.styles[`node:${node.id}`]);
+  const fill = boxStyle(style);
+  // A removed card keeps its dashed grey border.
+  if (change === 'removed') delete fill.borderColor;
   useLayoutEffect(() => {
     const el = content.current;
     if (!el) return;
@@ -122,13 +127,13 @@ function BaseCard(props: { flow: Flow; node: FlowNode; layout: FlowLayout; chang
   return (
     <div
       className={cls('box flow-card flow-base-card', `flow-${node.kind}`, change && `diff-${change}`)}
-      style={{ left: box.x, top: box.y, width: box.w, height: box.h, ...(pill ? {} : { borderTopColor: accent }), ...(flow.styles[`node:${node.id}`]?.bg && !pill ? { background: flow.styles[`node:${node.id}`]!.bg } : {}) }}
+      style={{ left: box.x, top: box.y, width: box.w, height: box.h, ...(pill ? {} : { ...fill, borderTopColor: accent }) }}
       data-base-node={node.id}
     >
       <div className="flow-card-content" ref={content}>
         {change === 'removed' ? <span className="change-tag change-removed">{t('state.removedTag')}</span> : change && <ChangeTag change={change} />}
         {node.kind === 'choice' && <span className="flow-choice-tag">{t('flow.kind.choice')}</span>}
-        <div className={cls(pill ? 'flow-pill-text' : 'flow-text', !node.text.trim() && 'is-empty')}>
+        <div className={cls(pill ? 'flow-pill-text' : 'flow-text', !node.text.trim() && 'is-empty')} style={pill ? undefined : { ...textStyle(style), ...(node.text.trim() ? {} : { color: undefined }) }}>
           {node.text.trim() ? node.text : t(pill ? `flow.kind.${node.kind}` : node.kind === 'choice' ? 'flow.choicePlaceholder' : 'flow.activityPlaceholder')}
         </div>
         {change === 'removed' && !pill && (
