@@ -69,6 +69,10 @@ interface State extends DocState {
   busy: string | null;
   /** On a target state: show what changed since its current state. */
   compare: boolean;
+  /** While comparing a flow: unchanged cards and arrows fade. */
+  compareFocus: boolean;
+  /** While comparing a flow: its current state in a pane above, or its removed cards over the target. */
+  compareView: 'split' | 'merged';
 
   /** Changes the mission map shown, as one undo step (or merged into the last with the same `coalesce`). */
   apply: (fn: (map: Blueprint) => Blueprint, opts?: { coalesce?: string }) => void;
@@ -87,6 +91,8 @@ interface State extends DocState {
   setNewMapOpen: (open: boolean) => void;
   setBusy: (busy: string | null) => void;
   setCompare: (compare: boolean) => void;
+  setCompareFocus: (compareFocus: boolean) => void;
+  setCompareView: (compareView: 'split' | 'merged') => void;
   /** Presentation: shows `step` (-1: the whole document) of another document. */
   presentAt: (docId: Id, step: number) => void;
   undo: () => void;
@@ -235,6 +241,8 @@ export const useStore = create<State>((set, get) => ({
   newMapOpen: false,
   busy: null,
   compare: true,
+  compareFocus: false,
+  compareView: 'split',
 
   apply: (fn, opts) => {
     const { docId, applyProject } = get();
@@ -265,6 +273,8 @@ export const useStore = create<State>((set, get) => ({
   setNewMapOpen: (newMapOpen) => set({ newMapOpen }),
   setBusy: (busy) => set({ busy }),
   setCompare: (compare) => set({ compare }),
+  setCompareFocus: (compareFocus) => set({ compareFocus }),
+  setCompareView: (compareView) => set({ compareView }),
   presentAt: (docId, step) => {
     if (!findDoc(get().project, docId)) return;
     set({ docId, presentStep: step, sel: null, linkFrom: null, sheetPreview: null, tagFilter: [] });

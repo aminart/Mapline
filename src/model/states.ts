@@ -7,7 +7,7 @@
  * its cards, so the two can be compared card by card.
  */
 
-import type { Activity, Blueprint, Flow, FlowDoc, FlowNode, Id, MissionMapDoc, Project } from './types';
+import type { Activity, Blueprint, Flow, FlowDoc, FlowLink, FlowNode, Id, MissionMapDoc, Project } from './types';
 import { addDoc, findDoc } from './project';
 import { activityKeyOf, cellKey, uid } from './ops';
 import { insertColumn } from './flow';
@@ -36,17 +36,40 @@ export function targetsOf(project: Project, docId: Id): StateDoc[] {
 export function makeTarget(project: Project, docId: Id, name: string): { project: Project; docId: Id | null } {
   const doc = findDoc(project, docId);
   if (!isStateDoc(doc)) return { project, docId: null };
-  const copy = { ...structuredClone(doc), id: uid(), name, baseline: doc.id } as StateDoc;
+  const { detachedFrom: _was, ...source } = structuredClone(doc);
+  const copy = { ...source, id: uid(), name, baseline: doc.id } as StateDoc;
   const after = targetsOf(project, docId).at(-1)?.id ?? docId;
   return { project: addDoc(project, copy, after), docId: copy.id };
 }
 
-/** Stops comparing a target with its current state: both stay. */
+/**
+ * Stops comparing a target with its current state: both stay, and the
+ * target remembers its current state, to compare them again.
+ */
 export function detachTarget(project: Project, docId: Id): Project {
   const doc = findDoc(project, docId);
   if (!isStateDoc(doc) || !doc.baseline) return project;
-  const { baseline: _gone, ...rest } = doc;
-  return { ...project, docs: project.docs.map((d) => (d.id === docId ? (rest as StateDoc) : d)) };
+  const { baseline, ...rest } = doc;
+  const detached = { ...rest, detachedFrom: baseline } as StateDoc;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? detached : d)) };
+}
+
+/** The current state a former target was compared with, while it exists. */
+export function detachedBaseOf(project: Project, docId: Id): StateDoc | undefined {
+  const doc = findDoc(project, docId);
+  if (!isStateDoc(doc) || doc.baseline || !doc.detachedFrom) return undefined;
+  const base = findDoc(project, doc.detachedFrom);
+  return isStateDoc(base) && base.kind === doc.kind && base.id !== doc.id ? base : undefined;
+}
+
+/** Compares a former target with its current state again. */
+export function reattachTarget(project: Project, docId: Id): Project {
+  const base = detachedBaseOf(project, docId);
+  if (!base) return project;
+  const doc = findDoc(project, docId) as StateDoc;
+  const { detachedFrom: _was, ...rest } = doc;
+  const attached = { ...rest, baseline: base.id } as StateDoc;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? attached : d)) };
 }
 
 export type Change = 'added' | 'modified';
@@ -110,6 +133,71 @@ export function diffFlow(base: Flow, target: Flow): Diff<FlowNode> {
   }
   for (const node of base.nodes) if (!kept.has(node.id)) diff.removed.push(node);
   return diff;
+}
+
+/** How a target's arrows differ from its current state's. */
+export interface LinkDiff {
+  /** Arrows of the target between two cards the current state didn't link. */
+  added: Id[];
+  /** Arrows of both whose label changed. */
+  modified: Id[];
+  /** Arrows of the current state the target no longer has. */
+  removed: FlowLink[];
+}
+
+/**
+ * Arrows added, relabelled or removed. An arrow is the same in both when it
+ * links the same two cards the same way, even redrawn.
+ */
+export function diffFlowLinks(base: Flow, target: Flow): LinkDiff {
+  const key = (l: FlowLink) => `${l.from}>${l.to}`;
+  const before = new Map(base.links.map((l) => [key(l), l]));
+  const after = new Set(target.links.map(key));
+  const diff: LinkDiff = { added: [], modified: [], removed: [] };
+  for (const link of target.links) {
+    const old = before.get(key(link));
+    if (!old) diff.added.push(link.id);
+    else if ((old.label ?? '').trim() !== (link.label ?? '').trim()) diff.modified.push(link.id);
+  }
+  for (const link of base.links) if (!after.has(key(link))) diff.removed.push(link);
+  return diff;
+}
+
+/** One change of a flow, where it is, to go from one to the next. */
+export interface FlowChange {
+  id: Id;
+  change: Change | 'removed';
+  col: number;
+  row: number;
+}
+
+/** A flow's changed cards, column by column, top to bottom; removed ones where they were. */
+export function flowChanges(target: Flow, diff: Diff<FlowNode>): FlowChange[] {
+  const list: FlowChange[] = target.nodes.filter((n) => diff.changes[n.id]).map((n) => ({ id: n.id, change: diff.changes[n.id], col: n.col, row: n.row }));
+  for (const n of diff.removed) list.push({ id: n.id, change: 'removed', col: n.col, row: n.row });
+  return list.sort((a, b) => a.col - b.col || a.row - b.row);
+}
+
+/**
+ * Where the removed cards are drawn over the target: in their cell when it
+ * is free, otherwise in the same column, in a row under the flow.
+ */
+export function placeGhosts(target: Flow, removed: FlowNode[]): FlowNode[] {
+  const taken = new Set(target.nodes.map((n) => `${n.col}:${n.row}`));
+  const spare = Math.max(-1, ...target.nodes.map((n) => n.row), ...removed.map((n) => n.row)) + 1;
+  const placed: FlowNode[] = [];
+  for (const node of removed) {
+    if (!taken.has(`${node.col}:${node.row}`)) {
+      taken.add(`${node.col}:${node.row}`);
+      placed.push(node);
+      continue;
+    }
+    let row = spare;
+    while (taken.has(`${node.col}:${row}`)) row++;
+    taken.add(`${node.col}:${row}`);
+    placed.push({ ...node, row });
+  }
+  return placed;
 }
 
 /** How many cards were added, changed and removed. */

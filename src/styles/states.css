@@ -222,3 +222,138 @@
 .flow-base-card .removed-restore:focus-visible {
   opacity: 1;
 }
+
+/* Comparing a flow: the view, the focus switch, going from change to change. */
+.state-view button {
+  height: 26px;
+}
+.state-jump {
+  height: 26px;
+  padding: 0 6px;
+  margin: 0 -6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.state-jump:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.state-jump:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.state-links {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.state-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.state-nav-pos {
+  min-width: 54px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+/* Changes only: what didn't change fades. */
+.diff-focus .diff-same {
+  opacity: 0.28;
+  transition: opacity 0.15s;
+}
+.diff-focus .box.diff-same:hover,
+.diff-focus .box.diff-same.is-selected,
+.diff-focus .box.diff-same:focus-within {
+  opacity: 1;
+}
+
+/* Arrows added, relabelled or removed: a coloured halo under the line. */
+.link-diff-halo {
+  opacity: 0.4;
+}
+.diff-removed-link {
+  opacity: 0.8;
+}
+.link-label.diff-added-label {
+  box-shadow: 0 0 0 2px #12b76a;
+}
+.link-label.diff-modified-label {
+  box-shadow: 0 0 0 2px #f79009;
+}
+.link-label.diff-removed-link {
+  border-style: dashed;
+  border-color: #98a2b3 !important;
+  color: #667085 !important;
+}
+
+/* The change just gone to blinks once; a card's other version is outlined. */
+.box.diff-flash {
+  animation: diff-flash 1.5s ease-out;
+}
+@keyframes diff-flash {
+  0%,
+  40% {
+    outline: 4px solid var(--accent);
+    outline-offset: 4px;
+  }
+  100% {
+    outline: 4px solid transparent;
+    outline-offset: 10px;
+  }
+}
+.box.is-twin {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+}
+
+/* Removed cards drawn over the target. */
+.flow-ghost .removed-restore {
+  opacity: 1;
+}
+
+/* Between the two panes: drag to resize, or fold the current state away. */
+.split-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  cursor: row-resize;
+  touch-action: none;
+}
+.split-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.split-handle.is-collapsed {
+  height: 26px;
+  cursor: default;
+}
+.split-fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.split-fold:hover {
+  color: var(--ink);
+}
+.split-handle:not(.is-collapsed) .split-fold {
+  height: 18px;
+}

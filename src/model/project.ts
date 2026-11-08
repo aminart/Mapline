@@ -75,6 +75,10 @@ export function removeDoc(project: Project, docId: Id): Project {
         const { baseline: _base, ...rest } = d;
         d = rest as typeof d;
       }
+      if ((d.kind === 'mission-map' || d.kind === 'flow') && d.detachedFrom === docId) {
+        const { detachedFrom: _was, ...rest } = d;
+        d = rest as typeof d;
+      }
       // Nor is a copy of it still sharing its sheets.
       if (d.kind === 'mission-map' && d.origin === docId) {
         const { origin: _origin, ...rest } = d;

@@ -4,11 +4,11 @@
 import { describe, expect, it } from 'vitest';
 import { exampleProject } from './fixtures';
 import { addDoc, missionMapOf, projectPersonas, removeDoc, sheetFor, updateFlow, updateMap } from './project';
-import { baselineOf, detachTarget, diffCounts, diffFlow, diffMap, makeTarget, restoreActivity, restoreNode, targetsOf } from './states';
+import { baselineOf, detachTarget, detachedBaseOf, diffCounts, diffFlow, diffFlowLinks, flowChanges, placeGhosts, diffMap, makeTarget, reattachTarget, restoreActivity, restoreNode, targetsOf } from './states';
 import { parse, serialize } from './serialize';
 import * as ops from './ops';
 import * as fo from './flow';
-import type { FlowDoc, PersonaSheetDoc, Project } from './types';
+import type { Flow, FlowDoc, FlowNode, PersonaSheetDoc, Project } from './types';
 
 const labels = { start: 'Début', end: 'Fin', yes: 'Oui', no: 'Non' };
 
@@ -89,6 +89,18 @@ describe('target states', () => {
     expect(missionMapOf(detachTarget(project, target), target)).toBeDefined();
   });
 
+  it('compares again a target no longer compared, even after saving', () => {
+    const { project, current, target } = withTarget();
+    const detached = parse(serialize(detachTarget(project, target)));
+    expect(detachedBaseOf(detached, target)?.id).toBe(current);
+    const again = reattachTarget(detached, target);
+    expect(baselineOf(again, target)?.id).toBe(current);
+    expect(detachedBaseOf(again, target)).toBeUndefined();
+    // Not once its current state is removed.
+    expect(detachedBaseOf(removeDoc(detached, current), target)).toBeUndefined();
+    expect(reattachTarget(removeDoc(detached, current), target)).toEqual(removeDoc(detached, current));
+  });
+
   it('shares the persona sheets and lists each persona once', () => {
     let { project, current, target } = withTarget();
     const persona = missionMapOf(project, current)!.map.personas[0];
@@ -99,5 +111,25 @@ describe('target states', () => {
     // A persona added to the target only is listed too.
     project = updateMap(project, target, ops.addPersona);
     expect(projectPersonas(project)).toHaveLength(4);
+  });
+
+  it('compares the arrows: added, relabelled, removed, not redrawn', () => {
+    const node = (id: string, col: number, row = 0) => ({ id, kind: 'activity', text: id, col, row }) as FlowNode;
+    const base = { nodes: [node('a', 0), node('b', 1), node('c', 2)], links: [{ id: 'l1', from: 'a', to: 'b' }, { id: 'l2', from: 'b', to: 'c', label: 'oui' }, { id: 'l3', from: 'a', to: 'c' }] } as unknown as Flow;
+    const target = { ...base, links: [{ id: 'x1', from: 'a', to: 'b' }, { id: 'l2', from: 'b', to: 'c', label: 'non' }, { id: 'l4', from: 'c', to: 'a' }] } as unknown as Flow;
+    const diff = diffFlowLinks(base, target);
+    expect(diff.added).toEqual(['l4']);
+    expect(diff.modified).toEqual(['l2']);
+    expect(diff.removed.map((l) => l.id)).toEqual(['l3']);
+  });
+
+  it('lists the changes in reading order and places removed cards', () => {
+    const node = (id: string, col: number, row = 0) => ({ id, kind: 'activity', text: id, col, row }) as FlowNode;
+    const base = { nodes: [node('a', 0), node('b', 1), node('c', 2), node('d', 3)], links: [] } as unknown as Flow;
+    const target = { nodes: [{ ...node('a', 0), text: 'A' }, node('e', 2), node('f', 0, 1)], links: [] } as unknown as Flow;
+    const diff = diffFlow(base, target);
+    expect(flowChanges(target, diff).map((c) => `${c.id}:${c.change}`)).toEqual(['a:modified', 'f:added', 'b:removed', 'e:added', 'c:removed', 'd:removed']);
+    // b and d keep their free cell, c's is taken: it goes under the flow, in its column.
+    expect(placeGhosts(target, diff.removed).map((n) => `${n.id}@${n.col},${n.row}`)).toEqual(['b@1,0', 'c@2,2', 'd@3,0']);
   });
 });

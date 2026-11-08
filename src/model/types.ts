@@ -122,6 +122,8 @@ export interface MissionMapDoc {
   map: Blueprint;
   /** On a target state: the map of the current state it is compared with. */
   baseline?: Id;
+  /** On a former target state: the map it was compared with, to compare it again. */
+  detachedFrom?: Id;
   /** On a copy: the map it was copied from, whose persona sheets its personas share. */
   origin?: Id;
 }
@@ -263,6 +265,8 @@ export interface FlowDoc {
   flow: Flow;
   /** On a target state: the flow of the current state it is compared with. */
   baseline?: Id;
+  /** On a former target state: the flow it was compared with, to compare it again. */
+  detachedFrom?: Id;
 }
 
 /** A document of a project. */

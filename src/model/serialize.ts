@@ -51,7 +51,11 @@ function parseDoc(raw: unknown): ProjectDoc {
   if (!isObject(raw)) throw new ProjectFileError('invalid');
   const base = { id: typeof raw.id === 'string' && raw.id ? raw.id : uid(), name: String(raw.name ?? '') };
   // A target state names the document of its current state.
-  const baseline = typeof raw.baseline === 'string' && raw.baseline ? { baseline: raw.baseline } : {};
+  const baseline = {
+    ...(typeof raw.baseline === 'string' && raw.baseline ? { baseline: raw.baseline } : {}),
+    // A former target state names the one it was compared with.
+    ...(typeof raw.detachedFrom === 'string' && raw.detachedFrom ? { detachedFrom: raw.detachedFrom } : {}),
+  };
   switch (raw.kind) {
     case 'mission-map':
       return { ...base, kind: 'mission-map', map: parseMap(raw.map), ...baseline, ...(typeof raw.origin === 'string' && raw.origin ? { origin: raw.origin } : {}) };

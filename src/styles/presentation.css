@@ -100,3 +100,11 @@
   color: #b9bfca;
   white-space: nowrap;
 }
+
+/* Presenting a flow column by column: the next ones appear as it goes. */
+.app.is-presenting .flow [data-reveal] {
+  transition: opacity 0.35s, visibility 0.35s;
+}
+.app.is-presenting .flow {
+  pointer-events: none;
+}
