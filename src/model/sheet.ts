@@ -137,19 +137,43 @@ export function placeBlock(sheet: PersonaSheet, blockId: Id, place: BlockPlace):
   if (old.x === target.x && old.y === target.y && old.w === target.w && old.h === target.h && sheet.blocks[i].place) return sheet;
   const places = layout.slice();
   places[i] = target;
-  // Settled blocks are fixed; each other one, top to bottom, goes down until it is clear.
-  const settled = [i];
-  const rest = places.map((_, j) => j).filter((j) => j !== i).sort((a, b) => places[a].y - places[b].y || places[a].x - places[b].x);
-  for (const j of rest) {
+  return { ...sheet, blocks: settle(sheet.blocks, places, [i]) };
+}
+
+/**
+ * Swaps two blocks: the dragged one takes the other's cell, and the other one
+ * the cell the dragged one left. Each keeps its size; if sizes differ, the
+ * blocks they would cover move down out of their way.
+ */
+export function swapBlocks(sheet: PersonaSheet, blockId: Id, withId: Id): PersonaSheet {
+  const layout = sheetLayout(sheet.blocks);
+  const i = sheet.blocks.findIndex((b) => b.id === blockId);
+  const j = sheet.blocks.findIndex((b) => b.id === withId);
+  if (i < 0 || j < 0 || i === j) return sheet;
+  const places = layout.slice();
+  places[i] = clampPlace({ ...layout[i], x: layout[j].x, y: layout[j].y });
+  places[j] = clampPlace({ ...layout[j], x: layout[i].x, y: layout[i].y });
+  return { ...sheet, blocks: settle(sheet.blocks, places, [i, j]) };
+}
+
+/**
+ * Settles blocks at `places`: those in `fixed` are placed first, in that
+ * order, and every block, top to bottom, goes down until it is clear. Blocks
+ * are kept in reading order: by row, then column.
+ */
+function settle(blocks: SheetBlock[], places: BlockPlace[], fixed: number[]): SheetBlock[] {
+  places = places.slice();
+  const settled: number[] = [];
+  const rest = places.map((_, j) => j).filter((j) => !fixed.includes(j)).sort((a, b) => places[a].y - places[b].y || places[a].x - places[b].x);
+  for (const j of [...fixed, ...rest]) {
     let p = places[j];
     while (settled.some((k) => overlaps(places[k], p))) p = { ...p, y: p.y + 1 };
     places[j] = p;
     settled.push(j);
   }
-  const blocks = sheet.blocks
+  return blocks
     .map((b, j) => ({ ...b, place: places[j] }))
     .sort((a, b) => a.place.y - b.place.y || a.place.x - b.place.x);
-  return { ...sheet, blocks };
 }
 
 function mapBlock(sheet: PersonaSheet, blockId: Id, fn: (b: SheetBlock) => SheetBlock): PersonaSheet {

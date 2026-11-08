@@ -96,23 +96,30 @@ function Blocks({ sheet }: { sheet: PersonaSheet }) {
   const [ghost, setGhost] = useState<BlockPlace | null>(null);
   const layout = so.sheetLayout(sheet.blocks);
   const rows = Math.max(0, ...layout.map((p) => p.y + p.h));
-  // Where a dragged block would land: the cell under its top left corner.
-  const landing = (d: { id: string; grabX: number; grabY: number }, at: DropPoint): BlockPlace | null => {
+  // Where a dragged block would land. Over another block, it takes that
+  // block's place and the two swap; over free cells, the cell under its top
+  // left corner.
+  const landing = (d: { id: string; grabX: number; grabY: number }, at: DropPoint): { place: BlockPlace; swapWith: string | null } | null => {
     const i = sheet.blocks.findIndex((b) => b.id === d.id);
     if (i < 0 || !ref.current) return null;
-    const cell = cellAt(ref.current, { x: at.x - d.grabX + 8, y: at.y - d.grabY + 8 });
     const { w, h } = layout[i];
-    return { x: Math.min(cell.x, so.SHEET_COLS - w), y: cell.y, w, h };
+    const under = cellAt(ref.current, at);
+    const j = layout.findIndex((p, k) => k !== i && under.x >= p.x && under.x < p.x + p.w && under.y >= p.y && under.y < p.y + p.h);
+    if (j >= 0) return { place: { x: Math.min(layout[j].x, so.SHEET_COLS - w), y: layout[j].y, w, h }, swapWith: sheet.blocks[j].id };
+    const cell = cellAt(ref.current, { x: at.x - d.grabX + 8, y: at.y - d.grabY + 8 });
+    return { place: { x: Math.min(cell.x, so.SHEET_COLS - w), y: cell.y, w, h }, swapWith: null };
   };
   const drop = useDropTarget(
     'block',
     (d, at) => {
       setGhost(null);
-      const place = landing(d, at);
-      if (place) applySheet((s) => so.placeBlock(s, d.id, place));
+      const land = landing(d, at);
+      if (!land) return;
+      const { place, swapWith } = land;
+      applySheet((s) => (swapWith ? so.swapBlocks(s, d.id, swapWith) : so.placeBlock(s, d.id, place)));
     },
     (d, at) => {
-      const place = landing(d, at);
+      const place = landing(d, at)?.place;
       if (place && (place.x !== ghost?.x || place.y !== ghost?.y || place.w !== ghost?.w || place.h !== ghost?.h)) setGhost(place);
     },
   );

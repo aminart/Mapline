@@ -181,6 +181,23 @@ describe('placing blocks on the sheet grid', () => {
     expect(at(s, 'Scénario')).toEqual({ x: 4, y: 5, w: 2, h: 1 });
   });
 
+  it('swaps a block with the one it is dropped on', () => {
+    let s = classic();
+    s = sheetOps.swapBlocks(s, s.blocks[5].id, s.blocks[0].id);
+    expect(at(s, 'Scénario')).toEqual({ x: 0, y: 0, w: 2, h: 1 });
+    expect(at(s, 'Objectifs')).toEqual({ x: 4, y: 1, w: 2, h: 1 });
+    // The others stay where they were.
+    expect(at(s, 'Frustrations')).toEqual({ x: 2, y: 0, w: 2, h: 1 });
+    expect(s.blocks.map((b) => b.title)[0]).toBe('Scénario');
+    // Blocks of different sizes keep theirs; none overlap.
+    s = sheetOps.placeBlock(s, s.blocks[0].id, { x: 0, y: 0, w: 4, h: 1 });
+    s = sheetOps.swapBlocks(s, s.blocks[0].id, s.blocks[s.blocks.length - 1].id);
+    const places = sheetOps.sheetLayout(s.blocks);
+    for (const p of places) for (const q of places)
+      if (p !== q) expect(p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h).toBe(false);
+    expect(at(s, 'Scénario').w).toBe(4);
+  });
+
   it('resizes across columns and rows, within the grid', () => {
     let s = classic();
     const id = s.blocks[0].id;
