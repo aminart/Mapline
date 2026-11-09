@@ -745,3 +745,51 @@
 .board.export-no-info .info-row {
   display: none;
 }
+
+/*
+ * Arrows are quiet at rest: thin and light. Those of the hovered or selected
+ * card (or the hovered or selected arrow) come forward, the others fade more.
+ */
+.links g {
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.links g .link-line {
+  stroke-width: 1.25;
+}
+.links g:hover,
+.links.is-focusing g.is-focus {
+  opacity: 1;
+}
+.links g:hover .link-line,
+.links.is-focusing g.is-focus .link-line {
+  stroke-width: 2.25;
+}
+.links.is-focusing g.is-faded {
+  opacity: 0.12;
+}
+.link-label {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.link-label:hover,
+.link-label.is-focus {
+  opacity: 1;
+}
+.link-label.is-faded {
+  opacity: 0.15;
+}
+.card.is-link-end {
+  box-shadow: 0 0 0 2px rgba(47, 85, 212, 0.35);
+}
+/* Exports and presentations show every arrow at full strength. */
+.is-exporting .links g,
+.is-exporting .link-label,
+.board.presenting .links g,
+.board.presenting .link-label {
+  opacity: 1;
+}
+.is-exporting .links g .link-line,
+.board.presenting .links g .link-line {
+  stroke-width: 1.75;
+}

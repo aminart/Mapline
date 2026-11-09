@@ -449,6 +449,8 @@ function rectWithin(el: HTMLElement, container: HTMLElement): Rect {
 
 interface Drawn {
   id: Id;
+  from: Id;
+  to: Id;
   d: string;
   mid: { x: number; y: number };
   label: string;
@@ -470,6 +472,28 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
   const select = useStore((s) => s.select);
   const [drawn, setDrawn] = useState<Drawn[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const hovered = useHoveredCard(container);
+
+  // A hovered or selected card (or a selected arrow) brings its arrows forward and fades the others.
+  const selAct = sel?.startsWith('act:') ? sel.slice(4) : null;
+  const selLink = sel?.startsWith('link:') ? sel.slice(5) : null;
+  const focusCard = hovered ?? selAct;
+  const focused = new Set<Id>();
+  if (focusCard) drawn.forEach((p) => (p.from === focusCard || p.to === focusCard) && focused.add(p.id));
+  else if (selLink && drawn.some((p) => p.id === selLink)) focused.add(selLink);
+  const focusing = focused.size > 0;
+  const linked = new Set<Id>();
+  drawn.forEach((p) => focused.has(p.id) && (linked.add(p.from), linked.add(p.to)));
+  const linkedKey = [...linked].sort().join(',');
+
+  // The cards at either end of the arrows in focus are outlined.
+  useLayoutEffect(() => {
+    if (!container || !linkedKey) return;
+    const ids = linkedKey.split(',');
+    const els = ids.map((id) => container.querySelector<HTMLElement>(`[data-act="${CSS.escape(id)}"]`)).filter((el): el is HTMLElement => !!el);
+    els.forEach((el) => el.classList.add('is-link-end'));
+    return () => els.forEach((el) => el.classList.remove('is-link-end'));
+  }, [container, linkedKey]);
 
   useLayoutEffect(() => {
     if (!container) return;
@@ -486,6 +510,8 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
         const points = routeArrow(rectWithin(a, container), rectWithin(b, container), { col: GAP, row: ROW_GAP }, i, cellOf(a), cellOf(b));
         next.push({
           id: l.id,
+          from: l.from,
+          to: l.to,
           d: roundedPath(points),
           mid: midpoint(points),
           label: l.label ?? '',
@@ -507,7 +533,7 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
 
   return (
     <>
-      <svg className="links" width={size.w} height={size.h}>
+      <svg className={cls('links', focusing && 'is-focusing')} width={size.w} height={size.h}>
         <defs>
           {drawn.map((p) => (
             <marker key={p.id} id={`mm-arrow-${p.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -518,7 +544,7 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
         {drawn.map((p) => {
           const selected = sel === `link:${p.id}`;
           return (
-            <g key={p.id} data-link-steps={p.steps}>
+            <g key={p.id} data-link-steps={p.steps} className={cls(focusing && (focused.has(p.id) ? 'is-focus' : 'is-faded'))}>
               <path d={p.d} className="link-halo" fill="none" stroke={selected ? '#C9D5F6' : '#FFFFFF'} strokeWidth={selected ? 8 : 5} strokeLinecap="round" />
               <path
                 d={p.d}
@@ -543,7 +569,7 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
           <button
             key={p.id}
             data-link-steps={p.steps}
-            className={cls('link-label', sel === `link:${p.id}` && 'is-selected')}
+            className={cls('link-label', sel === `link:${p.id}` && 'is-selected', focusing && (focused.has(p.id) ? 'is-focus' : 'is-faded'))}
             style={{ left: p.mid.x, top: p.mid.y, color: p.color, borderColor: p.color }}
             onClick={() => select(`link:${p.id}`)}
           >
@@ -552,6 +578,26 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
         ))}
     </>
   );
+}
+
+/** The id of the activity card under the pointer, if any. */
+function useHoveredCard(container: HTMLDivElement | null): Id | null {
+  const [id, setId] = useState<Id | null>(null);
+  useLayoutEffect(() => {
+    if (!container) return;
+    const over = (e: PointerEvent) => {
+      const card = (e.target as Element | null)?.closest<HTMLElement>('[data-act]');
+      setId(card && container.contains(card) ? card.dataset.act! : null);
+    };
+    const leave = () => setId(null);
+    container.addEventListener('pointerover', over);
+    container.addEventListener('pointerleave', leave);
+    return () => {
+      container.removeEventListener('pointerover', over);
+      container.removeEventListener('pointerleave', leave);
+    };
+  }, [container]);
+  return id;
 }
 
 /**

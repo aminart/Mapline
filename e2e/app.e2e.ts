@@ -95,6 +95,35 @@ test('arrows go round cards, split cells included', async ({ page }) => {
   expect(await arrowsOverCards(page)).toEqual([]);
 });
 
+test('a hovered card brings its arrows forward and fades the others', async ({ page }) => {
+  await startProject(page);
+  await addActivity(page, 0, 0, 'A');
+  await addActivity(page, 0, 1, 'B');
+  await addActivity(page, 1, 2, 'C');
+  await addActivity(page, 1, 3, 'D');
+  const card = (row: number, col: number) => cell(page, row, col).locator('.card');
+  await link(page, card(0, 0), card(0, 1));
+  await link(page, card(1, 2), card(1, 3));
+  const groups = page.locator('svg.links g');
+  await expect(groups).toHaveCount(2);
+  // Nothing hovered or selected: every arrow drawn alike.
+  await page.locator('main.canvas').click({ position: { x: 4, y: 4 } });
+  await page.mouse.move(0, 0);
+  await expect(page.locator('svg.links g.is-faded')).toHaveCount(0);
+
+  await card(1, 2).hover();
+  await expect(groups.nth(0)).toHaveClass(/is-faded/);
+  await expect(groups.nth(1)).toHaveClass(/is-focus/);
+  await expect(card(1, 3)).toHaveClass(/is-link-end/);
+  await expect(card(0, 1)).not.toHaveClass(/is-link-end/);
+
+  // A selected card keeps its arrows forward once the pointer has left it.
+  await card(0, 0).locator('textarea').click();
+  await page.mouse.move(0, 0);
+  await expect(groups.nth(0)).toHaveClass(/is-focus/);
+  await expect(groups.nth(1)).toHaveClass(/is-faded/);
+});
+
 test('undo and redo', async ({ page }) => {
   await startProject(page);
   const objective = page.getByPlaceholder('Quel est l’objectif de ce parcours ?');
