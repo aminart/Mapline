@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Activity, Blueprint, BoxKey, BoxStyle, Divider, Id, Link, Persona, Phase, Scene } from './types';
+import type { Activity, Blueprint, BoxKey, BoxStyle, Divider, Id, Link, Persona, Phase, Scene, SceneView } from './types';
 import { PERSONA_PALETTE } from './theme';
 
 export function uid(): Id {
@@ -476,6 +476,34 @@ export const textCellKey = (rowId: Id, stepId: Id): BoxKey => `info:${rowId}:${s
 export function setScene(doc: Blueprint, stepId: Id, patch: Partial<Scene>): Blueprint {
   const prev = doc.scenes[stepId] ?? { img: null, text: '' };
   return { ...doc, scenes: { ...doc.scenes, [stepId]: { ...prev, ...patch } } };
+}
+
+export const SCENE_MAX_ZOOM = 4;
+export const DEFAULT_SCENE_VIEW: SceneView = { x: 50, y: 50, zoom: 1 };
+
+const clamp = (v: unknown, min: number, max: number, fallback: number) =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+
+/** A scene's framing, with any missing or out of range value brought back in range. */
+export function sceneView(scene: Scene | undefined): SceneView {
+  const v = scene?.view;
+  return {
+    x: clamp(v?.x, 0, 100, 50),
+    y: clamp(v?.y, 0, 100, 50),
+    zoom: clamp(v?.zoom, 1, SCENE_MAX_ZOOM, 1),
+  };
+}
+
+/** Changes how a scene's image is framed; the default framing is not stored. */
+export function setSceneView(doc: Blueprint, stepId: Id, view: SceneView): Blueprint {
+  const prev = doc.scenes[stepId];
+  if (!prev) return doc;
+  const next = sceneView({ ...prev, view });
+  const isDefault = next.x === 50 && next.y === 50 && next.zoom === 1;
+  const scene = { ...prev };
+  if (isDefault) delete scene.view;
+  else scene.view = next;
+  return { ...doc, scenes: { ...doc.scenes, [stepId]: scene } };
 }
 
 // Styles
