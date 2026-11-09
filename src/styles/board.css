@@ -743,3 +743,30 @@
 .board.export-no-info .info-row {
   display: none;
 }
+
+/* Arrows of the hovered or selected card stay sharp, the others fade. */
+.links g {
+  transition: opacity 0.15s;
+}
+.links.is-focusing g.is-faded {
+  opacity: 0.18;
+}
+.links.is-focusing g.is-focus .link-line {
+  stroke-width: 2.5;
+}
+.link-label {
+  transition: opacity 0.15s;
+}
+.link-label.is-faded {
+  opacity: 0.2;
+}
+.card.is-link-end {
+  box-shadow: 0 0 0 2px rgba(47, 85, 212, 0.35);
+}
+.is-exporting .links g.is-faded,
+.is-exporting .link-label.is-faded {
+  opacity: 1;
+}
+.is-exporting .links g.is-focus .link-line {
+  stroke-width: 1.75;
+}
