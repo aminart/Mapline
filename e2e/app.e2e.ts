@@ -466,3 +466,36 @@ test('stacks more than two cards under a step', async ({ page }) => {
   await expect(c.locator('[data-act]')).toHaveCount(2);
   await expect(c.locator('[data-act] textarea').last()).toHaveValue('Au guichet');
 });
+
+test('stacked cards grow with their text, inside their row', async ({ page }) => {
+  await startProject(page);
+  const c = cell(page, 0, 0);
+  if (!(await c.locator('[data-act]').count())) await addActivity(page, 0, 0, 'Par mail');
+  const long = 'Une alternative au texte long, qui doit agrandir sa carte au lieu de déborder sur la suivante. ';
+  for (const text of [long, long.repeat(2), 'Au guichet']) {
+    await c.locator('[data-act]').last().hover();
+    await c.getByRole('button', { name: 'Ajouter une alternative dessous (un autre choix possible)' }).click();
+    await page.keyboard.type(text);
+  }
+  await page.mouse.click(1, 1);
+  await expect(c.locator('[data-act]')).toHaveCount(4);
+  // No card hides part of its text, and none overlaps the next one or leaves the cell.
+  expect(await clippedFields(page, '.persona-row:first-child .cell:first-of-type')).toEqual([]);
+  const boxes = await c.evaluate((el) => {
+    const r = (e: Element) => e.getBoundingClientRect();
+    const cards = Array.from(el.querySelectorAll('.card')).map((card) => {
+      const t = card.querySelector('textarea')!;
+      return { top: r(card).top, bottom: r(card).bottom, textBottom: r(t).top + t.scrollHeight };
+    });
+    return { cell: { top: r(el).top, bottom: r(el).bottom }, cards };
+  });
+  for (const [i, card] of boxes.cards.entries()) {
+    expect(card.textBottom).toBeLessThanOrEqual(card.bottom + 1);
+    expect(card.top).toBeGreaterThanOrEqual(boxes.cell.top - 1);
+    expect(card.bottom).toBeLessThanOrEqual(boxes.cell.bottom + 1);
+    const next = boxes.cards[i + 1];
+    if (next) expect(next.top).toBeGreaterThanOrEqual(card.bottom - 1);
+  }
+  const rows = await personaRows(page);
+  for (const card of rows[0].cards) expect(card.bottom).toBeLessThanOrEqual(rows[0].row.bottom + 1);
+});
