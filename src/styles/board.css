@@ -292,6 +292,52 @@
   object-fit: cover;
   display: block;
 }
+.scene-img.is-reframing {
+  cursor: grab;
+  touch-action: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.scene-img.is-reframing:active {
+  cursor: grabbing;
+}
+.scene-img.is-reframing img {
+  user-select: none;
+  pointer-events: none;
+}
+.scene-reframe-bar {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  cursor: default;
+}
+.scene-reframe-hint {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  width: fit-content;
+  margin: 0 auto;
+  text-align: center;
+  pointer-events: none;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(20, 24, 32, 0.6);
+  color: #fff;
+  font-size: 11px;
+}
+.chip-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.chip:disabled {
+  opacity: 0.5;
+}
 .scene-img-actions {
   position: absolute;
   top: 6px;

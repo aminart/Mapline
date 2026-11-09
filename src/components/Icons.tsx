@@ -103,6 +103,13 @@ export const ImageIcon = ({ size = 26 }: P) => (
     <path d="m21 16-5-5-9 9" />
   </Svg>
 );
+/** Two corner brackets: reframe a picture. */
+export const CropIcon = ({ size = 13 }: P) => (
+  <Svg size={size} width={2}>
+    <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+    <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+  </Svg>
+);
 export const LogoIcon = ({ size = 28 }: P) => (
   <img src={logoMapline} alt="" width={size} height={size} style={{ display: 'block', flexShrink: 0 }} />
 );

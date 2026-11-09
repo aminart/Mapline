@@ -47,6 +47,18 @@ export interface Scene {
   /** Image as a data URL, stored inside the project file. */
   img: string | null;
   text: string;
+  /** Which part of the image the block shows; centred and unzoomed when unset. */
+  view?: SceneView;
+}
+
+/** Framing of a scene's image inside its block. */
+export interface SceneView {
+  /** Horizontal focus, from 0 (left edge) to 100 (right edge). */
+  x: number;
+  /** Vertical focus, from 0 (top edge) to 100 (bottom edge). */
+  y: number;
+  /** Magnification on top of filling the block, from 1 to SCENE_MAX_ZOOM. */
+  zoom: number;
 }
 
 export type LinkStyle = 'solid' | 'dashed' | 'dotted';

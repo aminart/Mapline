@@ -263,6 +263,32 @@ describe('notes', () => {
   });
 });
 
+describe('scene framing', () => {
+  const withImage = () => ops.setScene(exampleBlueprint(), 's1', { img: 'data:image/png;base64,AA', text: '' });
+
+  it('is centred and unzoomed by default', () => {
+    expect(ops.sceneView(withImage().scenes.s1)).toEqual(ops.DEFAULT_SCENE_VIEW);
+    expect(ops.sceneView(undefined)).toEqual(ops.DEFAULT_SCENE_VIEW);
+  });
+
+  it('keeps the chosen view, brought back in range, and saves it', () => {
+    const doc = ops.setSceneView(withImage(), 's1', { x: 130, y: 20, zoom: 9 });
+    expect(doc.scenes.s1.view).toEqual({ x: 100, y: 20, zoom: ops.SCENE_MAX_ZOOM });
+    expect(roundTrip(doc).scenes.s1.view).toEqual({ x: 100, y: 20, zoom: ops.SCENE_MAX_ZOOM });
+  });
+
+  it('stores nothing for the default view', () => {
+    let doc = ops.setSceneView(withImage(), 's1', { x: 10, y: 10, zoom: 2 });
+    doc = ops.setSceneView(doc, 's1', ops.DEFAULT_SCENE_VIEW);
+    expect('view' in doc.scenes.s1).toBe(false);
+  });
+
+  it('ignores a framing that makes no sense in a file', () => {
+    const scene = { img: 'x', text: '', view: { x: 'left', y: Number.NaN, zoom: 0.2 } } as never;
+    expect(ops.sceneView(scene)).toEqual({ x: 50, y: 50, zoom: 1 });
+  });
+});
+
 describe('files', () => {
   it('round-trips through serialize/parse', () => {
     const doc = ops.setScene(exampleBlueprint(), 'x', { text: 'ignored' });
