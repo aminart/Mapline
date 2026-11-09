@@ -614,9 +614,11 @@
   color: var(--muted);
 }
 .cell.has-alt .card {
-  /* The cards share the height equally, unless one needs more. Tall enough
-     for the delete and note buttons not to overlap, with three cards or more. */
-  flex: 1 1 0;
+  /* Each card is as tall as its text needs, and the cards share what room is
+     left in the cell. Never shrunk below their text (it would spill over the
+     next card), and tall enough for the delete and note buttons not to
+     overlap, with three cards or more. */
+  flex: 1 0 auto;
   min-height: 60px;
 }
 .cell.has-alt .box.card textarea {
