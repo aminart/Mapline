@@ -129,6 +129,25 @@ test('selects an arrow, labels it and deletes it with the Delete key', async ({ 
   await expect(arrows(page)).toHaveCount(0);
 });
 
+test('chooses the sides an arrow leaves and enters by, then back to automatic', async ({ page }) => {
+  await startFlow(page, 'Flow vide');
+  const line = arrows(page).first();
+  const straight = await line.getAttribute('d');
+  await page.locator('.flow .link-hit').first().dispatchEvent('click');
+  const toolbar = page.getByRole('toolbar');
+  await toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' }).click();
+  await toolbar.getByRole('group', { name: 'Arrivée' }).getByRole('button', { name: 'Bas' }).click();
+  await expect(toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' })).toHaveAttribute('aria-pressed', 'true');
+  // Out of the bottom of the start, under the row, up into the bottom of the end.
+  const [start, end] = await Promise.all([cards(page).nth(0).boundingBox(), cards(page).nth(1).boundingBox()]);
+  const box = await line.boundingBox();
+  expect(box!.y + box!.height).toBeGreaterThan(Math.max(start!.y + start!.height, end!.y + end!.height) + 5);
+  expect(await arrowsOverCards(page, CARDS)).toEqual([]);
+  await toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Auto' }).click();
+  await toolbar.getByRole('group', { name: 'Arrivée' }).getByRole('button', { name: 'Auto' }).click();
+  await expect(line).toHaveAttribute('d', straight!);
+});
+
 test('a flow inside a map project, saved and opened again', async ({ page }, info) => {
   await startProject(page);
   await page.getByRole('button', { name: 'Nouveau flow' }).click();

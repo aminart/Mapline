@@ -242,7 +242,13 @@ export interface FlowLink {
   label?: string;
   style?: LinkStyle;
   color?: string;
+  /** The side of its card the arrow leaves by; chosen by the route when unset. */
+  fromSide?: LinkSide;
+  /** The side of its card the arrow enters by; chosen by the route when unset. */
+  toSide?: LinkSide;
 }
+
+export type LinkSide = 'top' | 'right' | 'bottom' | 'left';
 
 /** The part of a mission map a flow details: a phase or a step (an activity in files from 1.3.0). */
 export interface FlowSource {
