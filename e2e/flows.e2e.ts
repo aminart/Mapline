@@ -44,13 +44,21 @@ test('adds cards on all four sides, moving the rest of the flow along', async ({
   const start = await card(page, 'Début');
   const end = await card(page, 'Fin');
   const endLeft = await left(end);
+  const endTop = await top(end);
   await start.locator('textarea').click();
-  // Right of the start is taken by the end: it moves one column right.
+  // Right of the start is the end, which already follows it: the new card branches off, under the end.
   await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
   await page.keyboard.type('Ouvre l’app');
   await expect(cards(page)).toHaveCount(3);
-  expect(await left(end)).toBeGreaterThan(endLeft);
+  expect(await left(end)).toBe(endLeft);
   const app = await card(page, 'Ouvre l’app');
+  // Same column as the end: the two cards share a centre line (the end is a narrower pill).
+  const centre = async (l: Locator) => {
+    const b = (await l.boundingBox())!;
+    return Math.round(b.x + b.width / 2);
+  };
+  expect(await centre(app)).toBe(await centre(end));
+  expect(await top(app)).toBeGreaterThan(endTop);
   const appTop = await top(app);
   await app.getByRole('button', { name: 'Ajouter une carte au-dessus' }).click();
   await page.keyboard.type('En haut');
