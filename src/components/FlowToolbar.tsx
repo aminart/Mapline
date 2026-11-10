@@ -4,7 +4,7 @@
 import { activeFlow, useStore, useT } from '../store';
 import * as fo from '../model/flow';
 import { findDoc, projectPersonas, renameDoc } from '../model/project';
-import { FILL_SWATCHES, LINK_COLORS } from '../model/theme';
+import { FILL_SWATCHES, LINK_COLORS, personaAccent } from '../model/theme';
 import type { Flow, LinkStyle } from '../model/types';
 import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
@@ -78,6 +78,7 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
   const personas = projectPersonas(project);
   const mainName = personas.find((p) => p.persona.id === flow.personaId)?.persona.name;
   const editable = node.kind === 'activity' || node.kind === 'choice';
+  const picked = fo.nodePersonas(node);
   return (
     <div className="style-controls">
       <span className="badge">{t(`flow.kind.${node.kind}`)}</span>
@@ -94,20 +95,32 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
         </div>
       )}
       {editable && personas.length > 0 && (
-        <label className="field">
-          {t('flow.persona')}
-          <select value={node.personaId ?? ''} onChange={(e) => {
-            const v = e.target.value || null;
-            applyFlow((f) => fo.setNode(f, id, { personaId: v }));
-          }}>
-            <option value="">{mainName !== undefined ? t('flow.inheritPersona', { name: mainName || t('doc.unnamed') }) : t('flow.noPersona')}</option>
-            {personas.map(({ persona }) => (
-              <option key={persona.id} value={persona.id}>
-                {persona.name || t('doc.unnamed')}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="swatches flow-persona-picks" role="group" aria-label={t('flow.personas')}>
+          <span className="swatches-label">{t('flow.personas')}</span>
+          <div className="persona-chips">
+            {personas.map(({ persona, style, photo }) => {
+              const on = picked.includes(persona.id);
+              const name = persona.name || t('doc.unnamed');
+              return (
+                <button
+                  key={persona.id}
+                  className={cls('persona-chip', on && 'is-on')}
+                  aria-pressed={on}
+                  title={on ? t('flow.removePersona', { name }) : t('flow.addPersona', { name })}
+                  onClick={() => applyFlow((f) => fo.toggleNodePersona(f, id, persona.id))}
+                >
+                  <span className="persona-chip-dot" style={{ background: personaAccent(persona.color, style).accent }}>
+                    {photo ? <img src={photo} alt="" /> : name.charAt(0).toUpperCase()}
+                  </span>
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+          {picked.length === 0 && (
+            <span className="hint">{mainName !== undefined ? t('flow.inheritPersona', { name: mainName || t('doc.unnamed') }) : t('flow.noPersonaHint')}</span>
+          )}
+        </div>
       )}
       {editable && (
         <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={custom?.bg ?? '#FFFFFF'} variant="fill" onPick={(bg, live) => applyFlow((f) => fo.setNodeStyle(f, id, { bg }), live ? { coalesce: `style:node:${id}` } : undefined)} />

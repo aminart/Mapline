@@ -135,7 +135,7 @@ export function BaseCard(props: {
   const content = useRef<HTMLDivElement>(null);
   const box = nodeBox(node, layout);
   const pill = node.kind === 'start' || node.kind === 'end';
-  const personaId = node.personaId ?? flow.personaId;
+  const personaId = node.personaIds?.[0] ?? flow.personaId;
   const persona = personaId ? projectPersonas(project).find((p) => p.persona.id === personaId) : undefined;
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
   // The card's fill, border and text, resolved as in the editable flow.

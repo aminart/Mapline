@@ -292,3 +292,41 @@ describe('start and end pills that grow with their text', () => {
     expect(box.y + box.h / 2).toBe(cell.y + cell.h / 2);
   });
 });
+
+describe('personas on a card', () => {
+  it('adds and takes off personas one by one, keeping the order picked', () => {
+    const flow = fo.templateFlow('user', labels);
+    const id = flow.nodes[1].id;
+    let f = fo.toggleNodePersona(flow, id, 'p1');
+    f = fo.toggleNodePersona(f, id, 'p2');
+    expect(fo.nodePersonas(fo.findNode(f, id)!)).toEqual(['p1', 'p2']);
+    f = fo.toggleNodePersona(f, id, 'p1');
+    expect(fo.findNode(f, id)!.personaIds).toEqual(['p2']);
+    f = fo.toggleNodePersona(f, id, 'p2');
+    // None left: the card goes back to the flow's main persona.
+    expect('personaIds' in fo.findNode(f, id)!).toBe(false);
+    expect(fo.setNodePersonas(flow, id, ['a', 'a', 'b']).nodes[1].personaIds).toEqual(['a', 'b']);
+  });
+});
+
+describe('card personas in project files', () => {
+  it('keeps several personas, and reads the single persona of older files as a list of one', async () => {
+    const { parse, serialize } = await import('./serialize');
+    const { createFlowProject } = await import('./templates');
+    const project = createFlowProject('user', 'fr');
+    const doc = project.docs[0];
+    if (doc.kind !== 'flow') throw new Error('not a flow');
+    const [a, b, c] = doc.flow.nodes;
+    const saved = { ...project, docs: [{ ...doc, flow: fo.setNodePersonas(doc.flow, b.id, ['p1', 'p2']) }] };
+    expect(parse(serialize(saved))).toEqual(saved);
+    const old = {
+      ...project,
+      docs: [{ ...doc, flow: { ...doc.flow, nodes: [a, { ...b, personaId: 'p1' }, { ...c, personaId: null }, ...doc.flow.nodes.slice(3)] } }],
+    };
+    const back = parse(JSON.stringify(old)).docs[0];
+    if (back.kind !== 'flow') throw new Error('not a flow');
+    expect(back.flow.nodes[1].personaIds).toEqual(['p1']);
+    expect('personaId' in back.flow.nodes[1]).toBe(false);
+    expect('personaIds' in back.flow.nodes[2]).toBe(false);
+  });
+});

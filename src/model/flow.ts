@@ -157,8 +157,34 @@ export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink,
   return { ...flow, links: flow.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
 }
 
-export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind' | 'personaId'>>): Flow {
+export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind'>>): Flow {
   return { ...flow, nodes: flow.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) };
+}
+
+/** The personas a card names itself (not the flow's main persona). */
+export function nodePersonas(node: FlowNode): Id[] {
+  return node.personaIds ?? [];
+}
+
+/** Sets a card's personas, in order; an empty list leaves it to the flow's main persona. */
+export function setNodePersonas(flow: Flow, id: Id, personaIds: Id[]): Flow {
+  const ids = [...new Set(personaIds)];
+  return {
+    ...flow,
+    nodes: flow.nodes.map((n) => {
+      if (n.id !== id) return n;
+      const { personaIds: _gone, ...rest } = n;
+      return ids.length > 0 ? { ...rest, personaIds: ids } : rest;
+    }),
+  };
+}
+
+/** Adds a persona to a card, or takes it off when the card already has it. */
+export function toggleNodePersona(flow: Flow, id: Id, personaId: Id): Flow {
+  const node = findNode(flow, id);
+  if (!node) return flow;
+  const ids = nodePersonas(node);
+  return setNodePersonas(flow, id, ids.includes(personaId) ? ids.filter((p) => p !== personaId) : ids.concat([personaId]));
 }
 
 /** Renames a tag on one card (`id`), or on every card when `id` is null. */
