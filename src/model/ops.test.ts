@@ -127,6 +127,21 @@ describe('links', () => {
     expect(removed.links.some((l) => l.from === a.id || l.to === a.id)).toBe(false);
   });
 
+  it('sets the sides an arrow leaves and enters by, and back to automatic', () => {
+    const doc = exampleBlueprint();
+    const id = doc.links[0].id;
+    const set = ops.updateLink(doc, id, { fromSide: 'bottom', toSide: 'left' });
+    expect(set.links[0]).toMatchObject({ fromSide: 'bottom', toSide: 'left' });
+    const auto = ops.updateLink(set, id, { fromSide: undefined });
+    expect('fromSide' in auto.links[0]).toBe(false);
+    expect(auto.links[0].toSide).toBe('left');
+    // Saved and opened again; a side this version doesn't know counts as automatic.
+    const odd = { ...set, links: [{ ...set.links[0], toSide: 'middle' }, ...set.links.slice(1)] } as unknown as Blueprint;
+    const back = (parse(serialize(projectFromMap('Test', odd))).docs[0] as MissionMapDoc).map;
+    expect(back.links[0].fromSide).toBe('bottom');
+    expect('toSide' in back.links[0]).toBe(false);
+  });
+
   it('removing a persona removes its activities and arrows', () => {
     const doc = exampleBlueprint();
     const next = ops.removePersona(doc, doc.personas[1].id);

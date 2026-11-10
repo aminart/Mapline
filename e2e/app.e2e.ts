@@ -95,6 +95,30 @@ test('arrows go round cards, split cells included', async ({ page }) => {
   expect(await arrowsOverCards(page)).toEqual([]);
 });
 
+test('chooses the sides a map arrow leaves and enters by, then back to automatic', async ({ page }) => {
+  await startProject(page);
+  await addActivity(page, 1, 0, 'Départ');
+  await addActivity(page, 1, 1, 'Arrivée');
+  const cards = (row: number, col: number) => cell(page, row, col).locator('.card');
+  await link(page, cards(1, 0), cards(1, 1));
+  const line = page.locator('svg.links .link-line').first();
+  const straight = await line.getAttribute('d');
+  await page.locator('svg.links .link-hit').first().dispatchEvent('click');
+  const toolbar = page.getByRole('toolbar');
+  await toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' }).click();
+  await toolbar.getByRole('group', { name: 'Arrivée' }).getByRole('button', { name: 'Bas' }).click();
+  await expect(toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' })).toHaveAttribute('aria-pressed', 'true');
+  // Out of the bottom of the first card, under the row, up into the bottom of the second.
+  await expect(line).not.toHaveAttribute('d', straight!);
+  const [start, end] = await Promise.all([cards(1, 0).boundingBox(), cards(1, 1).boundingBox()]);
+  const box = await line.boundingBox();
+  expect(box!.y + box!.height).toBeGreaterThan(Math.max(start!.y + start!.height, end!.y + end!.height) + 5);
+  expect(await arrowsOverCards(page)).toEqual([]);
+  await toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Auto' }).click();
+  await toolbar.getByRole('group', { name: 'Arrivée' }).getByRole('button', { name: 'Auto' }).click();
+  await expect(line).toHaveAttribute('d', straight!);
+});
+
 test('a hovered card brings its arrows forward and fades the others', async ({ page }) => {
   await startProject(page);
   await addActivity(page, 0, 0, 'A');

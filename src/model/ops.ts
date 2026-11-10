@@ -569,8 +569,18 @@ export function movePersona(doc: Blueprint, from: number, to: number): Blueprint
 
 // Arrows
 
-export function updateLink(doc: Blueprint, linkId: Id, patch: Partial<Pick<Link, 'label' | 'style' | 'color'>>): Blueprint {
-  return { ...doc, links: doc.links.map((l) => (l.id === linkId ? { ...l, ...patch } : l)) };
+export function updateLink(doc: Blueprint, linkId: Id, patch: Partial<Pick<Link, 'label' | 'style' | 'color' | 'fromSide' | 'toSide'>>): Blueprint {
+  return {
+    ...doc,
+    links: doc.links.map((l) => {
+      if (l.id !== linkId) return l;
+      const next = { ...l, ...patch };
+      // A side set back to automatic is left out of the file.
+      if (!next.fromSide) delete next.fromSide;
+      if (!next.toSide) delete next.toSide;
+      return next;
+    }),
+  };
 }
 
 // Separators

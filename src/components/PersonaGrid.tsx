@@ -13,7 +13,8 @@ import { sheetFor, sheetIdentity } from '../model/project';
 import { personaLinks } from '../model/links';
 import { cls } from './cls';
 import { GAP, ROW_GAP } from './layout';
-import { midpoint, roundedPath, routeArrow, type Rect } from '../lib/arrows';
+import { midpoint, roundedPath, type Rect } from '../lib/arrows';
+import { routeMap } from '../lib/mapRoute';
 import { startDrag, useDropTarget } from './dnd';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
@@ -501,13 +502,24 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
       const cards = new Map<string, HTMLElement>();
       container.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => cards.set(el.dataset.act!, el));
       const next: Drawn[] = [];
-      links.forEach((l, i) => {
+      // Routes are planned on the grid cells: two alternative cards share one.
+      const cellOf = (el: HTMLElement) => rectWithin(el.closest<HTMLElement>('.cell') ?? el, container);
+      const rowCells = Array.from(container.querySelectorAll<HTMLElement>('.persona-row')).map((row) => Array.from(row.querySelectorAll<HTMLElement>('.cell')).map((el) => rectWithin(el, container)));
+      const routes = routeMap(links, {
+        cards: Array.from(cards, ([id, el]) => ({ id, box: rectWithin(el, container), cell: cellOf(el) })),
+        // The word between two alternatives, and the empty cells with their + button.
+        obstacles: [...container.querySelectorAll<HTMLElement>('.alt-or'), ...Array.from(container.querySelectorAll<HTMLElement>('.persona-row .cell')).filter((el) => !el.querySelector('[data-act]'))].map((el) => rectWithin(el, container)),
+        columns: (rowCells[0] ?? []).map((r) => ({ x: r.x, w: r.w })),
+        rows: rowCells.filter((r) => r.length).map((r) => ({ y: r[0].y, h: r[0].h })),
+        gaps: { col: GAP, row: ROW_GAP },
+        width: container.offsetWidth,
+        height: container.offsetHeight,
+      });
+      links.forEach((l) => {
         const a = cards.get(l.from);
         const b = cards.get(l.to);
-        if (!a || !b) return;
-        // Routes are planned on the grid cells: two alternative cards share one.
-        const cellOf = (el: HTMLElement) => rectWithin(el.closest<HTMLElement>('.cell') ?? el, container);
-        const points = routeArrow(rectWithin(a, container), rectWithin(b, container), { col: GAP, row: ROW_GAP }, i, cellOf(a), cellOf(b));
+        const points = routes.get(l.id);
+        if (!a || !b || !points) return;
         next.push({
           id: l.id,
           from: l.from,
