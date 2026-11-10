@@ -4,6 +4,8 @@
 use tauri::menu::{Menu, MenuItem, MenuItemKind};
 use tauri::{AppHandle, Manager, Runtime};
 
+mod safe_save;
+
 const QUIT_MENU_ID: &str = "quit";
 
 /// On macOS, Cmd+Q terminates the app without asking the window first, so
@@ -31,12 +33,19 @@ fn quit_through_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Saves a project file safely: see `safe_save`.
+#[tauri::command]
+async fn save_project_file(path: String, contents: String) -> Result<(), String> {
+    safe_save::save_atomic(std::path::Path::new(&path), contents.as_bytes()).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![save_project_file])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
