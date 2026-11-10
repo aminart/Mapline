@@ -27,6 +27,7 @@ import { removeLink } from './model/ops';
 import { removeFlowLink } from './model/flow';
 import { findDoc } from './model/project';
 import { cls } from './components/cls';
+import { installCardClipboard } from './cardClipboard';
 
 /** Clears the selection and leaves the field being edited. */
 function deselect() {
@@ -159,6 +160,8 @@ export function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  useEffect(() => installCardClipboard(), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -213,7 +213,7 @@ function ActivityCell(props: { personaId: Id; personaColor: number; stepId: Id; 
   };
 
   return (
-    <div className={cls('cell', drop.over && 'is-drop-target', alts.length > 0 && 'has-alt', alts.length > 1 && 'has-alts')} data-step={stepId} {...drop.props}>
+    <div className={cls('cell', drop.over && 'is-drop-target', alts.length > 0 && 'has-alt', alts.length > 1 && 'has-alts')} data-step={stepId} data-persona={personaId} data-slot={slotId} {...drop.props}>
       {act ? (
         <>
           <ActivityCard {...props} activityKey={key} activityId={act.id} choice={act.kind === 'choice'} text={act.text} tags={act.tags ?? []} note={act.note ?? ''} noteResolved={Boolean(act.noteResolved)} canAddAlt={alts.length === 0} />
