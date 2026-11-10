@@ -29,15 +29,51 @@ describe('flow templates', () => {
 });
 
 describe('adding cards', () => {
-  it('adds to the right, moving the rest of the flow along when the cell is taken', () => {
-    const flow = fo.templateFlow('blank', labels);
+  it('adds to the right, moving an unrelated card along when the cell is taken', () => {
+    let flow = fo.templateFlow('blank', labels);
     const [start, end] = flow.nodes;
+    flow = { ...flow, links: [] };
     const r = fo.addNode(flow, start.id, 'right');
     expect(at(r.flow, r.nodeId)).toEqual([1, 0]);
     expect(at(r.flow, end.id)).toEqual([2, 0]);
-    expect(r.flow.links.some((l) => l.from === start.id && l.to === r.nodeId)).toBe(true);
-    // The end was next after the start: the new card goes in between.
-    expect(r.flow.links.map((l) => [l.from, l.to])).toEqual([[start.id, r.nodeId], [r.nodeId, end.id]]);
+    expect(r.flow.links.map((l) => [l.from, l.to])).toEqual([[start.id, r.nodeId]]);
+  });
+
+  it('adds a branch under the next card, keeping the arrow to it', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    let r = fo.addNode(flow, start.id, 'right');
+    // The end already follows the start: the new card starts a second branch, below.
+    expect(at(r.flow, end.id)).toEqual([1, 0]);
+    expect(at(r.flow, r.nodeId)).toEqual([1, 1]);
+    expect(r.flow.links.map((l) => [l.from, l.to])).toEqual([[start.id, end.id], [start.id, r.nodeId]]);
+    // A third branch goes under the second one.
+    const second = r.nodeId;
+    r = fo.addNode(r.flow, start.id, 'right');
+    expect(at(r.flow, second)).toEqual([1, 1]);
+    expect(at(r.flow, r.nodeId)).toEqual([1, 2]);
+    expect(r.flow.links.filter((l) => l.from === start.id)).toHaveLength(3);
+  });
+
+  it('inserts a row for a branch when the cell below holds an unrelated card', () => {
+    let flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    const other = fo.addNode(flow, end.id, 'down');
+    flow = other.flow;
+    const r = fo.addNode(flow, start.id, 'right');
+    expect(at(r.flow, r.nodeId)).toEqual([1, 1]);
+    expect(at(r.flow, other.nodeId)).toEqual([1, 2]);
+    expect(at(r.flow, start.id)).toEqual([0, 0]);
+  });
+
+  it('adds a branch beside the next card below', () => {
+    let flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    flow = fo.moveNode(flow, end.id, 0, 1);
+    const r = fo.addNode(flow, start.id, 'down');
+    expect(at(r.flow, end.id)).toEqual([0, 1]);
+    expect(at(r.flow, r.nodeId)).toEqual([1, 1]);
+    expect(r.flow.links.filter((l) => l.from === start.id)).toHaveLength(2);
   });
 
   it('branches off when the cell beside is free or holds an unrelated card', () => {
@@ -67,10 +103,10 @@ describe('adding cards', () => {
     expect(at(r.flow, r.nodeId)).toEqual([0, 1]);
     expect(at(r.flow, start.id)).toEqual([1, 1]);
     expect(fo.findNode(r.flow, r.nodeId!)!.kind).toBe('choice');
-    // Below the end again: taken, so a row is inserted under the end.
+    // Below the end again: the card there already follows the end, so the new one branches beside it.
     r = fo.addNode(r.flow, end.id, 'down');
-    expect(at(r.flow, r.nodeId)).toEqual([2, 2]);
-    expect(at(r.flow, below)).toEqual([2, 3]);
+    expect(at(r.flow, r.nodeId)).toEqual([3, 2]);
+    expect(at(r.flow, below)).toEqual([2, 2]);
   });
 
   it('puts a card on an arrow, keeping the label on the first half', () => {
