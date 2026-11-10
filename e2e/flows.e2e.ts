@@ -206,6 +206,23 @@ test('adds tags and a note on a flow card, as on map activities', async ({ page 
   await expect(page.locator('.tag-list li')).toHaveCount(1);
 });
 
+test('changes a card border and its top line, as on map cards', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const card = cards(page).nth(1);
+  await texts(page).nth(1).click();
+  const bar = page.getByRole('toolbar');
+  const css = (prop: string) => card.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+  await bar.getByRole('button', { name: 'Bordure #C2410C' }).click();
+  expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
+  // The border colours the top line too, until it gets its own.
+  expect(await css('border-top-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Trait du haut #0F766E' }).click();
+  expect(await css('border-top-color')).toBe('rgb(15, 118, 110)');
+  expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Réinitialiser' }).click();
+  expect(await css('border-top-color')).toBe('rgb(47, 85, 212)');
+});
+
 test('shows every text of a flow in full, start and end pills widening with theirs', async ({ page }) => {
   await startFlow(page, 'Flow utilisateur');
   const start = await card(page, 'Début');

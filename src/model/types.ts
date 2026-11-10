@@ -89,6 +89,8 @@ export interface BoxStyle {
   font?: FontId;
   size?: number;
   weight?: number;
+  /** Flow cards: the line along the top edge; the border's, else the persona's colour, when unset. */
+  top?: string;
 }
 
 /** The content of a mission map (one of a project's documents). */

@@ -27,6 +27,7 @@ export function useBox<T extends HTMLElement>(key: BoxKey, kind: BoxKind, person
   return {
     ref,
     style,
+    custom,
     hasCustomBorder: custom?.bc !== undefined,
     hasCustomFill: custom?.bg !== undefined,
     selected,

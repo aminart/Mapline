@@ -4,7 +4,7 @@
 import { activeFlow, useStore, useT } from '../store';
 import * as fo from '../model/flow';
 import { findDoc, projectPersonas, renameDoc } from '../model/project';
-import { FILL_SWATCHES, LINK_COLORS } from '../model/theme';
+import { BORDER_SWATCHES, FILL_SWATCHES, LINK_COLORS, flowCardTop, personaAccent, resolveStyle } from '../model/theme';
 import type { Flow, LinkStyle } from '../model/types';
 import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
@@ -78,6 +78,11 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
   const personas = projectPersonas(project);
   const mainName = personas.find((p) => p.persona.id === flow.personaId)?.persona.name;
   const editable = node.kind === 'activity' || node.kind === 'choice';
+  // As on the card: its persona's colour, else the flow's main persona's.
+  const persona = personas.find((p) => p.persona.id === (node.personaId ?? flow.personaId));
+  const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
+  const cur = resolveStyle('node', custom);
+  const set = (patch: Flow['styles'][string], live?: boolean) => applyFlow((f) => fo.setNodeStyle(f, id, patch), live ? { coalesce: `style:node:${id}` } : undefined);
   return (
     <div className="style-controls">
       <span className="badge">{t(`flow.kind.${node.kind}`)}</span>
@@ -110,7 +115,11 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
         </label>
       )}
       {editable && (
-        <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={custom?.bg ?? '#FFFFFF'} variant="fill" onPick={(bg, live) => applyFlow((f) => fo.setNodeStyle(f, id, { bg }), live ? { coalesce: `style:node:${id}` } : undefined)} />
+        <>
+          <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={cur.bg} variant="fill" onPick={(bg, live) => set({ bg }, live)} />
+          <Swatches label={t('tool.border')} list={BORDER_SWATCHES} value={cur.bc} variant="border" onPick={(bc, live) => set({ bc }, live)} />
+          <Swatches label={t('flow.topLine')} list={[accent, ...BORDER_SWATCHES.filter((c) => c !== accent && c !== BORDER_SWATCHES[0])]} value={flowCardTop(custom, accent)} variant="fill" onPick={(top, live) => set({ top: top === accent && !custom?.bc ? undefined : top }, live)} />
+        </>
       )}
       {custom && (
         <button className="text-btn" onClick={() => applyFlow((f) => fo.resetNodeStyle(f, id))}>
