@@ -544,3 +544,27 @@ test('reframes the image of a storyboard scene: drag to move, wheel to zoom', as
   await page.keyboard.press('Escape');
   await expect(frame).not.toHaveClass(/is-reframing/);
 });
+
+test('moves a phase with its steps and activities', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await startProject(page);
+  const phases = page.locator('.phase');
+  const phaseNames = phases.getByRole('textbox', { name: 'Nom de la phase' });
+  const stepNames = page.locator('.step').getByRole('textbox', { name: 'Nom de l’étape' });
+  const count = await phases.count();
+  expect(count).toBeGreaterThan(1);
+  for (let k = 0; k < count; k++) await phaseNames.nth(k).fill(`Ph${k + 1}`);
+  const nSteps = await stepNames.count();
+  for (let i = 0; i < nSteps; i++) await stepNames.nth(i).fill(`E${i + 1}`);
+  await addActivity(page, 0, 0, 'Première activité');
+  // The first phase dropped on the second one: it moves after it, its steps with it.
+  await dragTo(page, phases.first().locator('.grip-phase'), phases.nth(1));
+  await expect(phaseNames.nth(0)).toHaveValue('Ph2');
+  await expect(phaseNames.nth(1)).toHaveValue('Ph1');
+  const order = await stepNames.evaluateAll((els) => els.map((e) => (e as HTMLTextAreaElement).value));
+  expect(order.indexOf('E1')).toBeGreaterThan(0);
+  // The activity of the first step went along: it sits under E1 wherever E1 is now.
+  await expect(cell(page, 0, order.indexOf('E1')).locator('textarea').first()).toHaveValue('Première activité');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(phaseNames.nth(0)).toHaveValue('Ph1');
+});

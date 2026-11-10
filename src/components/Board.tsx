@@ -129,8 +129,16 @@ function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: bo
   const { phase, index, span, isLast, canRemove, onInsertBefore } = props;
   const apply = useStore((s) => s.apply);
   const b = useBox<HTMLTextAreaElement>(`phase:${phase.id}`, 'phase');
+  const boxRef = useRef<HTMLDivElement>(null);
+  const drop = useDropTarget('phase', (d) => apply((doc) => ops.movePhase(doc, d.index, index)));
   return (
-    <div className={cls('box phase', b.selected && 'is-selected')} style={{ ...b.box, gridColumn: `span ${span}` }}>
+    <div
+      ref={boxRef}
+      className={cls('box phase', b.selected && 'is-selected', drop.over && 'is-drop-target')}
+      style={{ ...b.box, gridColumn: `span ${span}` }}
+      data-phase={phase.id}
+      {...drop.props}
+    >
       <button className="insert-btn insert-btn-sm no-export" title={t('board.insertPhase')} aria-label={t('board.insertPhase')} onClick={onInsertBefore}>
         <PlusIcon size={14} />
       </button>
@@ -149,6 +157,16 @@ function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: bo
       />
       <FlowLinks kind="phase" id={phase.id} />
       <div className="box-actions no-export" style={{ color: b.style.color }}>
+        {canRemove && (
+          <span
+            className="grip grip-phase"
+            title={t('board.dragPhase')}
+            aria-hidden="true"
+            onPointerDown={(e) => startDrag(e, { kind: 'phase', index }, boxRef.current)}
+          >
+            <GripIcon size={12} />
+          </span>
+        )}
         {!isLast && (
           <>
             <button className="icon-btn" title={t('board.phaseShrink')} aria-label={t('board.phaseShrink')} onClick={() => apply((d) => ops.movePhaseEdge(d, index, -1))}>

@@ -42,6 +42,7 @@ body.is-dragging {
 }
 .grip-card:hover,
 .grip-persona:hover,
+.grip-phase:hover,
 .grip-step:hover {
   color: var(--ink-2);
   background: rgba(20, 24, 32, 0.06);
@@ -56,6 +57,17 @@ body.is-dragging {
   transition: opacity 0.15s;
 }
 .step:hover .grip-step {
+  opacity: 1;
+}
+.grip-phase {
+  width: 18px;
+  height: 22px;
+  color: inherit;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.phase:hover .grip-phase {
   opacity: 1;
 }
 .grip-persona {

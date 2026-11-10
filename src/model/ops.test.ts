@@ -180,6 +180,29 @@ describe('drag and drop', () => {
     expect(people.dividers[0].after).toBe(people.personas[1].id);
     expect(ops.moveStep(doc, 0, 9)).toBe(doc);
   });
+
+  it('moves a phase with its steps, activities and scenes', () => {
+    let doc = exampleBlueprint();
+    doc = ops.setScene(doc, doc.steps[4].id, { text: 'Scène' });
+    const ids = doc.steps.map((s) => s.id);
+    const phaseIds = doc.phases.map((p) => p.id);
+    const before = spans(doc);
+    // The last phase goes first, then back.
+    const moved = ops.movePhase(doc, doc.phases.length - 1, 0);
+    expect(moved.phases.map((p) => p.id)).toEqual([phaseIds[phaseIds.length - 1], ...phaseIds.slice(0, -1)]);
+    expect(spans(moved)).toEqual([before[before.length - 1], ...before.slice(0, -1)]);
+    const lastSpan = before[before.length - 1];
+    expect(moved.steps.map((s) => s.id)).toEqual([...ids.slice(ids.length - lastSpan), ...ids.slice(0, ids.length - lastSpan)]);
+    // Activities, arrows and scenes hang on the steps: they come along untouched.
+    expect(moved.activities).toBe(doc.activities);
+    expect(moved.links).toBe(doc.links);
+    expect(moved.scenes).toBe(doc.scenes);
+    expect(ops.movePhase(moved, 0, doc.phases.length - 1).steps.map((s) => s.id)).toEqual(ids);
+    // A three-step phase moved to the end keeps its steps in order.
+    expect(ops.movePhase(doc, 0, 2).steps.map((s) => s.id)).toEqual([ids[3], ids[4], ids[0], ids[1], ids[2]]);
+    expect(ops.movePhase(doc, 0, 0)).toBe(doc);
+    expect(ops.movePhase(doc, 0, 9)).toBe(doc);
+  });
 });
 
 describe('separators', () => {
