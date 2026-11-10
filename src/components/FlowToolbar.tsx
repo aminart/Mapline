@@ -78,15 +78,32 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
   const personas = projectPersonas(project);
   const mainName = personas.find((p) => p.persona.id === flow.personaId)?.persona.name;
   const editable = node.kind === 'activity' || node.kind === 'choice';
+  const terminal = !editable;
+  // Activity, choice, or a start/end box: the latter turns into a start or an
+  // end depending on where it sits, then can be switched between the two.
+  const setKind = (k: 'activity' | 'choice' | 'terminal') =>
+    applyFlow((f) => fo.setNodeKind(f, id, k === 'terminal' ? fo.terminalKind(f, id) : k));
   return (
     <div className="style-controls">
       <span className="badge">{t(`flow.kind.${node.kind}`)}</span>
-      {editable && (
-        <div className="swatches" role="group" aria-label={t('flow.kind')}>
-          <span className="swatches-label">{t('flow.kind')}</span>
+      <div className="swatches" role="group" aria-label={t('flow.kind')}>
+        <span className="swatches-label">{t('flow.kind')}</span>
+        <div className="segmented segmented-sm">
+          {(['activity', 'choice', 'terminal'] as const).map((k) => {
+            const on = k === 'terminal' ? terminal : node.kind === k;
+            return (
+              <button key={k} className={cls(on && 'is-on')} aria-pressed={on} onClick={() => !on && setKind(k)}>
+                {t(`flow.kind.${k}`)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {terminal && (
+        <div className="swatches" role="group" aria-label={t('flow.terminal')}>
           <div className="segmented segmented-sm">
-            {(['activity', 'choice'] as const).map((k) => (
-              <button key={k} className={cls(node.kind === k && 'is-on')} aria-pressed={node.kind === k} onClick={() => applyFlow((f) => fo.setNode(f, id, { kind: k }))}>
+            {(['start', 'end'] as const).map((k) => (
+              <button key={k} className={cls(node.kind === k && 'is-on')} aria-pressed={node.kind === k} onClick={() => applyFlow((f) => fo.setNodeKind(f, id, k))}>
                 {t(`flow.kind.${k}`)}
               </button>
             ))}

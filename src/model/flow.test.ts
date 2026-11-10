@@ -292,3 +292,36 @@ describe('start and end pills that grow with their text', () => {
     expect(box.y + box.h / 2).toBe(cell.y + cell.h / 2);
   });
 });
+
+describe('putting back a start or an end', () => {
+  it('turns a card into an end once arrows reach it, and into a start otherwise', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    const noEnd = fo.removeNode(flow, end.id);
+    const r = fo.addNode(noEnd, start.id, 'right');
+    expect(fo.terminalKind(r.flow, r.nodeId!)).toBe('end');
+    const back = fo.setNodeKind(r.flow, r.nodeId!, fo.terminalKind(r.flow, r.nodeId!));
+    expect(fo.findNode(back, r.nodeId!)!.kind).toBe('end');
+    const lone = fo.addNode(noEnd, start.id, 'down');
+    const unlinked = { ...lone.flow, links: lone.flow.links.filter((l) => l.to !== lone.nodeId) };
+    expect(fo.terminalKind(unlinked, lone.nodeId!)).toBe('start');
+  });
+
+  it('turns arrows around when a card added on the left becomes the start', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    const noStart = fo.removeNode(flow, start.id);
+    const r = fo.addNode(noStart, end.id, 'left');
+    const next = fo.setNodeKind(r.flow, r.nodeId!, 'start');
+    expect(fo.findNode(next, r.nodeId!)!.kind).toBe('start');
+    expect(next.links.map((l) => [l.from, l.to])).toEqual([[r.nodeId, end.id]]);
+  });
+
+  it('leaves arrows alone when the new start already leads somewhere', () => {
+    const flow = fo.templateFlow('user', labels);
+    const act = flow.nodes.find((n) => n.kind === 'activity')!;
+    const next = fo.setNodeKind(flow, act.id, 'start');
+    expect(next.links).toEqual(flow.links);
+    expect(fo.setNodeKind(next, act.id, 'activity').nodes.find((n) => n.id === act.id)!.kind).toBe('activity');
+  });
+});
