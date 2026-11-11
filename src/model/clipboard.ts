@@ -77,12 +77,14 @@ function asActivity(clip: CardClip, id: Id): Activity {
 function asNode(clip: CardClip, id: Id, col: number, row: number, known: (personaId: Id) => boolean): FlowNode {
   if (clip.from === 'flow') {
     const node: FlowNode = { ...clone(clip.card), id, col, row };
-    if (node.personaId && !known(node.personaId)) delete node.personaId;
+    const kept = node.personaIds?.filter(known);
+    if (kept?.length) node.personaIds = kept;
+    else delete node.personaIds;
     return node;
   }
   const c = clip.card;
   const node: FlowNode = { id, kind: c.kind === 'choice' ? 'choice' : 'activity', col, row, text: c.text };
-  if (known(clip.personaId)) node.personaId = clip.personaId;
+  if (known(clip.personaId)) node.personaIds = [clip.personaId];
   if (c.tags?.length) node.tags = [...c.tags];
   if (c.note) node.note = c.note;
   if (c.noteResolved) node.noteResolved = true;

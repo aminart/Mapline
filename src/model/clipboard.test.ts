@@ -97,9 +97,10 @@ describe('copying and pasting cards in a flow', () => {
     const { doc, key } = map();
     const flow = fo.templateFlow('blank', labels);
     const toFlow = pasteInFlow(flow, clipFromMap(doc, key)!, flow.nodes[0].id, (id) => id === 'p');
-    expect(fo.findNode(toFlow.flow, toFlow.nodeId!)).toMatchObject({ kind: 'choice', text: 'Remplit le formulaire', personaId: 'p', tags: ['Irritant'], note: 'Trop long' });
+    expect(fo.findNode(toFlow.flow, toFlow.nodeId!)).toMatchObject({ kind: 'choice', text: 'Remplit le formulaire', tags: ['Irritant'], note: 'Trop long' });
+    expect(fo.findNode(toFlow.flow, toFlow.nodeId!)!.personaIds).toEqual(['p']);
     const unknown = pasteInFlow(flow, clipFromMap(doc, key)!, null, () => false);
-    expect(fo.findNode(unknown.flow, unknown.nodeId!)!.personaId).toBeUndefined();
+    expect(fo.findNode(unknown.flow, unknown.nodeId!)!.personaIds).toBeUndefined();
     const toMap = pasteOnMap(doc, clipFromFlow(flow, flow.nodes[0].id)!, key);
     expect(toMap.doc.activities[ops.activityKeyOf(toMap.doc, toMap.activityId!)!]).toEqual({ id: toMap.activityId, text: 'Début' });
   });
