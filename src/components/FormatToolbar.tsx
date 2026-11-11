@@ -3,44 +3,26 @@
 
 import { activeMap, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
-import type { BoxKind, FontId, LinkStyle } from '../model/types';
-import { BORDER_SWATCHES, FILL_SWATCHES, FONTS, LINK_COLORS, SIZES, TAG_PALETTE, TEXT_SWATCHES, resolveStyle, tagColor } from '../model/theme';
+import type { BoxKind } from '../model/types';
+import { BORDER_SWATCHES, FILL_SWATCHES, TAG_PALETTE, TEXT_SWATCHES, resolveStyle, tagColor } from '../model/theme';
 import { useEffect, useRef } from 'react';
-import { CloseIcon, CursorIcon, LinkIcon, TagIcon } from './Icons';
+import { CloseIcon, TagIcon } from './Icons';
 import { cls } from './cls';
 import { TargetButton } from './StateBar';
-import { LinkSides } from './LinkSides';
+import { ArrowControls, ColorMenu, KindMenu, ResetButton, StoryboardToggle, TextStyleControls, ToolModes } from './ToolControls';
 
 export function FormatToolbar() {
   const t = useT();
   const storyboard = useMap((m) => m.storyboard);
   const apply = useStore((s) => s.apply);
   const tool = useStore((s) => s.tool);
-  const setTool = useStore((s) => s.setTool);
   const linkFrom = useStore((s) => s.linkFrom);
   const selIsLink = useStore((s) => !!s.sel?.startsWith('link:'));
 
   return (
-    <div className="toolbar" role="toolbar" aria-label={t('tool.label')}>
-      <div className="segmented">
-        <button className={cls(tool === 'select' && 'is-on')} aria-pressed={tool === 'select'} onClick={() => setTool('select')}>
-          <CursorIcon /> {t('tool.select')}
-        </button>
-        <button className={cls(tool === 'link' && 'is-on')} aria-pressed={tool === 'link'} onClick={() => setTool('link')}>
-          <LinkIcon /> {t('tool.link')}
-        </button>
-      </div>
-      <label className="toggle toggle-inline">
-        <input
-          type="checkbox"
-          checked={storyboard}
-          onChange={(e) => {
-            const on = e.target.checked;
-            apply((d) => ({ ...d, storyboard: on }));
-          }}
-        />
-        <span>{t('tool.storyboard')}</span>
-      </label>
+    <div className="toolbar toolbar-compact" role="toolbar" aria-label={t('tool.label')}>
+      <ToolModes />
+      <StoryboardToggle on={storyboard} set={(on) => apply((d) => ({ ...d, storyboard: on }))} />
       <MapTagManager />
       <div className="divider" />
       {tool === 'link' && !selIsLink ? (
@@ -64,56 +46,16 @@ function LinkControls() {
   const apply = useStore((s) => s.apply);
   const select = useStore((s) => s.select);
   if (!link) return <span className="hint">{t('tool.noSelection')}</span>;
-  const style = link.style ?? 'solid';
-  const color = link.color ?? LINK_COLORS[0];
-  const styles: LinkStyle[] = ['solid', 'dashed', 'dotted'];
   return (
-    <div className="style-controls">
-      <span className="badge">{t('kind.link')}</span>
-      <label className="field">
-        {t('link.label')}
-        <input
-          className="text-field"
-          value={link.label ?? ''}
-          placeholder={t('link.labelPlaceholder')}
-          maxLength={40}
-          onChange={(e) => {
-            const v = e.target.value;
-            apply((d) => ops.updateLink(d, id, { label: v }), { coalesce: `link-label:${id}` });
-          }}
-        />
-      </label>
-      <div className="swatches" role="group" aria-label={t('link.style')}>
-        <span className="swatches-label">{t('link.style')}</span>
-        <div className="segmented segmented-sm">
-          {styles.map((st) => (
-            <button key={st} className={cls(style === st && 'is-on')} aria-pressed={style === st} onClick={() => apply((d) => ops.updateLink(d, id, { style: st }))}>
-              <svg width="22" height="8" aria-hidden="true">
-                <line x1="1" y1="4" x2="21" y2="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={st === 'dashed' ? '5 3' : st === 'dotted' ? '0.5 4' : undefined} />
-              </svg>
-              {t(`link.${st}`)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <Swatches
-        label={t('link.color')}
-        list={LINK_COLORS}
-        value={color}
-        variant="fill"
-        onPick={(hex, live) => apply((d) => ops.updateLink(d, id, { color: hex }), live ? { coalesce: `link-color:${id}` } : undefined)}
-      />
-      <LinkSides link={link} onPick={(end, side) => apply((d) => ops.updateLink(d, id, { [end]: side }))} />
-      <button
-        className="text-btn"
-        onClick={() => {
-          apply((d) => ops.removeLink(d, id));
-          select(null);
-        }}
-      >
-        {t('link.delete')}
-      </button>
-    </div>
+    <ArrowControls
+      link={link}
+      setLabel={(v) => apply((d) => ops.updateLink(d, id, { label: v }), { coalesce: `link-label:${id}` })}
+      update={(patch, live) => apply((d) => ops.updateLink(d, id, patch), live ? { coalesce: `link-style:${id}` } : undefined)}
+      remove={() => {
+        apply((d) => ops.removeLink(d, id));
+        select(null);
+      }}
+    />
   );
 }
 
@@ -156,8 +98,8 @@ export function TagManager(props: {
   return (
     <>
       <details className="popover" ref={ref}>
-        <summary className={cls('btn btn-sm', active.length > 0 && 'is-on')}>
-          <TagIcon /> {t('tags.button')}
+        <summary className={cls('btn btn-sm tags-summary', active.length > 0 && 'is-on')} title={t('tags.button')}>
+          <TagIcon /> <span className="tags-summary-label">{t('tags.button')}</span>
           {tags.length > 0 && <span className="count-pill">{tags.length}</span>}
         </summary>
         <div className="popover-panel tag-panel">
@@ -247,84 +189,22 @@ function StyleControls() {
     apply((d) => ops.setBoxStyle(d, sel, patch), live ? { coalesce: `style:${sel}` } : undefined);
 
   return (
-    <div className="style-controls">
-      <span className="badge">{t(cardKind === 'choice' ? 'flow.kind.choice' : `kind.${kind}`)}</span>
+    <div className="tool-group">
+      <span className="tool-kind">{t(cardKind === 'choice' ? 'flow.kind.choice' : `kind.${kind}`)}</span>
       {cardKey && cardKind && (
-        <div className="swatches" role="group" aria-label={t('tool.cardKind')}>
-          <span className="swatches-label">{t('tool.cardKind')}</span>
-          <div className="segmented segmented-sm">
-            {(['activity', 'choice'] as const).map((k) => (
-              <button key={k} className={cls(cardKind === k && 'is-on')} aria-pressed={cardKind === k} onClick={() => apply((d) => ops.setActivityKind(d, cardKey, k))}>
-                {t(`flow.kind.${k}`)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <KindMenu
+          value={cardKind}
+          options={(['activity', 'choice'] as const).map((k) => ({ key: k, label: t(`flow.kind.${k}`) }))}
+          onPick={(k) => apply((d) => ops.setActivityKind(d, cardKey, k))}
+        />
       )}
-      <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={cur.bg} onPick={(bg, live) => set({ bg }, live)} variant="fill" />
-      <Swatches label={t('tool.border')} list={BORDER_SWATCHES} value={cur.bc} onPick={(bc, live) => set({ bc }, live)} variant="border" />
-      <Swatches label={t('tool.text')} list={TEXT_SWATCHES} value={cur.color} onPick={(color, live) => set({ color }, live)} variant="text" />
-      <label className="field">
-        {t('tool.font')}
-        <select value={cur.font} onChange={(e) => set({ font: e.target.value as FontId })}>
-          {(Object.keys(FONTS) as FontId[]).map((f) => (
-            <option key={f} value={f}>
-              {t(`font.${f}`)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field">
-        {t('tool.size')}
-        <select value={cur.size} onChange={(e) => set({ size: Number(e.target.value) })}>
-          {(SIZES.includes(cur.size) ? SIZES : [...SIZES, cur.size].sort((a, b) => a - b)).map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        className={cls('square-btn', cur.weight >= 600 && 'is-on')}
-        aria-pressed={cur.weight >= 600}
-        aria-label={t('tool.bold')}
-        onClick={() => set({ weight: cur.weight >= 600 ? 400 : 700 })}
-      >
-        B
-      </button>
-      {custom && (
-        <button className="text-btn" onClick={() => apply((d) => ops.resetBoxStyle(d, sel))}>
-          {t('tool.reset')}
-        </button>
-      )}
-    </div>
-  );
-}
-
-export function Swatches(props: { label: string; list: string[]; value: string; onPick: (hex: string, live?: boolean) => void; variant: 'fill' | 'border' | 'text' }) {
-  const t = useT();
-  const { label, list, value, onPick, variant } = props;
-  const options = list.includes(value) ? list : [...list, value];
-  return (
-    <div className="swatches" role="group" aria-label={label}>
-      <span className="swatches-label">{label}</span>
-      {options.map((hex) => (
-        <button
-          key={hex}
-          className={cls('swatch', `swatch-${variant}`, hex === value && 'is-on')}
-          style={variant === 'fill' ? { background: hex } : variant === 'border' ? { borderColor: hex } : { color: hex }}
-          aria-label={`${label} ${hex}`}
-          aria-pressed={hex === value}
-          title={hex}
-          onClick={() => onPick(hex)}
-        >
-          {variant === 'text' ? 'A' : null}
-        </button>
-      ))}
-      <label className="swatch swatch-custom" title={t('tool.customColor')}>
-        <span aria-hidden="true">+</span>
-        <input type="color" aria-label={`${label} : ${t('tool.customColor')}`} value={value.length === 7 ? value : '#000000'} onChange={(e) => onPick(e.target.value.toUpperCase(), true)} />
-      </label>
+      <div className="divider" />
+      <ColorMenu label={t('tool.fill')} list={FILL_SWATCHES} value={cur.bg} onPick={(bg, live) => set({ bg }, live)} variant="fill" />
+      <ColorMenu label={t('tool.border')} list={BORDER_SWATCHES} value={cur.bc} onPick={(bc, live) => set({ bc }, live)} variant="border" />
+      <ColorMenu label={t('tool.text')} list={TEXT_SWATCHES} value={cur.color} onPick={(color, live) => set({ color }, live)} variant="text" />
+      <div className="divider" />
+      <TextStyleControls cur={cur} set={(patch) => set(patch)} />
+      {custom && <ResetButton onClick={() => apply((d) => ops.resetBoxStyle(d, sel))} />}
     </div>
   );
 }

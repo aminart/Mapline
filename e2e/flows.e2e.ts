@@ -143,6 +143,7 @@ test('chooses the sides an arrow leaves and enters by, then back to automatic', 
   const straight = await line.getAttribute('d');
   await page.locator('.flow .link-hit').first().dispatchEvent('click');
   const toolbar = page.getByRole('toolbar');
+  await toolbar.getByRole('button', { name: 'Côtés' }).click();
   await toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' }).click();
   await toolbar.getByRole('group', { name: 'Arrivée' }).getByRole('button', { name: 'Bas' }).click();
   await expect(toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' })).toHaveAttribute('aria-pressed', 'true');
@@ -161,7 +162,11 @@ test('a flow inside a map project, saved and opened again', async ({ page }, inf
   await page.getByRole('button', { name: 'Nouveau flow' }).click();
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   await expect(page.locator('.flow')).toBeVisible();
-  await page.getByRole('toolbar').getByRole('textbox', { name: 'Nom du flow' }).fill('Connexion');
+  // Renamed from its tab: the name is no longer on the toolbar.
+  await page.getByRole('button', { name: /^Renommer Flow/ }).click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('Connexion');
+  await page.keyboard.press('Enter');
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Flow · Connexion']);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
@@ -231,10 +236,12 @@ test('changes a card border and its top line, as on map cards', async ({ page })
   await texts(page).nth(1).click();
   const bar = page.getByRole('toolbar');
   const css = (prop: string) => card.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+  await bar.getByRole('button', { name: 'Bordure', exact: true }).click();
   await bar.getByRole('button', { name: 'Bordure #C2410C' }).click();
   expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
   // The border colours the top line too, until it gets its own.
   expect(await css('border-top-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Trait du haut', exact: true }).click();
   await bar.getByRole('button', { name: 'Trait du haut #0F766E' }).click();
   expect(await css('border-top-color')).toBe('rgb(15, 118, 110)');
   expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
@@ -307,9 +314,12 @@ test('puts back a deleted end box from the card type', async ({ page }) => {
   await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
   await page.keyboard.type('Merci');
   const added = await card(page, 'Merci');
-  await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Début / Fin' }).click();
+  const type = page.getByRole('toolbar').getByRole('button', { name: 'Type' });
+  await type.click();
+  await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Fin' }).click();
   await expect(added).toHaveClass(/flow-end/);
-  await expect(page.getByRole('group', { name: 'Début ou fin du flow' }).getByRole('button', { name: 'Fin' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(type).toHaveText('Fin');
+  await type.click();
   await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Activité' }).click();
   await expect(added).toHaveClass(/flow-activity/);
 });

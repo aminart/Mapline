@@ -105,6 +105,7 @@ test('chooses the sides a map arrow leaves and enters by, then back to automatic
   const straight = await line.getAttribute('d');
   await page.locator('svg.links .link-hit').first().dispatchEvent('click');
   const toolbar = page.getByRole('toolbar');
+  await toolbar.getByRole('button', { name: 'Côtés' }).click();
   await toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' }).click();
   await toolbar.getByRole('group', { name: 'Arrivée' }).getByRole('button', { name: 'Bas' }).click();
   await expect(toolbar.getByRole('group', { name: 'Départ' }).getByRole('button', { name: 'Bas' })).toHaveAttribute('aria-pressed', 'true');
@@ -259,6 +260,7 @@ test('adds a choice card in a map and turns it into an activity', async ({ page 
   const card = cell(page, 0, 1).locator('.card');
   await expect(card).toHaveClass(/card-choice/);
   await expect(card.locator('.choice-tag')).toHaveText('Choix');
+  await page.getByRole('toolbar').getByRole('button', { name: 'Type' }).click();
   const kind = page.getByRole('group', { name: 'Type' });
   await expect(kind.getByRole('button', { name: 'Choix' })).toHaveAttribute('aria-pressed', 'true');
   await kind.getByRole('button', { name: 'Activité' }).click();
@@ -352,7 +354,7 @@ test('exports a PNG with nothing behind its rounded corners, and a PDF on A4 by 
 test('shows every text of the map in full: phases, steps, personas and rows grow with it', async ({ page }) => {
   await startProject(page);
   const tools = page.getByRole('toolbar', { name: 'Outils et mise en forme' });
-  await tools.getByText('Storyboard', { exact: true }).click();
+  await tools.getByRole('button', { name: 'Storyboard' }).click();
   await page.getByRole('button', { name: 'Ligne de texte libre' }).click();
   await page.getByRole('button', { name: 'Ligne de texte libre' }).click();
   await addActivity(page, 0, 0, 'Une activité');
@@ -522,7 +524,7 @@ test('stacks more than two cards under a step', async ({ page }) => {
 
 test('reframes the image of a storyboard scene: drag to move, wheel to zoom', async ({ page }) => {
   await startProject(page);
-  await page.getByRole('toolbar', { name: 'Outils et mise en forme' }).getByText('Storyboard', { exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Outils et mise en forme' }).getByRole('button', { name: 'Storyboard' }).click();
   // A wide picture, so it can move sideways inside its block.
   const png = await page.evaluate(() => {
     const c = document.createElement('canvas');

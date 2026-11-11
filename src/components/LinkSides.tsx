@@ -7,7 +7,7 @@ import type { LinkSide } from '../model/types';
 import { cls } from './cls';
 
 /** A card with one side drawn bold: the side an arrow leaves or enters by. */
-function SideIcon({ side }: { side: LinkSide }) {
+export function SideIcon({ side }: { side: LinkSide }) {
   const edge = { top: 'M3 3h10', right: 'M13 3v10', bottom: 'M3 13h10', left: 'M3 3v10' }[side];
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">

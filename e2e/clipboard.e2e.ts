@@ -14,6 +14,7 @@ const flowTexts = (page: Page) =>
 test('copies, pastes and duplicates a map card with the keyboard', async ({ page }) => {
   await startProject(page);
   await addActivity(page, 0, 0, 'Remplit le formulaire');
+  await page.getByRole('toolbar').getByRole('button', { name: 'Type' }).click();
   await page.getByRole('button', { name: 'Choix', exact: true }).click();
   const key = page.keyboard;
   await page.locator('.persona-row').nth(0).locator('.card > textarea').first().focus();

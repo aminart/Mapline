@@ -7,7 +7,7 @@ import * as so from '../model/sheet';
 import { linkedPersona, setSheetSync, sheetIdentity } from '../model/project';
 import { BLOCK_ACCENTS, FILL_SWATCHES, PERSONA_PALETTE } from '../model/theme';
 import type { BlockView, PersonaSheet } from '../model/types';
-import { Swatches } from './FormatToolbar';
+import { Swatches } from './ToolControls';
 import { MapIcon } from './Icons';
 import { cls } from './cls';
 
