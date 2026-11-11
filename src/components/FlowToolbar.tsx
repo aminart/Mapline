@@ -4,7 +4,7 @@
 import { activeFlow, useStore, useT } from '../store';
 import * as fo from '../model/flow';
 import { findDoc, projectPersonas, renameDoc } from '../model/project';
-import { FILL_SWATCHES, LINK_COLORS, personaAccent } from '../model/theme';
+import { BORDER_SWATCHES, FILL_SWATCHES, LINK_COLORS, flowCardTop, personaAccent, resolveStyle } from '../model/theme';
 import type { Flow, LinkStyle } from '../model/types';
 import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
@@ -79,6 +79,11 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
   const mainName = personas.find((p) => p.persona.id === flow.personaId)?.persona.name;
   const editable = node.kind === 'activity' || node.kind === 'choice';
   const picked = fo.nodePersonas(node);
+  // As on the card: its first persona's colour, else the flow's main persona's.
+  const persona = personas.find((p) => p.persona.id === (picked[0] ?? flow.personaId));
+  const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
+  const cur = resolveStyle('node', custom);
+  const set = (patch: Flow['styles'][string], live?: boolean) => applyFlow((f) => fo.setNodeStyle(f, id, patch), live ? { coalesce: `style:node:${id}` } : undefined);
   return (
     <div className="style-controls">
       <span className="badge">{t(`flow.kind.${node.kind}`)}</span>
