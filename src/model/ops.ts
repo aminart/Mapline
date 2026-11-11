@@ -557,6 +557,23 @@ export function moveStep(doc: Blueprint, from: number, to: number): Blueprint {
 }
 
 /**
+ * Moves a phase with all its steps (and so their activities, scenes and row
+ * cells, which hang on the steps) to another place among the phases. Each
+ * phase keeps its size; the phase lands where phase `to` was.
+ */
+export function movePhase(doc: Blueprint, from: number, to: number): Blueprint {
+  const phases = normalizePhases(doc.phases, doc.steps.length);
+  if (from === to || from < 0 || to < 0 || from >= phases.length || to >= phases.length) return doc;
+  const blocks: Blueprint['steps'][] = [];
+  let start = 0;
+  for (const p of phases) {
+    blocks.push(doc.steps.slice(start, start + p.span));
+    start += p.span;
+  }
+  return { ...doc, phases: moveItem(phases, from, to), steps: moveItem(blocks, from, to).flat() };
+}
+
+/**
  * Moves a persona row. Separators keep their place between rows (the line of
  * visibility stays where it was drawn), whichever personas end up around them.
  */

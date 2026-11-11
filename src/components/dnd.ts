@@ -11,6 +11,7 @@ import { useEffect, useId, useState, type PointerEvent as ReactPointerEvent } fr
 export type Drag =
   | { kind: 'act'; key: string }
   | { kind: 'step'; index: number }
+  | { kind: 'phase'; index: number }
   | { kind: 'persona'; index: number }
   | { kind: 'divider'; id: string }
   /** grabX/grabY: where the block was taken, from its top left corner, in client pixels. */
