@@ -9,6 +9,7 @@ import { useEffect, useRef } from 'react';
 import { CloseIcon, CursorIcon, LinkIcon, TagIcon } from './Icons';
 import { cls } from './cls';
 import { TargetButton } from './StateBar';
+import { LinkSides } from './LinkSides';
 
 export function FormatToolbar() {
   const t = useT();
@@ -102,6 +103,7 @@ function LinkControls() {
         variant="fill"
         onPick={(hex, live) => apply((d) => ops.updateLink(d, id, { color: hex }), live ? { coalesce: `link-color:${id}` } : undefined)}
       />
+      <LinkSides link={link} onPick={(end, side) => apply((d) => ops.updateLink(d, id, { [end]: side }))} />
       <button
         className="text-btn"
         onClick={() => {

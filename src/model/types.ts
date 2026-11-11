@@ -70,6 +70,10 @@ export interface Link {
   label?: string;
   style?: LinkStyle;
   color?: string;
+  /** The side of its card the arrow leaves by; chosen by the route when unset. */
+  fromSide?: LinkSide;
+  /** The side of its card the arrow enters by; chosen by the route when unset. */
+  toSide?: LinkSide;
 }
 
 /** A labelled line drawn under a persona row, e.g. the line of visibility. */

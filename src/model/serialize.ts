@@ -99,7 +99,7 @@ function parseMap(input: unknown): Blueprint {
     })),
     activities: raw.activities ?? {},
     scenes: raw.scenes ?? {},
-    links: Array.isArray(raw.links) ? raw.links : [],
+    links: Array.isArray(raw.links) ? raw.links.map(knownSides) : [],
     dividers: Array.isArray(raw.dividers) ? raw.dividers : [],
     tagColors: raw.tagColors && typeof raw.tagColors === 'object' ? raw.tagColors : {},
     ...textRowsOf(raw),
@@ -198,6 +198,15 @@ const NODE_KINDS: FlowNodeKind[] = ['start', 'end', 'activity', 'choice'];
 const SOURCE_KINDS: FlowSource['kind'][] = ['phase', 'step', 'act'];
 const LINK_STYLES: LinkStyle[] = ['solid', 'dashed', 'dotted'];
 const LINK_SIDES: LinkSide[] = ['top', 'right', 'bottom', 'left'];
+
+/** A map arrow's sides, kept only when this version knows them: the others count as automatic. */
+function knownSides<T extends { fromSide?: unknown; toSide?: unknown }>(link: T): T {
+  if ((link.fromSide === undefined || LINK_SIDES.includes(link.fromSide as LinkSide)) && (link.toSide === undefined || LINK_SIDES.includes(link.toSide as LinkSide))) return link;
+  const next = { ...link };
+  if (!LINK_SIDES.includes(next.fromSide as LinkSide)) delete next.fromSide;
+  if (!LINK_SIDES.includes(next.toSide as LinkSide)) delete next.toSide;
+  return next;
+}
 const cellIndex = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
 
 /** A card's personas: the list, or the single `personaId` of older files. */
