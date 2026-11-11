@@ -61,9 +61,11 @@
   border: 2px solid #fff;
   border-radius: 12px;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Centred by its line height, not by flex: the PDF/PNG picture (html-to-image)
+     is drawn by WebKit on macOS, which shifts a flex-centred letter. */
+  display: block;
+  text-align: center;
+  line-height: 20px;
   font-size: 11px;
   font-weight: 700;
   color: #fff;
@@ -72,6 +74,7 @@
   margin-left: -6px;
 }
 .flow-persona img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
