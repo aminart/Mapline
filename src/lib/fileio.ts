@@ -27,7 +27,8 @@ function download(blob: Blob, filename: string) {
 }
 
 /**
- * Saves the project. On desktop, writes to `path` (or asks for one);
+ * Saves the project. On desktop, writes to `path` (or asks for one) safely,
+ * keeping the previous version next to it as `<file>.bak`;
  * returns the path written, or null if cancelled. In a browser, downloads it.
  */
 export async function saveProject(project: Project, path: string | null, saveAs = false): Promise<string | null> {
@@ -37,13 +38,15 @@ export async function saveProject(project: Project, path: string | null, saveAs 
     return null;
   }
   const { save } = await import('@tauri-apps/plugin-dialog');
-  const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+  const { invoke } = await import('@tauri-apps/api/core');
   let target = saveAs ? null : path;
   if (!target) {
     target = await save({ filters: [projectFilter()], defaultPath: `${safeName(project.title)}.${FILE_EXTENSION}` });
     if (!target) return null;
   }
-  await writeTextFile(target, text);
+  // Written to a temporary file then swapped in, so a crash mid-save never
+  // leaves a broken project; the previous version is kept as `<file>.bak`.
+  await invoke('save_project_file', { path: target, contents: text });
   return target;
 }
 
