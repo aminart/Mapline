@@ -4,7 +4,7 @@
 import { activeFlow, useStore, useT } from '../store';
 import * as fo from '../model/flow';
 import { findDoc, projectPersonas, renameDoc } from '../model/project';
-import { FILL_SWATCHES, LINK_COLORS } from '../model/theme';
+import { BORDER_SWATCHES, FILL_SWATCHES, LINK_COLORS, flowCardTop, personaAccent, resolveStyle } from '../model/theme';
 import type { Flow, LinkStyle } from '../model/types';
 import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
