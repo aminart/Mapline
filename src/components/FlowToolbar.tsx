@@ -123,7 +123,11 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
         </div>
       )}
       {editable && (
-        <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={custom?.bg ?? '#FFFFFF'} variant="fill" onPick={(bg, live) => applyFlow((f) => fo.setNodeStyle(f, id, { bg }), live ? { coalesce: `style:node:${id}` } : undefined)} />
+        <>
+          <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={cur.bg} variant="fill" onPick={(bg, live) => set({ bg }, live)} />
+          <Swatches label={t('tool.border')} list={BORDER_SWATCHES} value={cur.bc} variant="border" onPick={(bc, live) => set({ bc }, live)} />
+          <Swatches label={t('flow.topLine')} list={[accent, ...BORDER_SWATCHES.filter((c) => c !== accent && c !== BORDER_SWATCHES[0])]} value={flowCardTop(custom, accent)} variant="fill" onPick={(top, live) => set({ top: top === accent && !custom?.bc ? undefined : top }, live)} />
+        </>
       )}
       {custom && (
         <button className="text-btn" onClick={() => applyFlow((f) => fo.resetNodeStyle(f, id))}>

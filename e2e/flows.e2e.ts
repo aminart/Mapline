@@ -44,13 +44,21 @@ test('adds cards on all four sides, moving the rest of the flow along', async ({
   const start = await card(page, 'Début');
   const end = await card(page, 'Fin');
   const endLeft = await left(end);
+  const endTop = await top(end);
   await start.locator('textarea').click();
-  // Right of the start is taken by the end: it moves one column right.
+  // Right of the start is the end, which already follows it: the new card branches off, under the end.
   await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
   await page.keyboard.type('Ouvre l’app');
   await expect(cards(page)).toHaveCount(3);
-  expect(await left(end)).toBeGreaterThan(endLeft);
+  expect(await left(end)).toBe(endLeft);
   const app = await card(page, 'Ouvre l’app');
+  // Same column as the end: the two cards share a centre line (the end is a narrower pill).
+  const centre = async (l: Locator) => {
+    const b = (await l.boundingBox())!;
+    return Math.round(b.x + b.width / 2);
+  };
+  expect(await centre(app)).toBe(await centre(end));
+  expect(await top(app)).toBeGreaterThan(endTop);
   const appTop = await top(app);
   await app.getByRole('button', { name: 'Ajouter une carte au-dessus' }).click();
   await page.keyboard.type('En haut');
@@ -196,6 +204,23 @@ test('adds tags and a note on a flow card, as on map activities', async ({ page 
   await expect(card.locator('.note')).toHaveClass(/has-note/);
   await page.locator('.toolbar summary').filter({ hasText: 'Tags' }).click();
   await expect(page.locator('.tag-list li')).toHaveCount(1);
+});
+
+test('changes a card border and its top line, as on map cards', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const card = cards(page).nth(1);
+  await texts(page).nth(1).click();
+  const bar = page.getByRole('toolbar');
+  const css = (prop: string) => card.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+  await bar.getByRole('button', { name: 'Bordure #C2410C' }).click();
+  expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
+  // The border colours the top line too, until it gets its own.
+  expect(await css('border-top-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Trait du haut #0F766E' }).click();
+  expect(await css('border-top-color')).toBe('rgb(15, 118, 110)');
+  expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Réinitialiser' }).click();
+  expect(await css('border-top-color')).toBe('rgb(47, 85, 212)');
 });
 
 test('shows every text of a flow in full, start and end pills widening with theirs', async ({ page }) => {

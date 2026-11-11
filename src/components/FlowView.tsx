@@ -10,7 +10,7 @@ import type { Id } from '../model/types';
 import { NoteButton, TagRow, TagSuggestions } from './CardExtras';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
-import { LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
+import { LINK_COLORS, LINK_DASH, flowCardTop, personaAccent } from '../model/theme';
 import type { Flow, FlowNode, FlowNodeKind } from '../model/types';
 import { routeFlow, type RoutedLink } from '../lib/flowRoute';
 import { pointAlong, roundedPath } from '../lib/arrows';
@@ -400,7 +400,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
         width: box.w,
         height: box.h,
         // Start and end are dark pills: the card fill applies to activities and choices.
-        ...(pill ? {} : { ...b.box, borderTopColor: accent }),
+        ...(pill ? {} : { ...b.box, borderTopColor: flowCardTop(b.custom, accent) }),
       }}
       data-node={node.id}
       data-reveal={node.col}

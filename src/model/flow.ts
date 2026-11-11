@@ -58,17 +58,19 @@ function link(from: Id, to: Id, label?: string): FlowLink {
 /**
  * Adds a card next to `fromId`, in direction `dir`, joined by an arrow from
  * it. When that cell is taken (or off the grid), a column or row is inserted
- * so the rest of the flow moves along; if the card pushed away was the next
- * one after `fromId`, the new card goes in between.
+ * so the rest of the flow moves along. When the card in that cell already
+ * follows `fromId`, the new card is a branch: it goes under that card (beside
+ * it, for up and down), after the branches already there. To put a card in
+ * between, use `insertOnLink`.
  */
 export function addNode(flow: Flow, fromId: Id, dir: Direction, kind: FlowNodeKind = 'activity', label?: string): { flow: Flow; nodeId: Id | null } {
   const from = findNode(flow, fromId);
   if (!from) return { flow, nodeId: null };
-  let next = flow;
   let col = from.col;
   let row = from.row;
   const neighbour = dir === 'right' ? nodeAt(flow, from.col + 1, from.row) : dir === 'down' ? nodeAt(flow, from.col, from.row + 1) : dir === 'left' ? nodeAt(flow, from.col - 1, from.row) : nodeAt(flow, from.col, from.row - 1);
-  const pushed = neighbour ? flow.links.find((l) => l.from === fromId && l.to === neighbour.id) : undefined;
+  if (neighbour && flow.links.some((l) => l.from === fromId && l.to === neighbour.id)) return branch(flow, fromId, neighbour, dir === 'right' || dir === 'left', kind, label);
+  let next = flow;
   if (dir === 'right') {
     col = from.col + 1;
     if (nodeAt(next, col, row)) next = insertColumn(next, col);
@@ -83,14 +85,28 @@ export function addNode(flow: Flow, fromId: Id, dir: Direction, kind: FlowNodeKi
     else row = from.row - 1;
   }
   const node = newNode(kind, col, row);
-  let links = next.links.concat([link(fromId, node.id, label ?? pushed?.label)]);
-  if (pushed) {
-    // In between: from → new → the card that was next.
-    const onward: FlowLink = { ...pushed, id: uid(), from: node.id };
-    delete onward.label;
-    links = links.filter((l) => l.id !== pushed.id).concat([onward]);
-  }
+  const links = next.links.concat([link(fromId, node.id, label)]);
   return { flow: { ...next, nodes: next.nodes.concat([node]), links }, nodeId: node.id };
+}
+
+/**
+ * A new branch from `fromId`, whose next card `first` already sits in the
+ * way: the new card goes in the same column as `first`, under it and under
+ * the other branches stacked there (`down`), or in the same row, to the
+ * right of them. A row or column is inserted when the cell is taken.
+ */
+function branch(flow: Flow, fromId: Id, first: FlowNode, down: boolean, kind: FlowNodeKind, label?: string): { flow: Flow; nodeId: Id } {
+  const follows = (n: FlowNode | undefined) => n && flow.links.some((l) => l.from === fromId && l.to === n.id);
+  let col = first.col;
+  let row = first.row;
+  do {
+    if (down) row++;
+    else col++;
+  } while (follows(nodeAt(flow, col, row)));
+  let next = flow;
+  if (nodeAt(next, col, row)) next = down ? insertRow(next, row) : insertColumn(next, col);
+  const node = newNode(kind, col, row);
+  return { flow: { ...next, nodes: next.nodes.concat([node]), links: next.links.concat([link(fromId, node.id, label)]) }, nodeId: node.id };
 }
 
 /**
