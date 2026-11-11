@@ -194,3 +194,22 @@ export const PencilIcon = ({ size = 12 }: P) => (
     <path d="M14 6l4 4" />
   </Svg>
 );
+/** A strip of film frames: the storyboard row. */
+export const StoryboardIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M3 9.5h18M8 5v4.5M13 5v4.5M18 5v4.5" />
+  </Svg>
+);
+/** A curved arrow back: put the default style back. */
+export const ResetIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <path d="M4 12a8 8 0 1 0 2.5-5.8" />
+    <path d="M4 3.5V8h4.5" />
+  </Svg>
+);
+export const TrashIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <path d="M4 7h16M10 7V4h4v3M6.5 7l1 13h9l1-13" />
+  </Svg>
+);

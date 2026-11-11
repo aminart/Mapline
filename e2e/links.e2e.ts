@@ -95,6 +95,7 @@ test('flags a flow card with several personas', async ({ page }) => {
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
   const card = page.locator('.flow [data-node]').nth(1);
   await card.locator('textarea').click();
+  await page.getByRole('toolbar').getByRole('button', { name: 'Personas' }).click();
   const picks = page.locator('.flow-persona-picks');
   await picks.getByRole('button', { name: 'Patiente' }).click();
   await picks.getByRole('button', { name: 'Secrétaire' }).click();
