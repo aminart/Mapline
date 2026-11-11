@@ -183,7 +183,7 @@ const fr = {
   'tpl.persona.back.role': 'Processus internes',
   'side.shortcuts': 'Raccourcis clavier',
   'side.shortcutsText':
-    'Ctrl+N : nouveau projet\nCtrl+O : ouvrir · Ctrl+S : enregistrer\nCtrl+E : exporter · F5 : présenter\nSuppr : supprimer la flèche sélectionnée\nCtrl+W : fermer l’onglet\nCtrl+Entrée : activité à droite\nEntrée dans un tag : l’ajouter\nCtrl+Z / Ctrl+Maj+Z : annuler / rétablir\nCtrl+ + / − / 0 : zoom',
+    'Ctrl+N : nouveau projet\nCtrl+O : ouvrir · Ctrl+S : enregistrer\nCtrl+E : exporter · F5 : présenter\nSuppr : supprimer la flèche sélectionnée\nCtrl+W : fermer l’onglet\nCtrl+Entrée : activité à droite\nCtrl+C / Ctrl+V : copier / coller la carte sélectionnée (aussi d’une map ou d’un flow à l’autre)\nCtrl+D : dupliquer la carte sélectionnée\nEntrée dans un tag : l’ajouter\nCtrl+Z / Ctrl+Maj+Z : annuler / rétablir\nCtrl+ + / − / 0 : zoom',
   'about.open': 'À propos et licences',
   'about.version': 'Version {v}',
   'about.local': 'Vos projets restent sur votre ordinateur : l’application n’envoie aucune donnée sur internet.',
@@ -687,7 +687,7 @@ const en: Record<MessageKey, string> = {
   'tpl.persona.back.role': 'Internal processes',
   'side.shortcuts': 'Keyboard shortcuts',
   'side.shortcutsText':
-    'Ctrl+N: new project\nCtrl+O: open · Ctrl+S: save\nCtrl+E: export · F5: present\nDelete: delete the selected arrow\nCtrl+W: close tab\nCtrl+Enter: activity to the right\nEnter in a tag: add it\nCtrl+Z / Ctrl+Shift+Z: undo / redo\nCtrl+ + / − / 0: zoom',
+    'Ctrl+N: new project\nCtrl+O: open · Ctrl+S: save\nCtrl+E: export · F5: present\nDelete: delete the selected arrow\nCtrl+W: close tab\nCtrl+Enter: activity to the right\nCtrl+C / Ctrl+V: copy / paste the selected card (also from one map or flow to another)\nCtrl+D: duplicate the selected card\nEnter in a tag: add it\nCtrl+Z / Ctrl+Shift+Z: undo / redo\nCtrl+ + / − / 0: zoom',
   'about.open': 'About and licences',
   'about.version': 'Version {v}',
   'about.local': 'Your projects stay on your computer: the app sends no data over the internet.',
