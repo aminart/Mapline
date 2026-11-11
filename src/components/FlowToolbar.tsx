@@ -79,6 +79,12 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
   const personas = projectPersonas(project);
   const mainName = personas.find((p) => p.persona.id === flow.personaId)?.persona.name;
   const editable = node.kind === 'activity' || node.kind === 'choice';
+  const picked = fo.nodePersonas(node);
+  // As on the card: its first persona's colour, else the flow's main persona's.
+  const persona = personas.find((p) => p.persona.id === (picked[0] ?? flow.personaId));
+  const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
+  const cur = resolveStyle('node', custom);
+  const set = (patch: Flow['styles'][string], live?: boolean) => applyFlow((f) => fo.setNodeStyle(f, id, patch), live ? { coalesce: `style:node:${id}` } : undefined);
   const terminal = !editable;
   // Activity, choice, or a start/end box: the latter turns into a start or an
   // end depending on where it sits, then can be switched between the two.

@@ -252,6 +252,50 @@ test('shows every text of a flow in full, start and end pills widening with thei
   expect(await arrowsOverCards(page, CARDS)).toEqual([]);
 });
 
+test('exports a flow with its arrows on their cards and every text whole', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  // Left out of the picture, the empty brief takes no room in it either: the arrows stay on the cards.
+  const flowTop = () => page.locator('.flow').evaluate((el) => el.getBoundingClientRect().top);
+  const before = await flowTop();
+  await page.locator('.flow-doc').evaluate((el) => el.classList.add('is-exporting'));
+  expect(await page.locator('.flow-brief').isHidden()).toBe(true);
+  expect(await flowTop()).toBeLessThan(before);
+  await page.locator('.flow-doc').evaluate((el) => el.classList.remove('is-exporting'));
+
+  await fillWithLongText(page, '.flow');
+  await page.keyboard.press('ControlOrMeta+e');
+  await page.locator('input[name=export-format][value=pdf]').check({ force: true });
+  // While the picture is taken, each text is laid still over its field, broken into the same lines.
+  const frozen = page.evaluate(
+    () =>
+      new Promise<{ lines: number; rows: number }[]>((resolve) => {
+        const seen = new MutationObserver(() => {
+          const copies = Array.from(document.querySelectorAll<HTMLElement>('.flow-doc .export-text'));
+          if (copies.length === 0) return;
+          seen.disconnect();
+          resolve(
+            copies.map((c) => {
+              const field = c.previousElementSibling as HTMLTextAreaElement;
+              const css = getComputedStyle(field);
+              const inner = field.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom);
+              return { lines: c.textContent!.split('\n').length, rows: Math.round(inner / parseFloat(css.lineHeight)) };
+            }),
+          );
+        });
+        seen.observe(document.body, { childList: true, subtree: true });
+      }),
+  );
+  const download = page.waitForEvent('download');
+  await page.locator('dialog[open] .btn-primary').click();
+  await download;
+  const copies = await frozen;
+  expect(copies.length).toBeGreaterThan(5);
+  for (const c of copies) expect(c.lines).toBe(c.rows);
+  // Put back afterwards.
+  await expect(page.locator('.export-text')).toHaveCount(0);
+  expect(await texts(page).first().evaluate((el) => el.style.color)).not.toBe('transparent');
+});
+
 test('puts back a deleted end box from the card type', async ({ page }) => {
   await startFlow(page, 'Flow vide');
   const start = await card(page, 'Début');
