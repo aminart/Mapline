@@ -121,6 +121,8 @@ export function insertOnLink(flow: Flow, linkId: Id, kind: FlowNodeKind = 'activ
   if (!r.nodeId) return { flow, nodeId: null };
   const back = { ...l, id: uid(), from: r.nodeId };
   delete back.label;
+  // It now leaves the new card: its side is chosen afresh.
+  delete back.fromSide;
   return { flow: { ...r.flow, links: r.flow.links.concat([back]) }, nodeId: r.nodeId };
 }
 
@@ -136,7 +138,11 @@ export function removeNode(flow: Flow, id: Id): Flow {
   let links = flow.links.filter((l) => l.from !== id && l.to !== id);
   if (incoming.length === 1 && outgoing.length === 1) {
     const [a, b] = [incoming[0].from, outgoing[0].to];
-    if (a !== b && !links.some((l) => l.from === a && l.to === b)) links = links.concat([{ ...incoming[0], id: uid(), to: b }]);
+    if (a !== b && !links.some((l) => l.from === a && l.to === b)) {
+      // It now enters another card: its side there is chosen afresh.
+      const { toSide: _, ...joined } = incoming[0];
+      links = links.concat([{ ...joined, id: uid(), to: b, ...(outgoing[0].toSide ? { toSide: outgoing[0].toSide } : {}) }]);
+    }
   }
   return compact({ ...flow, nodes: flow.nodes.filter((n) => n.id !== id), links, styles: dropStyle(flow.styles, id) });
 }
@@ -169,8 +175,18 @@ export function removeFlowLink(flow: Flow, id: Id): Flow {
   return { ...flow, links: flow.links.filter((l) => l.id !== id) };
 }
 
-export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink, 'label' | 'style' | 'color'>> & { style?: LinkStyle }): Flow {
-  return { ...flow, links: flow.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
+export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink, 'label' | 'style' | 'color' | 'fromSide' | 'toSide'>> & { style?: LinkStyle }): Flow {
+  return {
+    ...flow,
+    links: flow.links.map((l) => {
+      if (l.id !== id) return l;
+      const next = { ...l, ...patch };
+      // A side set back to automatic is left out of the file.
+      if (!next.fromSide) delete next.fromSide;
+      if (!next.toSide) delete next.toSide;
+      return next;
+    }),
+  };
 }
 
 export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind'>>): Flow {

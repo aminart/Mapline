@@ -194,14 +194,63 @@ describe('arrow routes', () => {
     }
   });
 
-  it('goes straight to the next card, and loops back over the row', () => {
+  it('goes straight to the next card, and straight back beside it', () => {
     const flow = fo.templateFlow('blank', labels);
     const [start, end] = flow.nodes;
     const withBack = fo.toggleFlowLink(flow, end.id, start.id);
     const [forward, back] = routeFlow(withBack);
     expect(forward.points).toHaveLength(2);
-    expect(back.points[0][1]).toBe(nodeBox(end).y);
-    expect(Math.min(...back.points.map((p) => p[1]))).toBeLessThan(nodeBox(end).y);
+    expect(back.points).toHaveLength(2);
+    // Side by side, each on a port of its own.
+    expect(back.points[0][0]).toBe(nodeBox(end).x);
+    expect(back.points[1][0]).toBe(nodeBox(start).x + nodeBox(start).w);
+    expect(back.points[0][1]).not.toBe(forward.points[0][1]);
+  });
+
+  const n = (id: string, col: number, row: number): FlowNode => ({ id, kind: 'activity', col, row, text: '' });
+  const bends = (points: [number, number][]) => points.length - 2;
+
+  it('takes the most direct way back, without looping round the flow', () => {
+    // A → B, B ↓ C, C → D, then D back to A, up and to the left.
+    const nodes = [n('A', 0, 0), n('B', 1, 0), n('C', 1, 1), n('D', 2, 1)];
+    const links = [
+      { id: 'ab', from: 'A', to: 'B' },
+      { id: 'bc', from: 'B', to: 'C' },
+      { id: 'cd', from: 'C', to: 'D' },
+      { id: 'da', from: 'D', to: 'A' },
+    ];
+    const routed = routeFlow({ nodes, links, styles: {} });
+    const back = routed.find((r) => r.link.id === 'da')!.points;
+    // Up out of D, along the gap between the rows, up into A from below.
+    expect(back[0][1]).toBe(nodeBox(nodes[3]).y);
+    expect(back[back.length - 1][1]).toBe(nodeBox(nodes[0]).y + nodeBox(nodes[0]).h);
+    expect(bends(back)).toBe(2);
+    // Every other arrow runs straight.
+    for (const r of routed.filter((r) => r.link.id !== 'da')) expect(r.points).toHaveLength(2);
+  });
+
+  it('runs straight between level cards, even when a side is shared', () => {
+    // A choice with three branches meeting again: the middle ones stay straight.
+    const nodes = [n('A', 0, 1), n('Q', 1, 1), n('X', 2, 0), n('Y', 2, 1), n('Z', 2, 2), n('M', 3, 1)];
+    const links = ['A>Q', 'Q>X', 'Q>Y', 'Q>Z', 'X>M', 'Y>M', 'Z>M'].map((id) => ({ id, from: id[0], to: id[2] }));
+    const routed = routeFlow({ nodes, links, styles: {} });
+    const get = (id: string) => routed.find((r) => r.link.id === id)!.points;
+    expect(get('A>Q')).toHaveLength(2);
+    expect(get('Q>Y')).toHaveLength(2);
+    expect(get('Y>M')).toHaveLength(2);
+    for (const id of ['Q>X', 'Q>Z', 'X>M', 'Z>M']) expect(bends(get(id)), id).toBe(1);
+  });
+
+  it('leaves and enters by the sides an arrow asks for', () => {
+    const nodes = [n('A', 0, 0), n('B', 1, 0)];
+    const routed = routeFlow({ nodes, links: [{ id: 'ab', from: 'A', to: 'B', fromSide: 'bottom', toSide: 'bottom' }], styles: {} });
+    const [p0, ...rest] = routed[0].points;
+    const q0 = rest[rest.length - 1];
+    expect(p0[1]).toBe(nodeBox(nodes[0]).y + nodeBox(nodes[0]).h);
+    expect(q0[1]).toBe(nodeBox(nodes[1]).y + nodeBox(nodes[1]).h);
+    // Only one side asked for: the other is chosen.
+    const one = routeFlow({ nodes, links: [{ id: 'ab', from: 'A', to: 'B', fromSide: 'top' }], styles: {} })[0].points;
+    expect(one[0][1]).toBe(nodeBox(nodes[0]).y);
   });
 });
 
@@ -276,6 +325,38 @@ describe('flows in project files', () => {
     if (back.kind !== 'flow') throw new Error('not a flow');
     expect(back.flow.nodes.map((n) => n.id)).toEqual([a.id]);
     expect(back.flow.links).toEqual([]);
+  });
+});
+
+describe('sides chosen for an arrow', () => {
+  it('are kept in the file, dropped when set back to automatic or unknown', async () => {
+    const { parse, serialize } = await import('./serialize');
+    const { createFlowProject } = await import('./templates');
+    const project = createFlowProject('user', 'fr');
+    const doc = project.docs[0];
+    if (doc.kind !== 'flow') throw new Error('not a flow');
+    const linkId = doc.flow.links[0].id;
+    const flow = fo.updateFlowLink(doc.flow, linkId, { fromSide: 'bottom', toSide: 'top' });
+    const saved = { ...project, docs: [{ ...doc, flow }] };
+    const back = parse(serialize(saved)).docs[0];
+    if (back.kind !== 'flow') throw new Error('not a flow');
+    expect(back.flow.links[0]).toMatchObject({ fromSide: 'bottom', toSide: 'top' });
+    const auto = fo.updateFlowLink(flow, linkId, { fromSide: undefined });
+    expect('fromSide' in auto.links[0]).toBe(false);
+    expect(auto.links[0].toSide).toBe('top');
+    const odd = parse(JSON.stringify({ ...project, docs: [{ ...doc, flow: { ...flow, links: [{ ...flow.links[0], fromSide: 'middle' }] } }] })).docs[0];
+    if (odd.kind !== 'flow') throw new Error('not a flow');
+    expect('fromSide' in odd.flow.links[0]).toBe(false);
+  });
+
+  it('are chosen afresh for the end that moves to another card', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const linkId = flow.links[0].id;
+    const sided = fo.updateFlowLink(flow, linkId, { fromSide: 'bottom', toSide: 'bottom' });
+    const { flow: inserted, nodeId } = fo.insertOnLink(sided, linkId);
+    const second = inserted.links.find((l) => l.from === nodeId)!;
+    expect(second.fromSide).toBeUndefined();
+    expect(second.toSide).toBe('bottom');
   });
 });
 
