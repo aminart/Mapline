@@ -54,6 +54,104 @@ export interface BoardLayout {
   phases: { left: number; right: number; top: number; height: number; title: string; color: string; size: number }[];
 }
 
+/** Styles a frozen text copies from its field, so it reads the same. */
+const TEXT_STYLES = [
+  'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing', 'word-spacing', 'text-transform', 'text-align', 'text-indent',
+  'line-height', 'color', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'border-top-width', 'border-right-width',
+  'border-bottom-width', 'border-left-width', 'direction',
+];
+
+/** The text of `el` (a block holding one text node) cut into the lines the page shows. */
+function linesOf(el: HTMLElement): string[] {
+  const node = el.firstChild;
+  if (!(node instanceof Text)) return [];
+  const text = node.data;
+  const range = document.createRange();
+  const lines: string[] = [];
+  let start = 0;
+  let top: number | null = null;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\n') {
+      lines.push(text.slice(start, i));
+      start = i + 1;
+      top = null;
+      continue;
+    }
+    range.setStart(node, i);
+    range.setEnd(node, i + 1);
+    const rect = Array.from(range.getClientRects()).find((r) => r.width > 0) ?? range.getBoundingClientRect();
+    if (top !== null && rect.top > top + 1) {
+      // A new line: the spaces it broke on stay at the end of the last one.
+      lines.push(text.slice(start, i));
+      start = i;
+    }
+    top = rect.top;
+  }
+  lines.push(text.slice(start));
+  return lines;
+}
+
+/**
+ * Lays a still copy of each text field of the board over it, its lines
+ * broken where the page breaks them, and hides the field's own text.
+ *
+ * The picture is drawn by the engine from a copy of the page, where a
+ * textarea may lay its text out a little wider (WebKit, as in the macOS app)
+ * and push the last line out of its box, cut off. Lines that are already
+ * broken, and a box that doesn't clip, keep every word as on screen.
+ * Returns what puts the fields back.
+ */
+export function freezeTexts(board: HTMLElement): () => void {
+  const undo: (() => void)[] = [];
+  for (const field of Array.from(board.querySelectorAll<HTMLTextAreaElement>('textarea'))) {
+    const host = field.parentElement;
+    if (!host || !field.offsetParent || !field.value || field.closest('.no-export')) continue;
+    // The copy is placed against the field's own parent, which stays in the picture.
+    const position = host.style.position;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    const css = getComputedStyle(field);
+    const copy = document.createElement('div');
+    copy.className = 'export-text';
+    copy.setAttribute('aria-hidden', 'true');
+    for (const name of TEXT_STYLES) copy.style.setProperty(name, css.getPropertyValue(name));
+    Object.assign(copy.style, {
+      position: 'absolute',
+      // Where the field is, in the box it is placed against.
+      left: `${field.offsetLeft}px`,
+      top: `${field.offsetTop}px`,
+      width: `${field.offsetWidth}px`,
+      minHeight: `${field.offsetHeight}px`,
+      margin: '0',
+      boxSizing: 'border-box',
+      borderStyle: 'solid',
+      borderColor: 'transparent',
+      background: 'transparent',
+      whiteSpace: 'pre-wrap',
+      overflowWrap: css.getPropertyValue('overflow-wrap') || 'break-word',
+      wordBreak: css.getPropertyValue('word-break'),
+      overflow: 'visible',
+      pointerEvents: 'none',
+      zIndex: '1',
+    });
+    copy.textContent = field.value;
+    field.after(copy);
+    // Broken as on screen, then kept so: no wrapping left to the picture's engine.
+    copy.textContent = linesOf(copy).join('\n');
+    copy.style.whiteSpace = 'pre';
+    const color = field.style.color;
+    const fill = field.style.getPropertyValue('-webkit-text-fill-color');
+    field.style.color = 'transparent';
+    field.style.setProperty('-webkit-text-fill-color', 'transparent');
+    undo.push(() => {
+      copy.remove();
+      host.style.position = position;
+      field.style.color = color;
+      field.style.setProperty('-webkit-text-fill-color', fill);
+    });
+  }
+  return () => undo.reverse().forEach((f) => f());
+}
+
 /** Classes that lay the board out as exported: no hints, rows left out, flat or transparent. */
 function exportModes(opts: RenderOptions): string[] {
   return ['is-exporting', opts.transparent && 'export-transparent', opts.flat && 'export-flat', !opts.storyboard && 'export-no-storyboard', !opts.info && 'export-no-info'].filter(
@@ -134,8 +232,11 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
   let labels: { cx: number; cy: number; w: number; h: number; text: string; color: string; border: string; font: string }[] = [];
   let boardWidth = 0;
   let layout: BoardLayout = { width: 0, height: 0, stripRight: 0, steps: [], objectiveBottom: 0, objective: '', phases: [] };
+  let thaw = () => {};
   try {
     await nextFrame();
+    // Flows: every text kept whole, whatever the engine that draws the picture.
+    if (board.classList.contains('flow-doc')) thaw = freezeTexts(board);
     canvas = await toCanvas(board, {
       pixelRatio: opts.scale,
       // Only flat exports are laid on white: elsewhere the rounded corners stay clear.
@@ -168,6 +269,7 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
       });
     }
   } finally {
+    thaw();
     hinted.forEach((el, i) => (el.placeholder = hints[i]));
     board.classList.remove(...modes);
   }

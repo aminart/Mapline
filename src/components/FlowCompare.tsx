@@ -10,7 +10,7 @@ import { baselineOf, restoreNode, type Change } from '../model/states';
 import type { Flow, FlowNode, Id } from '../model/types';
 import { routeFlow, type RoutedLink } from '../lib/flowRoute';
 import { pointAlong, roundedPath } from '../lib/arrows';
-import { LINK_COLORS, LINK_DASH, boxStyle, personaAccent, resolveStyle, textStyle } from '../model/theme';
+import { LINK_COLORS, LINK_DASH, boxStyle, flowCardTop, personaAccent, resolveStyle, textStyle } from '../model/theme';
 import { useFlowDiff, useFlowFocus } from './useDiff';
 import { showTwin } from './compareNav';
 import { ChangeTag } from './ChangeMarks';
@@ -135,11 +135,12 @@ export function BaseCard(props: {
   const content = useRef<HTMLDivElement>(null);
   const box = nodeBox(node, layout);
   const pill = node.kind === 'start' || node.kind === 'end';
-  const personaId = node.personaId ?? flow.personaId;
+  const personaId = node.personaIds?.[0] ?? flow.personaId;
   const persona = personaId ? projectPersonas(project).find((p) => p.persona.id === personaId) : undefined;
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
   // The card's fill, border and text, resolved as in the editable flow.
-  const style = resolveStyle('node', flow.styles[`node:${node.id}`]);
+  const custom = flow.styles[`node:${node.id}`];
+  const style = resolveStyle('node', custom);
   const fill = boxStyle(style);
   // A removed card keeps its dashed grey border.
   if (change === 'removed') delete fill.borderColor;
@@ -155,7 +156,7 @@ export function BaseCard(props: {
   return (
     <div
       className={cls('box flow-card flow-base-card', ghost && 'flow-ghost', `flow-${node.kind}`, change ? `diff-${change}` : comparing && 'diff-same')}
-      style={{ left: box.x, top: box.y, width: box.w, height: box.h, ...(pill ? {} : { ...fill, borderTopColor: accent }) }}
+      style={{ left: box.x, top: box.y, width: box.w, height: box.h, ...(pill ? {} : { ...fill, borderTopColor: change === 'removed' ? accent : flowCardTop(custom, accent) }) }}
       {...(ghost ? { 'data-ghost-node': node.id } : { 'data-base-node': node.id })}
       onPointerEnter={ghost ? undefined : () => showTwin(node.id, 'base', true)}
       onPointerLeave={ghost ? undefined : () => showTwin(node.id, 'base', false)}

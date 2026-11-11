@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { contrast, paletteFromFill } from './color';
-import { personaAccent, resolveStyle } from './theme';
+import { flowCardTop, personaAccent, resolveStyle } from './theme';
 
 describe('persona colours from a fill', () => {
   it('derives a readable accent and text for light and dark fills', () => {
@@ -22,5 +22,16 @@ describe('persona colours from a fill', () => {
     expect(personaAccent(0, { bg: '#FFF4C2', bc: '#123456' }).accent).toBe('#123456');
     expect(resolveStyle('persona', { bg: '#191B20', color: '#FF0000' }, 0).color).toBe('#FF0000');
     expect(personaAccent(1, undefined).accent).toBe('#C2410C');
+  });
+});
+
+describe('top line of a flow card', () => {
+  it('takes its own colour, else the border, else the persona accent', () => {
+    expect(flowCardTop(undefined, '#2F55D4')).toBe('#2F55D4');
+    expect(flowCardTop({ bc: '#C2410C' }, '#2F55D4')).toBe('#C2410C');
+    expect(flowCardTop({ bc: '#C2410C', top: '#0F766E' }, '#2F55D4')).toBe('#0F766E');
+  });
+  it('is kept out of the resolved box style', () => {
+    expect(resolveStyle('node', { top: '#0F766E' })).not.toHaveProperty('top');
   });
 });

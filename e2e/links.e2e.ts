@@ -86,6 +86,29 @@ test('links a persona’s sheet to the flows they are in', async ({ page }) => {
   await expect(page.locator('.flow')).toBeVisible();
 });
 
+test('flags a flow card with several personas', async ({ page }) => {
+  await startProject(page);
+  const rows = page.locator('.persona-row');
+  await rows.nth(0).getByRole('textbox', { name: 'Nom du persona' }).fill('Patiente');
+  await rows.nth(1).getByRole('textbox', { name: 'Nom du persona' }).fill('Secrétaire');
+  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
+  const card = page.locator('.flow [data-node]').nth(1);
+  await card.locator('textarea').click();
+  const picks = page.locator('.flow-persona-picks');
+  await picks.getByRole('button', { name: 'Patiente' }).click();
+  await picks.getByRole('button', { name: 'Secrétaire' }).click();
+  await expect(picks.getByRole('button', { pressed: true })).toHaveText(['PPatiente', 'SSecrétaire']);
+  await expect(card.locator('.flow-persona')).toHaveText(['P', 'S']);
+  if (shots) await page.screenshot({ path: `${shots}/flow-personas.png`, fullPage: false });
+  // Taken off again: the other one stays.
+  await picks.getByRole('button', { name: 'Patiente' }).click();
+  await expect(card.locator('.flow-persona')).toHaveText(['S']);
+  // Added back, it comes last.
+  await picks.getByRole('button', { name: 'Patiente' }).click();
+  await expect(card.locator('.flow-persona')).toHaveText(['S', 'P']);
+});
+
 test('renames a tag and changes its colour from the card', async ({ page }) => {
   await startProject(page);
   await addActivity(page, 0, 0, 'Une');

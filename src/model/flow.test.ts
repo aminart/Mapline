@@ -29,15 +29,51 @@ describe('flow templates', () => {
 });
 
 describe('adding cards', () => {
-  it('adds to the right, moving the rest of the flow along when the cell is taken', () => {
-    const flow = fo.templateFlow('blank', labels);
+  it('adds to the right, moving an unrelated card along when the cell is taken', () => {
+    let flow = fo.templateFlow('blank', labels);
     const [start, end] = flow.nodes;
+    flow = { ...flow, links: [] };
     const r = fo.addNode(flow, start.id, 'right');
     expect(at(r.flow, r.nodeId)).toEqual([1, 0]);
     expect(at(r.flow, end.id)).toEqual([2, 0]);
-    expect(r.flow.links.some((l) => l.from === start.id && l.to === r.nodeId)).toBe(true);
-    // The end was next after the start: the new card goes in between.
-    expect(r.flow.links.map((l) => [l.from, l.to])).toEqual([[start.id, r.nodeId], [r.nodeId, end.id]]);
+    expect(r.flow.links.map((l) => [l.from, l.to])).toEqual([[start.id, r.nodeId]]);
+  });
+
+  it('adds a branch under the next card, keeping the arrow to it', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    let r = fo.addNode(flow, start.id, 'right');
+    // The end already follows the start: the new card starts a second branch, below.
+    expect(at(r.flow, end.id)).toEqual([1, 0]);
+    expect(at(r.flow, r.nodeId)).toEqual([1, 1]);
+    expect(r.flow.links.map((l) => [l.from, l.to])).toEqual([[start.id, end.id], [start.id, r.nodeId]]);
+    // A third branch goes under the second one.
+    const second = r.nodeId;
+    r = fo.addNode(r.flow, start.id, 'right');
+    expect(at(r.flow, second)).toEqual([1, 1]);
+    expect(at(r.flow, r.nodeId)).toEqual([1, 2]);
+    expect(r.flow.links.filter((l) => l.from === start.id)).toHaveLength(3);
+  });
+
+  it('inserts a row for a branch when the cell below holds an unrelated card', () => {
+    let flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    const other = fo.addNode(flow, end.id, 'down');
+    flow = other.flow;
+    const r = fo.addNode(flow, start.id, 'right');
+    expect(at(r.flow, r.nodeId)).toEqual([1, 1]);
+    expect(at(r.flow, other.nodeId)).toEqual([1, 2]);
+    expect(at(r.flow, start.id)).toEqual([0, 0]);
+  });
+
+  it('adds a branch beside the next card below', () => {
+    let flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    flow = fo.moveNode(flow, end.id, 0, 1);
+    const r = fo.addNode(flow, start.id, 'down');
+    expect(at(r.flow, end.id)).toEqual([0, 1]);
+    expect(at(r.flow, r.nodeId)).toEqual([1, 1]);
+    expect(r.flow.links.filter((l) => l.from === start.id)).toHaveLength(2);
   });
 
   it('branches off when the cell beside is free or holds an unrelated card', () => {
@@ -67,10 +103,10 @@ describe('adding cards', () => {
     expect(at(r.flow, r.nodeId)).toEqual([0, 1]);
     expect(at(r.flow, start.id)).toEqual([1, 1]);
     expect(fo.findNode(r.flow, r.nodeId!)!.kind).toBe('choice');
-    // Below the end again: taken, so a row is inserted under the end.
+    // Below the end again: the card there already follows the end, so the new one branches beside it.
     r = fo.addNode(r.flow, end.id, 'down');
-    expect(at(r.flow, r.nodeId)).toEqual([2, 2]);
-    expect(at(r.flow, below)).toEqual([2, 3]);
+    expect(at(r.flow, r.nodeId)).toEqual([3, 2]);
+    expect(at(r.flow, below)).toEqual([2, 2]);
   });
 
   it('puts a card on an arrow, keeping the label on the first half', () => {
@@ -371,5 +407,76 @@ describe('start and end pills that grow with their text', () => {
     expect([box.w, box.h]).toEqual([FLOW.cellW, 80]);
     expect(box.x).toBe(cell.x);
     expect(box.y + box.h / 2).toBe(cell.y + cell.h / 2);
+  });
+});
+
+describe('personas on a card', () => {
+  it('adds and takes off personas one by one, keeping the order picked', () => {
+    const flow = fo.templateFlow('user', labels);
+    const id = flow.nodes[1].id;
+    let f = fo.toggleNodePersona(flow, id, 'p1');
+    f = fo.toggleNodePersona(f, id, 'p2');
+    expect(fo.nodePersonas(fo.findNode(f, id)!)).toEqual(['p1', 'p2']);
+    f = fo.toggleNodePersona(f, id, 'p1');
+    expect(fo.findNode(f, id)!.personaIds).toEqual(['p2']);
+    f = fo.toggleNodePersona(f, id, 'p2');
+    // None left: the card goes back to the flow's main persona.
+    expect('personaIds' in fo.findNode(f, id)!).toBe(false);
+    expect(fo.setNodePersonas(flow, id, ['a', 'a', 'b']).nodes[1].personaIds).toEqual(['a', 'b']);
+  });
+});
+
+describe('card personas in project files', () => {
+  it('keeps several personas, and reads the single persona of older files as a list of one', async () => {
+    const { parse, serialize } = await import('./serialize');
+    const { createFlowProject } = await import('./templates');
+    const project = createFlowProject('user', 'fr');
+    const doc = project.docs[0];
+    if (doc.kind !== 'flow') throw new Error('not a flow');
+    const [a, b, c] = doc.flow.nodes;
+    const saved = { ...project, docs: [{ ...doc, flow: fo.setNodePersonas(doc.flow, b.id, ['p1', 'p2']) }] };
+    expect(parse(serialize(saved))).toEqual(saved);
+    const old = {
+      ...project,
+      docs: [{ ...doc, flow: { ...doc.flow, nodes: [a, { ...b, personaId: 'p1' }, { ...c, personaId: null }, ...doc.flow.nodes.slice(3)] } }],
+    };
+    const back = parse(JSON.stringify(old)).docs[0];
+    if (back.kind !== 'flow') throw new Error('not a flow');
+    expect(back.flow.nodes[1].personaIds).toEqual(['p1']);
+    expect('personaId' in back.flow.nodes[1]).toBe(false);
+    expect('personaIds' in back.flow.nodes[2]).toBe(false);
+  });
+});
+
+describe('putting back a start or an end', () => {
+  it('turns a card into an end once arrows reach it, and into a start otherwise', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    const noEnd = fo.removeNode(flow, end.id);
+    const r = fo.addNode(noEnd, start.id, 'right');
+    expect(fo.terminalKind(r.flow, r.nodeId!)).toBe('end');
+    const back = fo.setNodeKind(r.flow, r.nodeId!, fo.terminalKind(r.flow, r.nodeId!));
+    expect(fo.findNode(back, r.nodeId!)!.kind).toBe('end');
+    const lone = fo.addNode(noEnd, start.id, 'down');
+    const unlinked = { ...lone.flow, links: lone.flow.links.filter((l) => l.to !== lone.nodeId) };
+    expect(fo.terminalKind(unlinked, lone.nodeId!)).toBe('start');
+  });
+
+  it('turns arrows around when a card added on the left becomes the start', () => {
+    const flow = fo.templateFlow('blank', labels);
+    const [start, end] = flow.nodes;
+    const noStart = fo.removeNode(flow, start.id);
+    const r = fo.addNode(noStart, end.id, 'left');
+    const next = fo.setNodeKind(r.flow, r.nodeId!, 'start');
+    expect(fo.findNode(next, r.nodeId!)!.kind).toBe('start');
+    expect(next.links.map((l) => [l.from, l.to])).toEqual([[r.nodeId, end.id]]);
+  });
+
+  it('leaves arrows alone when the new start already leads somewhere', () => {
+    const flow = fo.templateFlow('user', labels);
+    const act = flow.nodes.find((n) => n.kind === 'activity')!;
+    const next = fo.setNodeKind(flow, act.id, 'start');
+    expect(next.links).toEqual(flow.links);
+    expect(fo.setNodeKind(next, act.id, 'activity').nodes.find((n) => n.id === act.id)!.kind).toBe('activity');
   });
 });

@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
 import { normalizePhases, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
@@ -209,6 +209,13 @@ function knownSides<T extends { fromSide?: unknown; toSide?: unknown }>(link: T)
 }
 const cellIndex = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
 
+/** A card's personas: the list, or the single `personaId` of older files. */
+function nodePersonasOf(n: Record<string, unknown>): { personaIds?: Id[] } {
+  const list = Array.isArray(n.personaIds) ? n.personaIds : typeof n.personaId === 'string' ? [n.personaId] : [];
+  const ids = [...new Set(list.filter((p): p is string => typeof p === 'string' && p !== ''))];
+  return ids.length > 0 ? { personaIds: ids } : {};
+}
+
 function parseFlow(input: unknown): Flow {
   if (!isObject(input)) throw new ProjectFileError('invalid');
   const taken = new Set<string>();
@@ -220,7 +227,7 @@ function parseFlow(input: unknown): Flow {
       col: cellIndex(n.col),
       row: cellIndex(n.row),
       text: str(n.text),
-      ...(typeof n.personaId === 'string' ? { personaId: n.personaId } : {}),
+      ...nodePersonasOf(n),
       ...(Array.isArray(n.tags) ? { tags: n.tags.filter((t): t is string => typeof t === 'string') } : {}),
       ...(typeof n.note === 'string' && n.note ? { note: n.note } : {}),
       ...(typeof n.note === 'string' && n.note && n.noteResolved === true ? { noteResolved: true } : {}),

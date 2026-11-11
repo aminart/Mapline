@@ -44,13 +44,21 @@ test('adds cards on all four sides, moving the rest of the flow along', async ({
   const start = await card(page, 'Début');
   const end = await card(page, 'Fin');
   const endLeft = await left(end);
+  const endTop = await top(end);
   await start.locator('textarea').click();
-  // Right of the start is taken by the end: it moves one column right.
+  // Right of the start is the end, which already follows it: the new card branches off, under the end.
   await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
   await page.keyboard.type('Ouvre l’app');
   await expect(cards(page)).toHaveCount(3);
-  expect(await left(end)).toBeGreaterThan(endLeft);
+  expect(await left(end)).toBe(endLeft);
   const app = await card(page, 'Ouvre l’app');
+  // Same column as the end: the two cards share a centre line (the end is a narrower pill).
+  const centre = async (l: Locator) => {
+    const b = (await l.boundingBox())!;
+    return Math.round(b.x + b.width / 2);
+  };
+  expect(await centre(app)).toBe(await centre(end));
+  expect(await top(app)).toBeGreaterThan(endTop);
   const appTop = await top(app);
   await app.getByRole('button', { name: 'Ajouter une carte au-dessus' }).click();
   await page.keyboard.type('En haut');
@@ -217,6 +225,23 @@ test('adds tags and a note on a flow card, as on map activities', async ({ page 
   await expect(page.locator('.tag-list li')).toHaveCount(1);
 });
 
+test('changes a card border and its top line, as on map cards', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const card = cards(page).nth(1);
+  await texts(page).nth(1).click();
+  const bar = page.getByRole('toolbar');
+  const css = (prop: string) => card.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+  await bar.getByRole('button', { name: 'Bordure #C2410C' }).click();
+  expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
+  // The border colours the top line too, until it gets its own.
+  expect(await css('border-top-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Trait du haut #0F766E' }).click();
+  expect(await css('border-top-color')).toBe('rgb(15, 118, 110)');
+  expect(await css('border-left-color')).toBe('rgb(194, 65, 12)');
+  await bar.getByRole('button', { name: 'Réinitialiser' }).click();
+  expect(await css('border-top-color')).toBe('rgb(47, 85, 212)');
+});
+
 test('shows every text of a flow in full, start and end pills widening with theirs', async ({ page }) => {
   await startFlow(page, 'Flow utilisateur');
   const start = await card(page, 'Début');
@@ -225,4 +250,66 @@ test('shows every text of a flow in full, start and end pills widening with thei
   expect(await clippedFields(page, '.flow')).toEqual([]);
   expect((await start.boundingBox())!.width).toBeGreaterThan(width);
   expect(await arrowsOverCards(page, CARDS)).toEqual([]);
+});
+
+test('exports a flow with its arrows on their cards and every text whole', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  // Left out of the picture, the empty brief takes no room in it either: the arrows stay on the cards.
+  const flowTop = () => page.locator('.flow').evaluate((el) => el.getBoundingClientRect().top);
+  const before = await flowTop();
+  await page.locator('.flow-doc').evaluate((el) => el.classList.add('is-exporting'));
+  expect(await page.locator('.flow-brief').isHidden()).toBe(true);
+  expect(await flowTop()).toBeLessThan(before);
+  await page.locator('.flow-doc').evaluate((el) => el.classList.remove('is-exporting'));
+
+  await fillWithLongText(page, '.flow');
+  await page.keyboard.press('ControlOrMeta+e');
+  await page.locator('input[name=export-format][value=pdf]').check({ force: true });
+  // While the picture is taken, each text is laid still over its field, broken into the same lines.
+  const frozen = page.evaluate(
+    () =>
+      new Promise<{ lines: number; rows: number }[]>((resolve) => {
+        const seen = new MutationObserver(() => {
+          const copies = Array.from(document.querySelectorAll<HTMLElement>('.flow-doc .export-text'));
+          if (copies.length === 0) return;
+          seen.disconnect();
+          resolve(
+            copies.map((c) => {
+              const field = c.previousElementSibling as HTMLTextAreaElement;
+              const css = getComputedStyle(field);
+              const inner = field.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom);
+              return { lines: c.textContent!.split('\n').length, rows: Math.round(inner / parseFloat(css.lineHeight)) };
+            }),
+          );
+        });
+        seen.observe(document.body, { childList: true, subtree: true });
+      }),
+  );
+  const download = page.waitForEvent('download');
+  await page.locator('dialog[open] .btn-primary').click();
+  await download;
+  const copies = await frozen;
+  expect(copies.length).toBeGreaterThan(5);
+  for (const c of copies) expect(c.lines).toBe(c.rows);
+  // Put back afterwards.
+  await expect(page.locator('.export-text')).toHaveCount(0);
+  expect(await texts(page).first().evaluate((el) => el.style.color)).not.toBe('transparent');
+});
+
+test('puts back a deleted end box from the card type', async ({ page }) => {
+  await startFlow(page, 'Flow vide');
+  const start = await card(page, 'Début');
+  const end = await card(page, 'Fin');
+  await end.locator('input, textarea').first().click();
+  await end.getByRole('button', { name: 'Supprimer la carte' }).click();
+  await expect(cards(page)).toHaveCount(1);
+  await start.locator('input, textarea').first().click();
+  await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
+  await page.keyboard.type('Merci');
+  const added = await card(page, 'Merci');
+  await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Début / Fin' }).click();
+  await expect(added).toHaveClass(/flow-end/);
+  await expect(page.getByRole('group', { name: 'Début ou fin du flow' }).getByRole('button', { name: 'Fin' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Activité' }).click();
+  await expect(added).toHaveClass(/flow-activity/);
 });
