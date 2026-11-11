@@ -4,8 +4,9 @@
 import { activeFlow, useStore, useT } from '../store';
 import * as fo from '../model/flow';
 import { findDoc, projectPersonas, renameDoc } from '../model/project';
-import { FILL_SWATCHES, LINK_COLORS } from '../model/theme';
-import type { Flow, LinkStyle } from '../model/types';
+import { BORDER_SWATCHES, FILL_SWATCHES, LINK_COLORS, flowCardTop, personaAccent, resolveStyle } from '../model/theme';
+import type { Flow, LinkSide, LinkStyle } from '../model/types';
+import { SIDES } from '../lib/flowRoute';
 import { Swatches, TagManager } from './FormatToolbar';
 import { CursorIcon, LinkIcon } from './Icons';
 import { cls } from './cls';
@@ -111,23 +112,39 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
         </div>
       )}
       {editable && personas.length > 0 && (
-        <label className="field">
-          {t('flow.persona')}
-          <select value={node.personaId ?? ''} onChange={(e) => {
-            const v = e.target.value || null;
-            applyFlow((f) => fo.setNode(f, id, { personaId: v }));
-          }}>
-            <option value="">{mainName !== undefined ? t('flow.inheritPersona', { name: mainName || t('doc.unnamed') }) : t('flow.noPersona')}</option>
-            {personas.map(({ persona }) => (
-              <option key={persona.id} value={persona.id}>
-                {persona.name || t('doc.unnamed')}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="swatches flow-persona-picks" role="group" aria-label={t('flow.personas')}>
+          <span className="swatches-label">{t('flow.personas')}</span>
+          <div className="persona-chips">
+            {personas.map(({ persona, style, photo }) => {
+              const on = picked.includes(persona.id);
+              const name = persona.name || t('doc.unnamed');
+              return (
+                <button
+                  key={persona.id}
+                  className={cls('persona-chip', on && 'is-on')}
+                  aria-pressed={on}
+                  title={on ? t('flow.removePersona', { name }) : t('flow.addPersona', { name })}
+                  onClick={() => applyFlow((f) => fo.toggleNodePersona(f, id, persona.id))}
+                >
+                  <span className="persona-chip-dot" style={{ background: personaAccent(persona.color, style).accent }}>
+                    {photo ? <img src={photo} alt="" /> : name.charAt(0).toUpperCase()}
+                  </span>
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+          {picked.length === 0 && (
+            <span className="hint">{mainName !== undefined ? t('flow.inheritPersona', { name: mainName || t('doc.unnamed') }) : t('flow.noPersonaHint')}</span>
+          )}
+        </div>
       )}
       {editable && (
-        <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={custom?.bg ?? '#FFFFFF'} variant="fill" onPick={(bg, live) => applyFlow((f) => fo.setNodeStyle(f, id, { bg }), live ? { coalesce: `style:node:${id}` } : undefined)} />
+        <>
+          <Swatches label={t('tool.fill')} list={FILL_SWATCHES} value={cur.bg} variant="fill" onPick={(bg, live) => set({ bg }, live)} />
+          <Swatches label={t('tool.border')} list={BORDER_SWATCHES} value={cur.bc} variant="border" onPick={(bc, live) => set({ bc }, live)} />
+          <Swatches label={t('flow.topLine')} list={[accent, ...BORDER_SWATCHES.filter((c) => c !== accent && c !== BORDER_SWATCHES[0])]} value={flowCardTop(custom, accent)} variant="fill" onPick={(top, live) => set({ top: top === accent && !custom?.bc ? undefined : top }, live)} />
+        </>
       )}
       {custom && (
         <button className="text-btn" onClick={() => applyFlow((f) => fo.resetNodeStyle(f, id))}>
@@ -135,6 +152,17 @@ function NodeControls({ flow, id }: { flow: Flow; id: string }) {
         </button>
       )}
     </div>
+  );
+}
+
+/** A card with one side drawn bold: the side an arrow leaves or enters by. */
+function SideIcon({ side }: { side: LinkSide }) {
+  const edge = { top: 'M3 3h10', right: 'M13 3v10', bottom: 'M3 13h10', left: 'M3 3v10' }[side];
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">
+      <rect x="3" y="3" width="10" height="10" rx="1.5" strokeWidth="1.2" opacity="0.45" />
+      <path d={edge} strokeWidth="2.6" />
+    </svg>
   );
 }
 
@@ -173,6 +201,22 @@ function LinkControls({ flow, id }: { flow: Flow; id: string }) {
         </div>
       </div>
       <Swatches label={t('link.color')} list={LINK_COLORS} value={link.color ?? LINK_COLORS[0]} variant="fill" onPick={(hex, live) => applyFlow((f) => fo.updateFlowLink(f, id, { color: hex }), live ? { coalesce: `flink-color:${id}` } : undefined)} />
+      {(['fromSide', 'toSide'] as const).map((end) => (
+        <div key={end} className="swatches" role="group" aria-label={t(`link.${end}`)}>
+          <span className="swatches-label">{t(`link.${end}`)}</span>
+          <div className="segmented segmented-sm link-sides">
+            {([undefined, ...SIDES] as const).map((side) => {
+              const on = link[end] === side;
+              const name = side ? t(`link.side.${side}`) : t('link.sideAutoHint');
+              return (
+                <button key={side ?? 'auto'} className={cls(on && 'is-on')} aria-pressed={on} aria-label={side ? name : t('link.sideAuto')} title={name} onClick={() => applyFlow((f) => fo.updateFlowLink(f, id, { [end]: side }))}>
+                  {side ? <SideIcon side={side} /> : t('link.sideAuto')}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
       <button
         className="text-btn"
         onClick={() => {

@@ -135,6 +135,14 @@
   flex-direction: column;
   gap: 12px;
 }
+/*
+ * Exported, the parts left out of the picture (an empty header or brief) take
+ * no room either: otherwise the cards move up in the picture while the arrows,
+ * drawn from the page as laid out, stay where they were.
+ */
+.flow-doc.is-exporting > .no-export {
+  display: none;
+}
 .flow-header {
   display: flex;
   align-items: center;

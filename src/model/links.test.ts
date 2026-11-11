@@ -56,7 +56,7 @@ describe('flows detailing a map', () => {
     p = { ...p, docs: p.docs.map((d) => (d.kind === 'flow' ? { ...d, flow: setFlowPersona(d.flow, null) } : d)) };
     expect(personaFlows(p, secretary)).toEqual([]);
     const card = flowDoc.flow.nodes[0].id;
-    p = { ...p, docs: p.docs.map((d) => (d.kind === 'flow' ? { ...d, flow: fo.setNode(d.flow, card, { personaId: secretary }) } : d)) };
+    p = { ...p, docs: p.docs.map((d) => (d.kind === 'flow' ? { ...d, flow: fo.setNodePersonas(d.flow, card, [map.personas[0].id, secretary]) } : d)) };
     expect(personaFlows(p, secretary).map((f) => f.id)).toEqual([flowDoc.id]);
   });
 
@@ -90,11 +90,11 @@ describe('removing what a link points to', () => {
     const persona = map.personas[0];
     const sheet = sheetDoc(createSheet('blank', 'fr', { persona, mapDocId: mapId }));
     const flow = createFlowDoc('blank', 'fr');
-    flow.flow = { ...flow.flow, personaId: persona.id, nodes: flow.flow.nodes.map((n) => ({ ...n, personaId: persona.id })) };
+    flow.flow = { ...flow.flow, personaId: persona.id, nodes: flow.flow.nodes.map((n, i) => ({ ...n, personaIds: i === 0 ? [persona.id, map.personas[1].id] : [persona.id] })) };
     let p = addDoc(addDoc(project, sheet), flow);
     // Renamed on the map only: the sheet's own copy is out of date.
     p = updateMap(p, mapId, (m) => ops.setPersona(m, persona.id, { name: 'Nouveau nom', role: 'Nouveau rôle' }));
-    return { p, mapId, persona, sheetId: sheet.id, flowId: flow.id };
+    return { p, mapId, persona, other: map.personas[1], sheetId: sheet.id, flowId: flow.id };
   }
 
   it('lists what goes with a persona', () => {
@@ -105,14 +105,16 @@ describe('removing what a link points to', () => {
   });
 
   it('keeps the sheet as it showed, and takes the persona off its flows', () => {
-    const { p, mapId, persona, sheetId, flowId } = withPersonaLinks();
+    const { p, mapId, persona, other, sheetId, flowId } = withPersonaLinks();
     const next = withLinksKept(p, (q) => updateMap(q, mapId, (m) => ops.removePersona(m, persona.id)));
     const sheet = sheetOf(next, sheetId)!.sheet;
     expect(sheet.link).toBeNull();
     expect(sheetIdentity(next, sheet)).toMatchObject({ name: 'Nouveau nom', role: 'Nouveau rôle', synced: false });
     const flow = flowOf(next, flowId)!.flow;
     expect(flow.personaId).toBeUndefined();
-    expect(flow.nodes.every((n) => !n.personaId)).toBe(true);
+    // A card keeps its other personas; one left with none goes back to the main persona.
+    expect(flow.nodes[0].personaIds).toEqual([other.id]);
+    expect(flow.nodes.slice(1).every((n) => n.personaIds === undefined)).toBe(true);
   });
 
   it('does the same when the whole map goes', () => {

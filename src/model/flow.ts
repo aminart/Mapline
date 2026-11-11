@@ -58,17 +58,19 @@ function link(from: Id, to: Id, label?: string): FlowLink {
 /**
  * Adds a card next to `fromId`, in direction `dir`, joined by an arrow from
  * it. When that cell is taken (or off the grid), a column or row is inserted
- * so the rest of the flow moves along; if the card pushed away was the next
- * one after `fromId`, the new card goes in between.
+ * so the rest of the flow moves along. When the card in that cell already
+ * follows `fromId`, the new card is a branch: it goes under that card (beside
+ * it, for up and down), after the branches already there. To put a card in
+ * between, use `insertOnLink`.
  */
 export function addNode(flow: Flow, fromId: Id, dir: Direction, kind: FlowNodeKind = 'activity', label?: string): { flow: Flow; nodeId: Id | null } {
   const from = findNode(flow, fromId);
   if (!from) return { flow, nodeId: null };
-  let next = flow;
   let col = from.col;
   let row = from.row;
   const neighbour = dir === 'right' ? nodeAt(flow, from.col + 1, from.row) : dir === 'down' ? nodeAt(flow, from.col, from.row + 1) : dir === 'left' ? nodeAt(flow, from.col - 1, from.row) : nodeAt(flow, from.col, from.row - 1);
-  const pushed = neighbour ? flow.links.find((l) => l.from === fromId && l.to === neighbour.id) : undefined;
+  if (neighbour && flow.links.some((l) => l.from === fromId && l.to === neighbour.id)) return branch(flow, fromId, neighbour, dir === 'right' || dir === 'left', kind, label);
+  let next = flow;
   if (dir === 'right') {
     col = from.col + 1;
     if (nodeAt(next, col, row)) next = insertColumn(next, col);
@@ -83,14 +85,28 @@ export function addNode(flow: Flow, fromId: Id, dir: Direction, kind: FlowNodeKi
     else row = from.row - 1;
   }
   const node = newNode(kind, col, row);
-  let links = next.links.concat([link(fromId, node.id, label ?? pushed?.label)]);
-  if (pushed) {
-    // In between: from → new → the card that was next.
-    const onward: FlowLink = { ...pushed, id: uid(), from: node.id };
-    delete onward.label;
-    links = links.filter((l) => l.id !== pushed.id).concat([onward]);
-  }
+  const links = next.links.concat([link(fromId, node.id, label)]);
   return { flow: { ...next, nodes: next.nodes.concat([node]), links }, nodeId: node.id };
+}
+
+/**
+ * A new branch from `fromId`, whose next card `first` already sits in the
+ * way: the new card goes in the same column as `first`, under it and under
+ * the other branches stacked there (`down`), or in the same row, to the
+ * right of them. A row or column is inserted when the cell is taken.
+ */
+function branch(flow: Flow, fromId: Id, first: FlowNode, down: boolean, kind: FlowNodeKind, label?: string): { flow: Flow; nodeId: Id } {
+  const follows = (n: FlowNode | undefined) => n && flow.links.some((l) => l.from === fromId && l.to === n.id);
+  let col = first.col;
+  let row = first.row;
+  do {
+    if (down) row++;
+    else col++;
+  } while (follows(nodeAt(flow, col, row)));
+  let next = flow;
+  if (nodeAt(next, col, row)) next = down ? insertRow(next, row) : insertColumn(next, col);
+  const node = newNode(kind, col, row);
+  return { flow: { ...next, nodes: next.nodes.concat([node]), links: next.links.concat([link(fromId, node.id, label)]) }, nodeId: node.id };
 }
 
 /**
@@ -105,6 +121,8 @@ export function insertOnLink(flow: Flow, linkId: Id, kind: FlowNodeKind = 'activ
   if (!r.nodeId) return { flow, nodeId: null };
   const back = { ...l, id: uid(), from: r.nodeId };
   delete back.label;
+  // It now leaves the new card: its side is chosen afresh.
+  delete back.fromSide;
   return { flow: { ...r.flow, links: r.flow.links.concat([back]) }, nodeId: r.nodeId };
 }
 
@@ -120,7 +138,11 @@ export function removeNode(flow: Flow, id: Id): Flow {
   let links = flow.links.filter((l) => l.from !== id && l.to !== id);
   if (incoming.length === 1 && outgoing.length === 1) {
     const [a, b] = [incoming[0].from, outgoing[0].to];
-    if (a !== b && !links.some((l) => l.from === a && l.to === b)) links = links.concat([{ ...incoming[0], id: uid(), to: b }]);
+    if (a !== b && !links.some((l) => l.from === a && l.to === b)) {
+      // It now enters another card: its side there is chosen afresh.
+      const { toSide: _, ...joined } = incoming[0];
+      links = links.concat([{ ...joined, id: uid(), to: b, ...(outgoing[0].toSide ? { toSide: outgoing[0].toSide } : {}) }]);
+    }
   }
   return compact({ ...flow, nodes: flow.nodes.filter((n) => n.id !== id), links, styles: dropStyle(flow.styles, id) });
 }
@@ -153,11 +175,21 @@ export function removeFlowLink(flow: Flow, id: Id): Flow {
   return { ...flow, links: flow.links.filter((l) => l.id !== id) };
 }
 
-export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink, 'label' | 'style' | 'color'>> & { style?: LinkStyle }): Flow {
-  return { ...flow, links: flow.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
+export function updateFlowLink(flow: Flow, id: Id, patch: Partial<Pick<FlowLink, 'label' | 'style' | 'color' | 'fromSide' | 'toSide'>> & { style?: LinkStyle }): Flow {
+  return {
+    ...flow,
+    links: flow.links.map((l) => {
+      if (l.id !== id) return l;
+      const next = { ...l, ...patch };
+      // A side set back to automatic is left out of the file.
+      if (!next.fromSide) delete next.fromSide;
+      if (!next.toSide) delete next.toSide;
+      return next;
+    }),
+  };
 }
 
-export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind' | 'personaId'>>): Flow {
+export function setNode(flow: Flow, id: Id, patch: Partial<Pick<FlowNode, 'text' | 'kind'>>): Flow {
   return { ...flow, nodes: flow.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) };
 }
 

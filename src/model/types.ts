@@ -89,6 +89,8 @@ export interface BoxStyle {
   font?: FontId;
   size?: number;
   weight?: number;
+  /** Flow cards: the line along the top edge; the border's, else the persona's colour, when unset. */
+  top?: string;
 }
 
 /** The content of a mission map (one of a project's documents). */
@@ -224,8 +226,12 @@ export interface FlowNode {
   col: number;
   row: number;
   text: string;
-  /** The mission map persona doing it, whose colour tops the card. */
-  personaId?: Id | null;
+  /**
+   * The mission map personas doing it, in the order picked: the first one's
+   * colour tops the card. Files before 1.6 held a single `personaId`, read as
+   * a list of one.
+   */
+  personaIds?: Id[];
   /** Labels under the text, as on mission map activities. */
   tags?: string[];
   /** Longer comment, kept off the card (shown on demand). */
@@ -242,7 +248,13 @@ export interface FlowLink {
   label?: string;
   style?: LinkStyle;
   color?: string;
+  /** The side of its card the arrow leaves by; chosen by the route when unset. */
+  fromSide?: LinkSide;
+  /** The side of its card the arrow enters by; chosen by the route when unset. */
+  toSide?: LinkSide;
 }
+
+export type LinkSide = 'top' | 'right' | 'bottom' | 'left';
 
 /** The part of a mission map a flow details: a phase or a step (an activity in files from 1.3.0). */
 export interface FlowSource {

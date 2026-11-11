@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
 import { normalizePhases, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
@@ -197,7 +197,15 @@ function placeOf(v: unknown): { place?: SheetBlock['place'] } {
 const NODE_KINDS: FlowNodeKind[] = ['start', 'end', 'activity', 'choice'];
 const SOURCE_KINDS: FlowSource['kind'][] = ['phase', 'step', 'act'];
 const LINK_STYLES: LinkStyle[] = ['solid', 'dashed', 'dotted'];
+const LINK_SIDES: LinkSide[] = ['top', 'right', 'bottom', 'left'];
 const cellIndex = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
+
+/** A card's personas: the list, or the single `personaId` of older files. */
+function nodePersonasOf(n: Record<string, unknown>): { personaIds?: Id[] } {
+  const list = Array.isArray(n.personaIds) ? n.personaIds : typeof n.personaId === 'string' ? [n.personaId] : [];
+  const ids = [...new Set(list.filter((p): p is string => typeof p === 'string' && p !== ''))];
+  return ids.length > 0 ? { personaIds: ids } : {};
+}
 
 function parseFlow(input: unknown): Flow {
   if (!isObject(input)) throw new ProjectFileError('invalid');
@@ -210,7 +218,7 @@ function parseFlow(input: unknown): Flow {
       col: cellIndex(n.col),
       row: cellIndex(n.row),
       text: str(n.text),
-      ...(typeof n.personaId === 'string' ? { personaId: n.personaId } : {}),
+      ...nodePersonasOf(n),
       ...(Array.isArray(n.tags) ? { tags: n.tags.filter((t): t is string => typeof t === 'string') } : {}),
       ...(typeof n.note === 'string' && n.note ? { note: n.note } : {}),
       ...(typeof n.note === 'string' && n.note && n.noteResolved === true ? { noteResolved: true } : {}),
@@ -232,6 +240,8 @@ function parseFlow(input: unknown): Flow {
       ...(typeof l.label === 'string' && l.label ? { label: l.label } : {}),
       ...(LINK_STYLES.includes(l.style as LinkStyle) ? { style: l.style as LinkStyle } : {}),
       ...(typeof l.color === 'string' && /^#[0-9a-f]{6}$/i.test(l.color) ? { color: l.color } : {}),
+      ...(LINK_SIDES.includes(l.fromSide as LinkSide) ? { fromSide: l.fromSide as LinkSide } : {}),
+      ...(LINK_SIDES.includes(l.toSide as LinkSide) ? { toSide: l.toSide as LinkSide } : {}),
     }));
   const src = input.source;
   const source =

@@ -10,7 +10,7 @@ import type { Id } from '../model/types';
 import { NoteButton, TagRow, TagSuggestions } from './CardExtras';
 import { useFitText } from './useFitText';
 import { FitText } from './FitText';
-import { LINK_COLORS, LINK_DASH, personaAccent } from '../model/theme';
+import { LINK_COLORS, LINK_DASH, flowCardTop, personaAccent } from '../model/theme';
 import type { Flow, FlowNode, FlowNodeKind } from '../model/types';
 import { routeFlow, type RoutedLink } from '../lib/flowRoute';
 import { pointAlong, roundedPath } from '../lib/arrows';
@@ -328,10 +328,11 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
   const content = useRef<HTMLDivElement>(null);
   const box = nodeBox(node, layout);
   const flowPersona = useStore((s) => activeFlow(s)?.personaId);
+  const allPersonas = projectPersonas(project);
+  // The card's own personas, each shown on its corner; the first one's colour tops the card.
+  const own = fo.nodePersonas(node).flatMap((id) => allPersonas.filter((p) => p.persona.id === id));
   // Cards without a persona of their own take the flow's main persona's colour.
-  const personaId = node.personaId ?? flowPersona;
-  const persona = personaId ? projectPersonas(project).find((p) => p.persona.id === personaId) : undefined;
-  const ownPersona = Boolean(node.personaId);
+  const persona = own[0] ?? (flowPersona ? allPersonas.find((p) => p.persona.id === flowPersona) : undefined);
   const tags = node.tags ?? [];
   const dimmed = tagFilter.length > 0 && !tags.some((tag) => tagFilter.includes(tag.toLowerCase()));
   const accent = persona ? personaAccent(persona.persona.color, persona.style).accent : node.kind === 'choice' ? '#A16207' : '#2F55D4';
@@ -399,7 +400,7 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
         width: box.w,
         height: box.h,
         // Start and end are dark pills: the card fill applies to activities and choices.
-        ...(pill ? {} : { ...b.box, borderTopColor: accent }),
+        ...(pill ? {} : { ...b.box, borderTopColor: flowCardTop(b.custom, accent) }),
       }}
       data-node={node.id}
       data-reveal={node.col}
@@ -426,9 +427,13 @@ function FlowCard(props: { node: FlowNode; layout: FlowLayout; onMeasure: (id: I
           {t('flow.kind.choice')}
             </span>
           )}
-          {persona && ownPersona && (
-            <span className="flow-persona" style={{ background: accent }} title={persona.persona.name} aria-label={persona.persona.name}>
-              {persona.photo ? <img src={persona.photo} alt="" /> : (persona.persona.name || '?').charAt(0).toUpperCase()}
+          {own.length > 0 && (
+            <span className="flow-personas" title={own.map((p) => p.persona.name || t('doc.unnamed')).join(', ')}>
+              {own.map((p) => (
+                <span key={p.persona.id} className="flow-persona" style={{ background: personaAccent(p.persona.color, p.style).accent }} aria-label={p.persona.name || t('doc.unnamed')}>
+                  {p.photo ? <img src={p.photo} alt="" /> : (p.persona.name || '?').charAt(0).toUpperCase()}
+                </span>
+              ))}
             </span>
           )}
           <textarea
