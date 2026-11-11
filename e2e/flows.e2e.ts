@@ -323,3 +323,36 @@ test('puts back a deleted end box from the card type', async ({ page }) => {
   await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Activité' }).click();
   await expect(added).toHaveClass(/flow-activity/);
 });
+
+test('centres the persona initials on flow cards, on screen and in exports', async ({ page }) => {
+  await startProject(page);
+  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
+  await page.locator('.flow [data-node]').nth(1).locator('textarea').click();
+  const chips = page.locator('.flow-persona-picks .persona-chip');
+  for (let i = 0; i < (await chips.count()); i++) await chips.nth(i).click();
+  await expect(page.locator('.flow-persona')).toHaveCount(await chips.count());
+  // Centred by line height rather than by flex, which WebKit shifts in the exported picture.
+  const offsets = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('.flow-persona, .flow-main-avatar')).map((el) => {
+        const box = el.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const text = range.getBoundingClientRect();
+        return {
+          display: getComputedStyle(el).display,
+          dx: Math.abs(text.x + text.width / 2 - (box.x + box.width / 2)),
+          dy: Math.abs(text.y + text.height / 2 - (box.y + box.height / 2)),
+        };
+      }),
+    );
+  for (const exporting of [false, true]) {
+    await page.locator('.flow-doc').evaluate((el, on) => el.classList.toggle('is-exporting', on), exporting);
+    for (const o of await offsets()) {
+      expect(o.display).toBe('block');
+      expect(o.dx).toBeLessThan(1);
+      expect(o.dy).toBeLessThan(1);
+    }
+  }
+});
