@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
 import { normalizePhases, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
