@@ -219,6 +219,29 @@ export function toggleNodePersona(flow: Flow, id: Id, personaId: Id): Flow {
   return setNodePersonas(flow, id, ids.includes(personaId) ? ids.filter((p) => p !== personaId) : ids.concat([personaId]));
 }
 
+/**
+ * Changes a card's kind. A card that becomes the start of the flow and only
+ * has arrows coming in (as a card added to the left of the first one) gets
+ * them turned around, so the flow leaves from it.
+ */
+export function setNodeKind(flow: Flow, id: Id, kind: FlowNodeKind): Flow {
+  const node = findNode(flow, id);
+  if (!node || node.kind === kind) return flow;
+  const next = setNode(flow, id, { kind });
+  if (kind !== 'start') return next;
+  const others = flow.links.filter((l) => l.from !== l.to);
+  const outgoing = others.some((l) => l.from === id);
+  const incoming = others.filter((l) => l.to === id);
+  if (outgoing || incoming.length === 0) return next;
+  const turned = new Set(incoming.map((l) => l.id));
+  return { ...next, links: next.links.map((l) => (turned.has(l.id) ? { ...l, from: id, to: l.from } : l)) };
+}
+
+/** The kind a card turned into a start or end box takes: an end once arrows reach it. */
+export function terminalKind(flow: Flow, id: Id): 'start' | 'end' {
+  return flow.links.some((l) => l.to === id && l.from !== id) ? 'end' : 'start';
+}
+
 /** Renames a tag on one card (`id`), or on every card when `id` is null. */
 export function renameNodeTag(flow: Flow, id: Id | null, from: string, to: string): Flow {
   let changed = false;

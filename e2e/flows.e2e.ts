@@ -295,3 +295,21 @@ test('exports a flow with its arrows on their cards and every text whole', async
   await expect(page.locator('.export-text')).toHaveCount(0);
   expect(await texts(page).first().evaluate((el) => el.style.color)).not.toBe('transparent');
 });
+
+test('puts back a deleted end box from the card type', async ({ page }) => {
+  await startFlow(page, 'Flow vide');
+  const start = await card(page, 'Début');
+  const end = await card(page, 'Fin');
+  await end.locator('input, textarea').first().click();
+  await end.getByRole('button', { name: 'Supprimer la carte' }).click();
+  await expect(cards(page)).toHaveCount(1);
+  await start.locator('input, textarea').first().click();
+  await start.getByRole('button', { name: 'Ajouter une carte à droite' }).click();
+  await page.keyboard.type('Merci');
+  const added = await card(page, 'Merci');
+  await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Début / Fin' }).click();
+  await expect(added).toHaveClass(/flow-end/);
+  await expect(page.getByRole('group', { name: 'Début ou fin du flow' }).getByRole('button', { name: 'Fin' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Activité' }).click();
+  await expect(added).toHaveClass(/flow-activity/);
+});
