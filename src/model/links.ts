@@ -78,7 +78,7 @@ export function addDetailFlow(project: Project, doc: FlowDoc, source: FlowSource
 /** The flows a map persona is in: as the flow's main persona or on one of its cards. */
 export function personaFlows(project: Project, personaId: Id): FlowDoc[] {
   return project.docs.filter(
-    (d): d is FlowDoc => d.kind === 'flow' && (d.flow.personaId === personaId || d.flow.nodes.some((n) => n.personaId === personaId)),
+    (d): d is FlowDoc => d.kind === 'flow' && (d.flow.personaId === personaId || d.flow.nodes.some((n) => n.personaIds?.includes(personaId))),
   );
 }
 
@@ -109,8 +109,14 @@ export function withLinksKept(project: Project, change: (project: Project) => Pr
       flow = rest;
     }
     if (!known(flow.personaId)) flow = setFlowPersona(flow, null);
-    if (flow.nodes.some((n) => !known(n.personaId))) {
-      flow = { ...flow, nodes: flow.nodes.map((n) => (known(n.personaId) ? n : { ...n, personaId: null })) };
+    if (flow.nodes.some((n) => n.personaIds?.some((p) => !known(p)))) {
+      const nodes = flow.nodes.map((n) => {
+        if (!n.personaIds?.some((p) => !known(p))) return n;
+        const { personaIds, ...rest } = n;
+        const kept = personaIds.filter((p) => known(p));
+        return kept.length > 0 ? { ...rest, personaIds: kept } : rest;
+      });
+      flow = { ...flow, nodes };
     }
     if (flow === d.flow) return d;
     changed = true;

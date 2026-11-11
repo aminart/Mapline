@@ -186,7 +186,7 @@ test('a sheet photo shows on the persona everywhere in the project', async ({ pa
   await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
   await page.locator('.flow [data-node]').nth(1).locator('textarea').click();
-  await page.getByRole('combobox', { name: 'Persona', exact: true }).selectOption({ index: 1 });
+  await page.locator('.flow-persona-picks .persona-chip').first().click();
   await expect(page.locator('.flow [data-node]').nth(1).locator('.flow-persona img')).toBeVisible();
 });
 

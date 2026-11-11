@@ -26,7 +26,7 @@ export const BORDER_SWATCHES = ['#DDE1E7', '#2F55D4', '#C2410C', '#0F766E', '#7E
 export const TEXT_SWATCHES = ['#191B20', '#4A505C', '#2F55D4', '#C2410C', '#0F766E', '#FFFFFF'];
 export const SIZES = [12, 13, 14, 16, 18, 20, 24, 28];
 
-export type ResolvedStyle = Required<BoxStyle>;
+export type ResolvedStyle = Required<Omit<BoxStyle, 'top'>>;
 
 const BASE: Record<BoxKind, ResolvedStyle> = {
   obj: { bg: '#191B20', bc: '#191B20', color: '#FFFFFF', font: 'inter', size: 20, weight: 600 },
@@ -53,6 +53,10 @@ export function defaultStyle(kind: BoxKind, personaColor?: number): ResolvedStyl
 }
 
 export function resolveStyle(kind: BoxKind, custom: BoxStyle | undefined, personaColor?: number): ResolvedStyle {
+  if (custom?.top !== undefined) {
+    const { top: _top, ...rest } = custom;
+    custom = rest;
+  }
   if (kind === 'persona' && custom?.bg) {
     // A persona's own fill drives its border and text unless those are set too.
     const derived = paletteFromFill(custom.bg);
@@ -72,6 +76,14 @@ export function personaAccent(personaColor: number, custom: BoxStyle | undefined
     return { accent, onAccent };
   }
   return { accent: PERSONA_PALETTE[personaColor % PERSONA_PALETTE.length].color, onAccent: '#FFFFFF' };
+}
+
+/**
+ * The line along a flow card's top edge: its own colour, else its border's
+ * (as on map cards), else the persona's accent.
+ */
+export function flowCardTop(custom: BoxStyle | undefined, accent: string): string {
+  return custom?.top ?? custom?.bc ?? accent;
 }
 
 export function textStyle(s: ResolvedStyle): CSSProperties {

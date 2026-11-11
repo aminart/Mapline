@@ -200,6 +200,13 @@ const LINK_STYLES: LinkStyle[] = ['solid', 'dashed', 'dotted'];
 const LINK_SIDES: LinkSide[] = ['top', 'right', 'bottom', 'left'];
 const cellIndex = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
 
+/** A card's personas: the list, or the single `personaId` of older files. */
+function nodePersonasOf(n: Record<string, unknown>): { personaIds?: Id[] } {
+  const list = Array.isArray(n.personaIds) ? n.personaIds : typeof n.personaId === 'string' ? [n.personaId] : [];
+  const ids = [...new Set(list.filter((p): p is string => typeof p === 'string' && p !== ''))];
+  return ids.length > 0 ? { personaIds: ids } : {};
+}
+
 function parseFlow(input: unknown): Flow {
   if (!isObject(input)) throw new ProjectFileError('invalid');
   const taken = new Set<string>();
@@ -211,7 +218,7 @@ function parseFlow(input: unknown): Flow {
       col: cellIndex(n.col),
       row: cellIndex(n.row),
       text: str(n.text),
-      ...(typeof n.personaId === 'string' ? { personaId: n.personaId } : {}),
+      ...nodePersonasOf(n),
       ...(Array.isArray(n.tags) ? { tags: n.tags.filter((t): t is string => typeof t === 'string') } : {}),
       ...(typeof n.note === 'string' && n.note ? { note: n.note } : {}),
       ...(typeof n.note === 'string' && n.note && n.noteResolved === true ? { noteResolved: true } : {}),
