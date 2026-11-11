@@ -46,12 +46,16 @@
 .flow-card.is-dimmed {
   opacity: 0.25;
 }
-/* The persona doing it: their photo or initial, on the card's corner. */
-.flow-persona {
+/* The personas doing it: their photos or initials, side by side on the card's corner. */
+.flow-personas {
   position: absolute;
   top: -11px;
   left: -11px;
   z-index: 1;
+  display: flex;
+}
+.flow-persona {
+  flex: none;
   width: 24px;
   height: 24px;
   border: 2px solid #fff;
@@ -63,6 +67,9 @@
   font-size: 11px;
   font-weight: 700;
   color: #fff;
+}
+.flow-persona + .flow-persona {
+  margin-left: -6px;
 }
 .flow-persona img {
   width: 100%;
@@ -247,4 +254,50 @@ body.is-dragging .flow-drop {
 .flow-card.is-selected {
   /* Its + handles above neighbouring arrows' ⊕. */
   z-index: 8;
+}
+/* Toolbar: the personas a card is flagged with, toggled one by one. */
+.persona-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.persona-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px 0 3px;
+  border: 1px solid var(--line, #d6d9e0);
+  border-radius: 13px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.persona-chip:hover {
+  opacity: 1;
+}
+.persona-chip.is-on {
+  opacity: 1;
+  border-color: currentColor;
+  font-weight: 600;
+}
+.persona-chip-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+.persona-chip-dot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }

@@ -226,8 +226,12 @@ export interface FlowNode {
   col: number;
   row: number;
   text: string;
-  /** The mission map persona doing it, whose colour tops the card. */
-  personaId?: Id | null;
+  /**
+   * The mission map personas doing it, in the order picked: the first one's
+   * colour tops the card. Files before 1.6 held a single `personaId`, read as
+   * a list of one.
+   */
+  personaIds?: Id[];
   /** Labels under the text, as on mission map activities. */
   tags?: string[];
   /** Longer comment, kept off the card (shown on demand). */

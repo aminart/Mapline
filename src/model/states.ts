@@ -85,6 +85,8 @@ export interface Diff<T> {
 }
 
 const sameTags = (a: string[] | undefined, b: string[] | undefined) => (a ?? []).join('\n') === (b ?? []).join('\n');
+/** Same personas on a card, whatever the order they were picked in. */
+const samePersonas = (a: Id[] | undefined, b: Id[] | undefined) => [...(a ?? [])].sort().join('\n') === [...(b ?? [])].sort().join('\n');
 
 /**
  * Activities added, changed (text, kind, tags, or moved to another cell) or
@@ -126,7 +128,7 @@ export function diffFlow(base: Flow, target: Flow): Diff<FlowNode> {
     }
     kept.add(node.id);
     const textChanged = old.text.trim() !== node.text.trim();
-    if (textChanged || old.kind !== node.kind || (old.personaId ?? null) !== (node.personaId ?? null) || !sameTags(old.tags, node.tags)) {
+    if (textChanged || old.kind !== node.kind || !samePersonas(old.personaIds, node.personaIds) || !sameTags(old.tags, node.tags)) {
       diff.changes[node.id] = 'modified';
       if (textChanged) diff.before[node.id] = old.text;
     }
