@@ -110,6 +110,19 @@ export const CropIcon = ({ size = 13 }: P) => (
     <path d="M18 22V8a2 2 0 0 0-2-2H2" />
   </Svg>
 );
+/** A small picture inside a larger frame: show the whole image. */
+export const FitContainIcon = ({ size = 13 }: P) => (
+  <Svg size={size} width={2}>
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <rect x="8" y="8" width="8" height="8" rx="1" />
+  </Svg>
+);
+/** Arrows to the corners: fill the frame. */
+export const FitCoverIcon = ({ size = 13 }: P) => (
+  <Svg size={size} width={2}>
+    <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />
+  </Svg>
+);
 export const LogoIcon = ({ size = 28 }: P) => (
   <img src={logoMapline} alt="" width={size} height={size} style={{ display: 'block', flexShrink: 0 }} />
 );

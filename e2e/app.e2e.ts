@@ -525,16 +525,16 @@ test('stacks more than two cards under a step', async ({ page }) => {
 test('reframes the image of a storyboard scene: drag to move, wheel to zoom', async ({ page }) => {
   await startProject(page);
   await page.getByRole('toolbar', { name: 'Outils et mise en forme' }).getByRole('button', { name: 'Storyboard' }).click();
-  // A wide picture, so it can move sideways inside its block.
+  // A wide picture, so it can move sideways inside its block (not so wide that it starts whole).
   const png = await page.evaluate(() => {
     const c = document.createElement('canvas');
     c.width = 1200;
-    c.height = 300;
+    c.height = 600;
     const ctx = c.getContext('2d')!;
     ctx.fillStyle = '#c33';
-    ctx.fillRect(0, 0, 600, 300);
+    ctx.fillRect(0, 0, 600, 600);
     ctx.fillStyle = '#33c';
-    ctx.fillRect(600, 0, 600, 300);
+    ctx.fillRect(600, 0, 600, 600);
     return c.toDataURL('image/png').split(',')[1];
   });
   const scene = page.locator('.scene').first();
@@ -569,6 +569,60 @@ test('reframes the image of a storyboard scene: drag to move, wheel to zoom', as
   await expect(img).toHaveCSS('object-position', '50% 50%');
   await page.keyboard.press('Escape');
   await expect(frame).not.toHaveClass(/is-reframing/);
+});
+
+test('gives every storyboard image the same frame, whole or filling it', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await startProject(page);
+  await page.getByRole('toolbar', { name: 'Outils et mise en forme' }).getByRole('button', { name: 'Storyboard' }).click();
+  const picture = (w: number, h: number) =>
+    page.evaluate(([w, h]) => {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = '#2a6';
+      ctx.fillRect(0, 0, w, h);
+      return c.toDataURL('image/png').split(',')[1];
+    }, [w, h]);
+  const scenes = page.locator('.scene');
+  const add = async (i: number, w: number, h: number, name: string) =>
+    scenes.nth(i).locator('input[type=file]').setInputFiles({ name, mimeType: 'image/png', buffer: Buffer.from(await picture(w, h), 'base64') });
+  // A photo close to 4:3, then a phone screenshot.
+  await add(0, 800, 600, 'photo.png');
+  await add(1, 390, 845, 'capture.png');
+  const frames = page.locator('.scene-img');
+  await expect(frames).toHaveCount(2);
+
+  // New maps use 4:3: both frames have the same size.
+  const format = page.getByRole('combobox', { name: 'Format des images' });
+  await expect(format).toHaveValue('4:3');
+  const [a, b] = [(await frames.nth(0).boundingBox())!, (await frames.nth(1).boundingBox())!];
+  expect(Math.abs(a.width - b.width)).toBeLessThan(1);
+  expect(Math.abs(a.width / a.height - 4 / 3)).toBeLessThan(0.02);
+
+  // The photo fills its frame; the screenshot arrives whole.
+  await expect(frames.nth(0)).not.toHaveClass(/is-whole/);
+  await expect(frames.nth(1)).toHaveClass(/is-whole/);
+  await expect(frames.nth(1).locator('img').last()).toHaveCSS('object-fit', 'contain');
+  await expect(scenes.nth(1).getByRole('button', { name: 'Recadrer' })).toHaveCount(0);
+
+  // Each image can switch on its own.
+  await scenes.nth(1).getByRole('button', { name: 'Remplir le cadre' }).click();
+  await expect(frames.nth(1)).not.toHaveClass(/is-whole/);
+  await expect(scenes.nth(1).getByRole('button', { name: 'Recadrer' })).toBeVisible();
+  await scenes.nth(0).getByRole('button', { name: 'Afficher l’image entière' }).click();
+  await expect(frames.nth(0)).toHaveClass(/is-whole/);
+
+  // Another format resizes every frame alike.
+  await format.selectOption('3:4');
+  const c = (await frames.nth(0).boundingBox())!;
+  expect(Math.abs(c.width / c.height - 3 / 4)).toBeLessThan(0.02);
+
+  // Back to the step width: 150 px high, as wide as the step.
+  await format.selectOption('');
+  const d = (await frames.nth(0).boundingBox())!;
+  expect(Math.round(d.height)).toBe(150);
 });
 
 test('moves a phase with its steps and activities', async ({ page }) => {

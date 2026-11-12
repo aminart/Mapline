@@ -5,36 +5,71 @@ import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
-import type { SceneView, Step } from '../model/types';
-import { readImage } from '../lib/image';
+import type { CSSProperties } from 'react';
+import type { SceneFit, SceneFormat, SceneView, Step } from '../model/types';
+import { imageBackdrop, imageSize, readImage } from '../lib/image';
 import { withBusy } from '../actions';
 import { useBox } from './useBox';
-import { CloseIcon, CropIcon, ImageIcon } from './Icons';
+import { CloseIcon, CropIcon, FitContainIcon, FitCoverIcon, ImageIcon } from './Icons';
+import { ACTIVITY_COL } from './layout';
 import { cls } from './cls';
 import { FitText } from './FitText';
 
 export function StoryboardRow() {
   const t = useT();
   const steps = useMap((m) => m.steps);
+  const format = useMap((m) => m.sceneFormat);
   const apply = useStore((s) => s.apply);
   return (
     <div className="grid-row storyboard-row">
       <div className="row-head">
         <span className="eyebrow eyebrow-accent">{t('sb.title')}</span>
         <span className="muted">{t('sb.text')}</span>
+        <label className="sb-format no-export">
+          <span>{t('sb.format')}</span>
+          <select
+            className="tool-select"
+            value={format ?? ''}
+            onChange={(e) => {
+              const v = (e.target.value || null) as SceneFormat | null;
+              apply((d) => ops.setSceneFormat(d, v));
+            }}
+          >
+            <option value="">{t('sb.formatStep')}</option>
+            {ops.SCENE_FORMATS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
         <button className="chip no-export" onClick={() => apply((d) => ({ ...d, storyboard: false }))}>
           {t('sb.hide')}
         </button>
       </div>
       {steps.map((s) => (
-        <SceneCell key={s.id} step={s} />
+        <SceneCell key={s.id} step={s} format={format} />
       ))}
       <div />
     </div>
   );
 }
 
-function SceneCell({ step }: { step: Step }) {
+/** Inner width of a one-column scene: its block's width less its padding and border. */
+const SCENE_SIDE = ACTIVITY_COL - 2 * 8 - 2 * 1.5;
+
+/**
+ * Size of a scene's frame. With a storyboard format, every frame is the
+ * largest of that shape that fits a one-column step, so all are alike.
+ */
+function frameStyle(format: SceneFormat | undefined): CSSProperties | undefined {
+  if (!format) return undefined;
+  const r = ops.sceneRatio(format);
+  const width = r >= 1 ? SCENE_SIDE : SCENE_SIDE * r;
+  return { width, height: width / r, alignSelf: 'center' };
+}
+
+function SceneCell({ step, format }: { step: Step; format: SceneFormat | undefined }) {
   const t = useT();
   const scene = useMap((m) => m.scenes[step.id]);
   const apply = useStore((s) => s.apply);
@@ -52,9 +87,14 @@ function SceneCell({ step }: { step: Step }) {
       return;
     }
     setReframing(false);
+    // A picture far from the storyboard's shape (a phone screenshot in a wide frame) starts whole.
+    const size = await imageSize(img);
+    const fit = size ? ops.autoSceneFit(format, size.width, size.height) : 'cover';
     // A new picture starts centred: the framing of the previous one means nothing for it.
-    apply((d) => ops.setSceneView(ops.setScene(d, step.id, { img }), step.id, ops.DEFAULT_SCENE_VIEW));
+    apply((d) => ops.setSceneFit(ops.setSceneView(ops.setScene(d, step.id, { img }), step.id, ops.DEFAULT_SCENE_VIEW), step.id, fit));
   }
+
+  const frame = frameStyle(format);
 
   const img = scene?.img ?? null;
   const text = scene?.text ?? '';
@@ -66,14 +106,18 @@ function SceneCell({ step }: { step: Step }) {
           img={img}
           alt={text || t('sb.alt', { name: step.title })}
           view={ops.sceneView(scene)}
+          fit={scene?.fit === 'contain' ? 'contain' : 'cover'}
+          frameStyle={frame}
+          onFit={(fit) => { setReframing(false); apply((d) => ops.setSceneFit(d, step.id, fit)); }}
           reframing={reframing}
           onReframe={setReframing}
           onReplace={load}
-          onRemove={() => { setReframing(false); apply((d) => ops.setSceneView(ops.setScene(d, step.id, { img: null }), step.id, ops.DEFAULT_SCENE_VIEW)); }}
+          onRemove={() => { setReframing(false); apply((d) => ops.setSceneFit(ops.setSceneView(ops.setScene(d, step.id, { img: null }), step.id, ops.DEFAULT_SCENE_VIEW), step.id, 'cover')); }}
         />
       ) : (
         <label
           className={cls('scene-drop file-label no-export', dragOver && 'is-over')}
+          style={frame}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => { e.preventDefault(); setDragOver(false); load(e.dataTransfer.files?.[0]); }}
@@ -106,6 +150,10 @@ interface SceneImageProps {
   img: string;
   alt: string;
   view: SceneView;
+  fit: SceneFit;
+  /** Fixed size of the frame, when the storyboard has a format. */
+  frameStyle: CSSProperties | undefined;
+  onFit: (fit: SceneFit) => void;
   reframing: boolean;
   onReframe: (on: boolean) => void;
   onReplace: (file: File | undefined) => void;
@@ -122,8 +170,15 @@ const KEY_STEP = 2;
  * A scene's picture, filling its block. In reframe mode, dragging the picture
  * chooses which part of it shows, and the wheel or the buttons zoom in.
  */
-function SceneImage({ stepId, img, alt, view, reframing, onReframe, onReplace, onRemove }: SceneImageProps) {
+function SceneImage({ stepId, img, alt, view, fit, frameStyle, onFit, reframing, onReframe, onReplace, onRemove }: SceneImageProps) {
   const t = useT();
+  const [backdrop, setBackdrop] = useState<string | null>(null);
+  useEffect(() => {
+    if (fit !== 'contain') return;
+    let live = true;
+    imageBackdrop(img).then((b) => { if (live) setBackdrop(b); });
+    return () => { live = false; };
+  }, [img, fit]);
   const apply = useStore((s) => s.apply);
   const frame = useRef<HTMLDivElement>(null);
   const picture = useRef<HTMLImageElement>(null);
@@ -232,7 +287,8 @@ function SceneImage({ stepId, img, alt, view, reframing, onReframe, onReplace, o
   return (
     <div
       ref={frame}
-      className={cls('scene-img', reframing && 'is-reframing')}
+      className={cls('scene-img', reframing && 'is-reframing', fit === 'contain' && 'is-whole')}
+      style={frameStyle}
       tabIndex={reframing ? 0 : undefined}
       role={reframing ? 'application' : undefined}
       aria-label={reframing ? t('sb.reframeHint') : undefined}
@@ -242,19 +298,24 @@ function SceneImage({ stepId, img, alt, view, reframing, onReframe, onReplace, o
       onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
       onDoubleClick={(e) => {
-        if (!(e.target as HTMLElement).closest('.scene-img-actions, .scene-reframe-bar, .scene-reframe-hint')) onReframe(!reframing);
+        if (fit === 'cover' && !(e.target as HTMLElement).closest('.scene-img-actions, .scene-reframe-bar, .scene-reframe-hint')) onReframe(!reframing);
       }}
     >
+      {fit === 'contain' && backdrop && <img className="scene-backdrop" src={backdrop} alt="" draggable={false} />}
       <img
         ref={picture}
         src={img}
         alt={alt}
         draggable={false}
-        style={{
-          objectPosition: `${view.x}% ${view.y}%`,
-          transform: view.zoom !== 1 ? `scale(${view.zoom})` : undefined,
-          transformOrigin: `${view.x}% ${view.y}%`,
-        }}
+        style={
+          fit === 'contain'
+            ? undefined
+            : {
+                objectPosition: `${view.x}% ${view.y}%`,
+                transform: view.zoom !== 1 ? `scale(${view.zoom})` : undefined,
+                transformOrigin: `${view.x}% ${view.y}%`,
+              }
+        }
       />
       {reframing ? (
         <>
@@ -278,12 +339,22 @@ function SceneImage({ stepId, img, alt, view, reframing, onReframe, onReplace, o
         <div className="scene-img-actions no-export">
           <button
             className="chip chip-raised chip-icon"
-            aria-label={t('sb.reframe')}
-            title={t('sb.reframe')}
-            onClick={() => { onReframe(true); requestAnimationFrame(() => frame.current?.focus()); }}
+            aria-label={fit === 'cover' ? t('sb.fitContain') : t('sb.fitCover')}
+            title={fit === 'cover' ? t('sb.fitContain') : t('sb.fitCover')}
+            onClick={() => onFit(fit === 'cover' ? 'contain' : 'cover')}
           >
-            <CropIcon />
+            {fit === 'cover' ? <FitContainIcon /> : <FitCoverIcon />}
           </button>
+          {fit === 'cover' && (
+            <button
+              className="chip chip-raised chip-icon"
+              aria-label={t('sb.reframe')}
+              title={t('sb.reframe')}
+              onClick={() => { onReframe(true); requestAnimationFrame(() => frame.current?.focus()); }}
+            >
+              <CropIcon />
+            </button>
+          )}
           <label className="chip chip-raised file-label">
             {t('sb.replace')}
             <input type="file" accept="image/*" onChange={(e) => { onReplace(e.target.files?.[0]); e.target.value = ''; }} />

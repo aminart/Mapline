@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Activity, Blueprint, BoxKey, BoxStyle, Divider, Id, Link, Persona, Phase, Scene, SceneView } from './types';
+import type { Activity, Blueprint, BoxKey, BoxStyle, Divider, Id, Link, Persona, Phase, Scene, SceneFit, SceneFormat, SceneView } from './types';
 import { PERSONA_PALETTE } from './theme';
 
 export function uid(): Id {
@@ -504,6 +504,48 @@ export function setSceneView(doc: Blueprint, stepId: Id, view: SceneView): Bluep
   if (isDefault) delete scene.view;
   else scene.view = next;
   return { ...doc, scenes: { ...doc.scenes, [stepId]: scene } };
+}
+
+export const SCENE_FORMATS: SceneFormat[] = ['16:9', '4:3', '1:1', '3:4'];
+/** Format of new storyboards. */
+export const DEFAULT_SCENE_FORMAT: SceneFormat = '4:3';
+
+/** Width over height of a storyboard format. */
+export function sceneRatio(format: SceneFormat): number {
+  const [w, h] = format.split(':').map(Number);
+  return w / h;
+}
+
+/**
+ * Below this ratio between the image's shape and the frame's (or above its
+ * inverse), filling the frame would cut away too much: a new image is then
+ * shown whole. A phone screenshot in a 4:3 frame is about 0.35.
+ */
+const CONTAIN_BELOW = 0.6;
+
+/** How a new image of `width` × `height` px is best fitted into a frame of `format`. */
+export function autoSceneFit(format: SceneFormat | undefined, width: number, height: number): SceneFit {
+  if (!format || !(width > 0) || !(height > 0)) return 'cover';
+  const r = width / height / sceneRatio(format);
+  return r < CONTAIN_BELOW || r > 1 / CONTAIN_BELOW ? 'contain' : 'cover';
+}
+
+/** Changes how a scene's image is fitted; filling, the default, is not stored. */
+export function setSceneFit(doc: Blueprint, stepId: Id, fit: SceneFit): Blueprint {
+  const prev = doc.scenes[stepId];
+  if (!prev) return doc;
+  const scene = { ...prev };
+  if (fit === 'contain') scene.fit = 'contain';
+  else delete scene.fit;
+  return { ...doc, scenes: { ...doc.scenes, [stepId]: scene } };
+}
+
+/** Sets the storyboard's format; null goes back to frames as wide as their step. */
+export function setSceneFormat(doc: Blueprint, format: SceneFormat | null): Blueprint {
+  const next = { ...doc };
+  if (format) next.sceneFormat = format;
+  else delete next.sceneFormat;
+  return next;
 }
 
 // Styles

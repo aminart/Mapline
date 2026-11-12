@@ -125,6 +125,7 @@ export function duplicateMap(project: Project, docId: Id, name: string, kind: Co
           tagColors: {},
           styles: Object.fromEntries(Object.entries(source.styles).filter(([key]) => key === 'obj' || (key.startsWith('persona:') && ids.has(key.slice(8))))),
           storyboard: source.storyboard,
+          ...(source.sceneFormat ? { sceneFormat: source.sceneFormat } : {}),
           textRows: [],
         };
   const copy: MissionMapDoc = { id: uid(), kind: 'mission-map', name, map, origin: doc.id };

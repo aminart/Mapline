@@ -327,6 +327,38 @@ describe('scene framing', () => {
   });
 });
 
+describe('storyboard format and fit', () => {
+  const withImage = () => ops.setScene(exampleBlueprint(), 's1', { img: 'data:image/png;base64,AA', text: '' });
+
+  it('keeps frames as wide as their step until a format is chosen', () => {
+    expect(exampleBlueprint().sceneFormat).toBeUndefined();
+    const doc = ops.setSceneFormat(exampleBlueprint(), '4:3');
+    expect(roundTrip(doc).sceneFormat).toBe('4:3');
+    expect('sceneFormat' in ops.setSceneFormat(doc, null)).toBe(false);
+  });
+
+  it('ignores an unknown format in a file', () => {
+    expect(roundTrip({ ...exampleBlueprint(), sceneFormat: '2:1' as never }).sceneFormat).toBeUndefined();
+  });
+
+  it('stores only the whole-image fit, and saves it', () => {
+    let doc = ops.setSceneFit(withImage(), 's1', 'contain');
+    expect(roundTrip(doc).scenes.s1.fit).toBe('contain');
+    doc = ops.setSceneFit(doc, 's1', 'cover');
+    expect('fit' in doc.scenes.s1).toBe(false);
+  });
+
+  it('shows a picture whole when its shape is far from the frame', () => {
+    // A phone screenshot, a panorama, then a photo close to the frame's shape.
+    expect(ops.autoSceneFit('4:3', 390, 845)).toBe('contain');
+    expect(ops.autoSceneFit('3:4', 2100, 900)).toBe('contain');
+    expect(ops.autoSceneFit('16:9', 1600, 1200)).toBe('cover');
+    expect(ops.autoSceneFit('1:1', 800, 800)).toBe('cover');
+    // Without a format, frames follow their step: filling stays the rule.
+    expect(ops.autoSceneFit(undefined, 390, 845)).toBe('cover');
+  });
+});
+
 describe('files', () => {
   it('round-trips through serialize/parse', () => {
     const doc = ops.setScene(exampleBlueprint(), 'x', { text: 'ignored' });

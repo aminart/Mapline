@@ -56,3 +56,52 @@ export function alphaBelowFull(data: Uint8ClampedArray): boolean {
   for (let i = 3; i < data.length; i += 4) if (data[i] < 255) return true;
   return false;
 }
+
+/** Natural size of an image, or null when it cannot be decoded. */
+export async function imageSize(src: string): Promise<{ width: number; height: number } | null> {
+  const img = new Image();
+  img.src = src;
+  try {
+    await img.decode();
+  } catch {
+    return null;
+  }
+  return img.naturalWidth && img.naturalHeight ? { width: img.naturalWidth, height: img.naturalHeight } : null;
+}
+
+const BACKDROP_SIDE = 12;
+const backdrops = new Map<string, Promise<string | null>>();
+
+/**
+ * A tiny copy of an image (a dozen pixels across). Stretched over a frame, the
+ * browser smooths it into a soft blur, the same on screen and in every export
+ * engine, which a CSS filter is not.
+ */
+export function imageBackdrop(src: string): Promise<string | null> {
+  let done = backdrops.get(src);
+  if (!done) {
+    done = (async () => {
+      const img = new Image();
+      img.src = src;
+      try {
+        await img.decode();
+      } catch {
+        return null;
+      }
+      const scale = BACKDROP_SIDE / Math.max(img.naturalWidth, img.naturalHeight, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      try {
+        return canvas.toDataURL('image/png');
+      } catch {
+        return null;
+      }
+    })();
+    backdrops.set(src, done);
+  }
+  return done;
+}
