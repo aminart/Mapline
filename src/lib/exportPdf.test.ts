@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { planPages, planPhasePages } from './exportPdf';
+import { planPages, planPhasePages, planPhasePdfPages } from './exportPdf';
 import type { BoardLayout } from './exportImage';
 
 /** A board with `n` steps of `cols` activity columns each, laid out like the app. */
@@ -32,10 +32,17 @@ describe('planPages', () => {
     expect((900 - 100) * plan.k).toBeLessThanOrEqual(595 - 56 - 38 - 16 + 0.01);
   });
 
-  it('slices a step that is wider than a page', () => {
-    const plan = planPages(board(1, 12), A4);
-    expect(plan.pages.length).toBeGreaterThan(1);
-    expect(plan.pages.every((p) => p.firstStep === 0 && p.lastStep === 0)).toBe(true);
+  it('puts a step wider than a page on a page of its own, scaled down so no card is cut', () => {
+    const layout = board(3);
+    layout.steps[1] = { left: layout.steps[1].left, right: layout.steps[1].left + 12 * 196 - 12 };
+    layout.steps[2] = { left: layout.steps[1].right + 12, right: layout.steps[1].right + 12 + 184 };
+    const plan = planPages(layout, A4);
+    const wide = plan.pages.find((p) => p.firstStep === 1)!;
+    expect(wide).toMatchObject({ lastStep: 1, x0: layout.steps[1].left - 6, x1: layout.steps[1].right + 6 });
+    expect(wide.k).toBeLessThan(plan.k);
+    expect((254 + wide.x1 - wide.x0) * wide.k).toBeCloseTo(842 - 56);
+    // The other pages keep the common scale.
+    expect(plan.pages.filter((p) => p !== wide).every((p) => p.k === plan.k)).toBe(true);
   });
 
   it('puts a small board on a single page, never enlarged', () => {
@@ -63,5 +70,47 @@ describe('planPhasePages', () => {
     const pages = planPhasePages(board(3));
     expect(pages).toHaveLength(1);
     expect(pages[0].top).toBe(100);
+  });
+});
+
+describe('planPhasePdfPages', () => {
+  const withPhases = (n: number, spans: number[]) => {
+    const layout = board(n);
+    let at = 0;
+    layout.phases = spans.map((span, i) => {
+      const ph = { left: layout.steps[at].left, right: layout.steps[at + span - 1].right, top: 110, height: 36, title: i === 0 ? 'Avant' : '', color: '#000', size: 14 };
+      at += span;
+      return ph;
+    });
+    return layout;
+  };
+
+  it('starts a new A4 page for each phase, with only its steps, all at one scale', () => {
+    const layout = withPhases(5, [2, 3]);
+    const pages = planPhasePdfPages(layout, A4);
+    expect(pages).toHaveLength(2);
+    expect(pages[0]).toMatchObject({ phase: 0, title: 'Avant', firstStep: 0, lastStep: 1, part: 1, parts: 1, x0: layout.steps[0].left - 6, x1: layout.steps[1].right + 6 });
+    expect(pages[1]).toMatchObject({ phase: 1, title: '', firstStep: 2, lastStep: 4, part: 1, parts: 1 });
+    expect(pages[0].k).toBe(pages[1].k);
+    expect(pages[0].k).toBe(planPages(layout, A4).k);
+  });
+
+  it('goes on over several pages for a phase too wide for one, cut between steps', () => {
+    const layout = withPhases(12, [1, 11]);
+    const pages = planPhasePdfPages(layout, A4);
+    const second = pages.filter((p) => p.phase === 1);
+    expect(second.length).toBeGreaterThan(1);
+    expect(second.map((p) => p.part)).toEqual(second.map((_, i) => i + 1));
+    expect(second.every((p) => p.parts === second.length)).toBe(true);
+    expect(second[0].firstStep).toBe(1);
+    expect(second[second.length - 1].lastStep).toBe(11);
+    for (let i = 1; i < second.length; i++) expect(second[i].firstStep).toBe(second[i - 1].lastStep + 1);
+    for (const p of pages) expect((254 + p.x1 - p.x0) * p.k).toBeLessThanOrEqual(842 - 56 + 0.01);
+  });
+
+  it('puts all the steps on pages of their own when the map has no phases', () => {
+    const pages = planPhasePdfPages(board(3), A4);
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toMatchObject({ phase: -1, firstStep: 0, lastStep: 2 });
   });
 });
