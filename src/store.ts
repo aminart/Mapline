@@ -49,6 +49,11 @@ interface State extends DocState {
   lang: Lang;
   /** Box to focus once it is mounted (after creating it). */
   pendingFocus: BoxKey | null;
+  /**
+   * Several boxes of one kind selected together (Shift or Cmd/Ctrl + click),
+   * `sel` being the last one picked; see selectedKeys.
+   */
+  multi: BoxKey[];
   tool: Tool;
   linkFrom: Id | null;
   newProjectOpen: boolean;
@@ -104,6 +109,10 @@ interface State extends DocState {
   savedAt: number;
   markSaved: (filePath: string | null) => void;
   select: (key: BoxKey | null) => void;
+  /** Adds the box to the selection, or takes it out (Shift or Cmd/Ctrl + click). */
+  toggleSelect: (key: BoxKey) => void;
+  /** Selects these boxes together, the last one as `sel`. */
+  selectMany: (keys: BoxKey[]) => void;
   focusLater: (key: BoxKey) => void;
   setTool: (tool: Tool) => void;
   setLinkFrom: (id: Id | null) => void;
@@ -151,6 +160,22 @@ export function activeFlow(s: DocState): Flow | undefined {
 /** Box styles of the document shown. */
 export function activeStyles(s: DocState): Record<string, BoxStyle> {
   return activeSheet(s)?.styles ?? activeFlow(s)?.styles ?? activeMap(s).styles;
+}
+
+const boxKind = (key: BoxKey) => key.split(':')[0];
+
+/**
+ * Every selected box: the ones picked together, or just `sel`. The group
+ * only counts while it holds `sel`, so selecting anything else drops it.
+ */
+export function selectedKeys(s: { sel: BoxKey | null; multi: BoxKey[] }): BoxKey[] {
+  if (!s.sel) return [];
+  return s.multi.includes(s.sel) ? s.multi : [s.sel];
+}
+
+/** Whether the box `key` is selected, alone or with others. */
+export function isSelected(s: { sel: BoxKey | null; multi: BoxKey[] }, key: BoxKey): boolean {
+  return s.sel === key || (s.multi.includes(key) && s.multi.includes(s.sel ?? ''));
 }
 
 /** Reads from the mission map shown; re-renders when the selected part changes. */
@@ -228,6 +253,7 @@ export const useStore = create<State>((set, get) => ({
   activeId: null,
   lang: initialLang(),
   pendingFocus: null,
+  multi: [],
   tool: 'select',
   linkFrom: null,
   newProjectOpen: false,
@@ -370,9 +396,19 @@ export const useStore = create<State>((set, get) => ({
   savedAt: 0,
   markSaved: (filePath) => set({ filePath, dirty: false, savedAt: Date.now() }),
   select: (key) => {
-    if (get().sel !== key) set({ sel: key });
+    const s = get();
+    if (s.sel !== key || s.multi.length) set({ sel: key, multi: [] });
   },
-  focusLater: (key) => set({ pendingFocus: key, sel: key }),
+  toggleSelect: (key) => {
+    const kind = boxKind(key);
+    let keys = selectedKeys(get());
+    // One kind at a time: cards, steps, phases or flow cards.
+    if (keys.some((k) => boxKind(k) !== kind)) keys = [];
+    keys = keys.includes(key) ? keys.filter((k) => k !== key) : keys.concat([key]);
+    get().selectMany(keys);
+  },
+  selectMany: (keys) => set({ sel: keys[keys.length - 1] ?? null, multi: keys.length > 1 ? keys : [] }),
+  focusLater: (key) => set({ pendingFocus: key, sel: key, multi: [] }),
   setTool: (tool) => set({ tool, linkFrom: null }),
   setLinkFrom: (linkFrom) => set({ linkFrom }),
   setZoom: (zoom) => set({ zoom: Math.min(2, Math.max(0.3, Math.round(zoom * 100) / 100)) }),

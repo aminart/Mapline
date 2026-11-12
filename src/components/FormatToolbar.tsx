@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { activeMap, useMap, useStore, useT } from '../store';
+import { activeMap, selectedKeys, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
 import type { BoxKind } from '../model/types';
 import { BORDER_SWATCHES, FILL_SWATCHES, TAG_PALETTE, TEXT_SWATCHES, resolveStyle, tagColor } from '../model/theme';
@@ -177,6 +177,9 @@ function StyleControls() {
   });
   const apply = useStore((s) => s.apply);
   const cardKey = useStore((s) => (s.sel?.startsWith('act:') ? ops.activityKeyOf(activeMap(s), s.sel.slice('act:'.length)) : undefined));
+  // Several boxes picked together are styled together, like the last one picked.
+  const picked = useStore((s) => selectedKeys(s).length);
+  const keys = () => selectedKeys(useStore.getState());
   const cardKind = useMap((m) => (cardKey ? (m.activities[cardKey]?.kind ?? 'activity') : undefined));
 
   if (!sel) {
@@ -186,16 +189,23 @@ function StyleControls() {
   const cur = resolveStyle(kind, custom, personaColor);
   // Dragging in the colour picker fires many changes: keep them as one undo step.
   const set = (patch: Parameters<typeof ops.setBoxStyle>[2], live = false) =>
-    apply((d) => ops.setBoxStyle(d, sel, patch), live ? { coalesce: `style:${sel}` } : undefined);
+    apply((d) => keys().reduce((m, k) => ops.setBoxStyle(m, k, patch), d), live ? { coalesce: `style:${keys().join(',')}` } : undefined);
+  const setKind = (k: 'activity' | 'choice') =>
+    apply((d) =>
+      keys().reduce((m, key) => {
+        const at = ops.activityKeyOf(m, key.slice('act:'.length));
+        return at ? ops.setActivityKind(m, at, k) : m;
+      }, d),
+    );
 
   return (
     <div className="tool-group">
-      <span className="tool-kind">{t(cardKind === 'choice' ? 'flow.kind.choice' : `kind.${kind}`)}</span>
+      <span className="tool-kind">{picked > 1 ? t('tool.picked', { n: picked }) : t(cardKind === 'choice' ? 'flow.kind.choice' : `kind.${kind}`)}</span>
       {cardKey && cardKind && (
         <KindMenu
           value={cardKind}
           options={(['activity', 'choice'] as const).map((k) => ({ key: k, label: t(`flow.kind.${k}`) }))}
-          onPick={(k) => apply((d) => ops.setActivityKind(d, cardKey, k))}
+          onPick={setKind}
         />
       )}
       <div className="divider" />
@@ -204,7 +214,7 @@ function StyleControls() {
       <ColorMenu label={t('tool.text')} list={TEXT_SWATCHES} value={cur.color} onPick={(color, live) => set({ color }, live)} variant="text" />
       <div className="divider" />
       <TextStyleControls cur={cur} set={(patch) => set(patch)} />
-      {custom && <ResetButton onClick={() => apply((d) => ops.resetBoxStyle(d, sel))} />}
+      {custom && <ResetButton onClick={() => apply((d) => keys().reduce((m, k) => ops.resetBoxStyle(m, k), d))} />}
     </div>
   );
 }

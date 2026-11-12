@@ -28,6 +28,7 @@ import { removeFlowLink } from './model/flow';
 import { findDoc } from './model/project';
 import { cls } from './components/cls';
 import { installCardClipboard } from './cardClipboard';
+import { installMultiSelect } from './multiSelect';
 
 /** Clears the selection and leaves the field being edited. */
 function deselect() {
@@ -162,6 +163,7 @@ export function App() {
   }, [lang]);
 
   useEffect(() => installCardClipboard(), []);
+  useEffect(() => installMultiSelect(), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
