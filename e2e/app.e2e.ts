@@ -351,6 +351,21 @@ test('exports a PNG with nothing behind its rounded corners, and a PDF on A4 by 
   expect(pdf).toMatch(/\/MediaBox \[0 0 842\.?0* 595\.?0*\]/);
 });
 
+test('exports a PDF with one A4 page per phase, after the overview', async ({ page }) => {
+  await startProject(page);
+  await addActivity(page, 0, 0, 'Une activité');
+  await page.keyboard.press('ControlOrMeta+e');
+  await page.locator('input[name=export-format][value=pdf]').check({ force: true });
+  await page.getByRole('button', { name: 'Une page par phase' }).click();
+  const download = page.waitForEvent('download');
+  await page.locator('dialog[open] .btn-primary').click();
+  const pdf = (await readFile(await (await download).path())).toString('latin1');
+  // The overview, then Avant, Pendant and Après; notes are off as no activity has one.
+  const boxes = pdf.match(/\/MediaBox \[[^\]]*\]/g) ?? [];
+  expect(boxes).toHaveLength(4);
+  for (const box of boxes) expect(box).toMatch(/\/MediaBox \[0 0 842\.?0* 595\.?0*\]/);
+});
+
 test('shows every text of the map in full: phases, steps, personas and rows grow with it', async ({ page }) => {
   await startProject(page);
   const tools = page.getByRole('toolbar', { name: 'Outils et mise en forme' });

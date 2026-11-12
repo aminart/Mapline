@@ -20,43 +20,94 @@ const PAD = 6;
 /** Layout pixels to points at 100 %. */
 const PX_TO_PT = 0.75;
 
-export interface PagePlan {
-  /** Points per layout pixel. */
+export interface PlannedPage {
+  /** Board slice (layout px) shown next to the persona column. */
+  x0: number;
+  x1: number;
+  firstStep: number;
+  lastStep: number;
+  /** Points per layout pixel on this page. */
   k: number;
-  /** Board slices (layout px) shown next to the persona column, with the steps they hold. */
-  pages: { x0: number; x1: number; firstStep: number; lastStep: number }[];
+}
+
+export interface PagePlan {
+  /** Points per layout pixel, shared by every page whose steps fit at that scale. */
+  k: number;
+  pages: PlannedPage[];
+}
+
+/** Room for the board on a page: under the header, above the page number. */
+function usableArea(page: { w: number; h: number }) {
+  return { w: page.w - 2 * MARGIN, h: page.h - 2 * MARGIN - HEADER - FOOTER };
+}
+
+/** The scale at which the board, from its objective down, fits the height of the page. */
+function heightScale(layout: BoardLayout, page: { w: number; h: number }) {
+  return Math.min(PX_TO_PT, usableArea(page).h / (layout.height - layout.objectiveBottom));
+}
+
+/**
+ * Packs steps `from` to `to` page by page at scale `k`, without cutting one
+ * in two. A step too wide for a page gets a page of its own, scaled down so
+ * that it fits whole: its cards are never cut.
+ */
+function packSteps(layout: BoardLayout, page: { w: number; h: number }, k: number, from: number, to: number): PlannedPage[] {
+  const availW = usableArea(page).w;
+  const usableW = availW - layout.stripRight * k;
+  const pages: PlannedPage[] = [];
+  const { steps } = layout;
+  let i = from;
+  while (i <= to) {
+    const start = steps[i].left - PAD;
+    let j = i;
+    while (j + 1 <= to && (steps[j + 1].right + PAD - start) * k <= usableW) j++;
+    const x1 = steps[j].right + PAD;
+    const fit = Math.min(k, availW / (layout.stripRight + x1 - start));
+    pages.push({ x0: start, x1, firstStep: i, lastStep: j, k: fit });
+    i = j + 1;
+  }
+  return pages;
 }
 
 /**
  * Splits the board into pages: the board is scaled so its height fits the
- * page, then steps are packed page by page without cutting one in two
- * (a step wider than a page is sliced).
+ * page, then steps are packed page by page without cutting one in two.
  */
 export function planPages(layout: BoardLayout, page: { w: number; h: number }): PagePlan {
-  // Detail pages leave out the objective band; it goes in the page header.
-  const usableH = page.h - 2 * MARGIN - HEADER - FOOTER;
-  const k = Math.min(PX_TO_PT, usableH / (layout.height - layout.objectiveBottom));
-  const usableW = page.w - 2 * MARGIN - layout.stripRight * k;
-  const pages: PagePlan['pages'] = [];
+  const k = heightScale(layout, page);
+  return { k, pages: layout.steps.length ? packSteps(layout, page, k, 0, layout.steps.length - 1) : [] };
+}
+
+export interface PhasePdfPage extends PlannedPage {
+  /** Index of the phase, for its default name; -1 when the map has no phases. */
+  phase: number;
+  title: string;
+  /** Which page of its phase this is (from 1), out of `parts`. */
+  part: number;
+  parts: number;
+}
+
+/**
+ * Pages of the "one page per phase" PDF: each phase starts a new page, at
+ * the scale of the A4 pages; a phase too wide for one page goes on over the
+ * next ones, cut between steps.
+ */
+export function planPhasePdfPages(layout: BoardLayout, page: { w: number; h: number }): PhasePdfPage[] {
   const { steps } = layout;
-  let i = 0;
-  while (i < steps.length) {
-    const start = steps[i].left - PAD;
-    if ((steps[i].right + PAD - start) * k > usableW) {
-      // One step wider than the page: slice it.
-      const sliceW = usableW / k;
-      for (let x = start; x < steps[i].right + PAD; x += sliceW) {
-        pages.push({ x0: x, x1: Math.min(x + sliceW, steps[i].right + PAD), firstStep: i, lastStep: i });
-      }
-      i++;
-      continue;
-    }
-    let j = i;
-    while (j + 1 < steps.length && (steps[j + 1].right + PAD - start) * k <= usableW) j++;
-    pages.push({ x0: start, x1: steps[j].right + PAD, firstStep: i, lastStep: j });
-    i = j + 1;
-  }
-  return { k, pages };
+  if (steps.length === 0) return [];
+  const k = heightScale(layout, page);
+  // The steps under each phase: those whose middle lies inside it.
+  const groups = layout.phases
+    .map((ph, index) => {
+      const inside = steps.map((s, i) => ({ i, mid: (s.left + s.right) / 2 })).filter((s) => s.mid >= ph.left && s.mid <= ph.right);
+      return { index, title: ph.title, from: inside[0]?.i, to: inside[inside.length - 1]?.i };
+    })
+    .filter((g): g is { index: number; title: string; from: number; to: number } => g.from !== undefined);
+  if (groups.length === 0) groups.push({ index: -1, title: '', from: 0, to: steps.length - 1 });
+  return groups.flatMap((g) => {
+    const pages = packSteps(layout, page, k, g.from, g.to);
+    return pages.map((p, n) => ({ ...p, phase: g.index, title: g.title, part: n + 1, parts: pages.length }));
+  });
 }
 
 export interface PhasePage {
@@ -69,7 +120,7 @@ export interface PhasePage {
   title: string;
 }
 
-/** One page per phase: its steps, with the phase box on top and without the objective. */
+/** One slide per phase (PowerPoint): its steps, with the phase box on top and without the objective. */
 export function planPhasePages(layout: BoardLayout): PhasePage[] {
   if (layout.phases.length === 0) {
     const { steps } = layout;
@@ -138,8 +189,6 @@ export async function pdfDocument(args: {
     return pdf.output('blob');
   }
 
-  if (mode === 'phases') return phasesDocument(jsPDF, args);
-
   if (mode === 'fit') {
     // One A4 page, turned to suit the board's shape, the board scaled to fit under the title.
     const landscape = layout.width >= layout.height;
@@ -156,10 +205,18 @@ export async function pdfDocument(args: {
     return pdf.output('blob');
   }
 
-  const paper = PAPER[mode];
+  // Detail pages: A4 or A3 cut between steps, or A4 with each phase starting a page.
+  const paper = mode === 'phases' ? PAPER.a4 : PAPER[mode];
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [paper.w, paper.h], compress: true });
   pdf.setProperties({ title });
-  const plan = planPages(layout, paper);
+  const stepsLabel = (p: PlannedPage) => (p.firstStep === p.lastStep ? labels.step(p.firstStep + 1) : labels.steps(p.firstStep + 1, p.lastStep + 1));
+  const pages: (PlannedPage & { label: string })[] =
+    mode === 'phases'
+      ? planPhasePdfPages(layout, paper).map((p) => {
+          const name = p.phase < 0 ? '' : p.title || labels.phase(p.phase + 1);
+          return { ...p, label: [name, p.parts > 1 || !name ? stepsLabel(p) : ''].filter(Boolean).join(' · ') };
+        })
+      : planPages(layout, paper).pages.map((p) => ({ ...p, label: stepsLabel(p) }));
   let first = true;
 
   const header = (right: string, subtitle: string) => {
@@ -168,32 +225,30 @@ export async function pdfDocument(args: {
     drawHeader(pdf, paper, title, right, subtitle);
   };
 
-  if (overview) {
-    const availW = paper.w - 2 * MARGIN;
-    const availH = paper.h - 2 * MARGIN - HEADER - FOOTER;
+  if (overview || pages.length === 0) {
+    const { w: availW, h: availH } = usableArea(paper);
     const k = Math.min(availW / layout.width, availH / layout.height);
     const w = layout.width * k;
     const h = layout.height * k;
     header(labels.overview, '');
-    pdf.addImage(canvas, 'JPEG', MARGIN + (availW - w) / 2, MARGIN + HEADER, w, h, undefined, 'FAST');
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN + (availW - w) / 2, MARGIN + HEADER, w, h, undefined, 'FAST');
   }
 
   const top = layout.objectiveBottom;
-  for (const p of plan.pages) {
-    const range = p.firstStep === p.lastStep ? labels.step(p.firstStep + 1) : labels.steps(p.firstStep + 1, p.lastStep + 1);
-    header(range, layout.objective);
+  for (const p of pages) {
+    header(p.label, layout.objective);
     const image = crop(canvas, scale, [{ x0: 0, x1: layout.stripRight }, p], top, layout.height);
     const x = MARGIN;
     const y = MARGIN + HEADER;
-    const w = (layout.stripRight + (p.x1 - p.x0)) * plan.k;
-    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, (layout.height - top) * plan.k, undefined, 'FAST');
+    const w = (layout.stripRight + (p.x1 - p.x0)) * p.k;
+    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, (layout.height - top) * p.k, undefined, 'FAST');
     // A phase that began on an earlier page: repeat its name where it enters this one.
     for (const ph of layout.phases) {
       if (!ph.title || ph.left >= p.x0 || ph.right <= p.x0) continue;
-      const px = x + (layout.stripRight + 14) * plan.k;
-      const py = y + (ph.top - top + ph.height / 2) * plan.k;
+      const px = x + (layout.stripRight + 14) * p.k;
+      const py = y + (ph.top - top + ph.height / 2) * p.k;
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(ph.size * plan.k);
+      pdf.setFontSize(ph.size * p.k);
       pdf.setTextColor(ph.color);
       pdf.text(ph.title, px, py, { baseline: 'middle' });
     }
@@ -218,44 +273,6 @@ function drawHeader(pdf: Pdf, paper: { w: number; h: number }, title: string, ri
     const line: string = pdf.splitTextToSize(subtitle, paper.w - 2 * MARGIN)[0];
     pdf.text(line, MARGIN, MARGIN + 24);
   }
-}
-
-/** One page per phase, each sized to fit its phase at full scale. */
-function phasesDocument(jsPDF: (typeof import('jspdf'))['jsPDF'], args: Parameters<typeof pdfDocument>[0]): Blob {
-  const { canvas, scale, layout, title, overview, notes, labels } = args;
-  const pages = planPhasePages(layout);
-  // At least as wide as an A4 page, so a one-step phase still has room for its header.
-  const sizeOf = (w: number, h: number) => ({ w: Math.max(595, w * PX_TO_PT + 2 * MARGIN), h: h * PX_TO_PT + 2 * MARGIN + HEADER + FOOTER });
-  const sizes = pages.map((p) => sizeOf(layout.stripRight + p.x1 - p.x0, layout.height - p.top));
-  const overviewSize = sizeOf(layout.width, layout.height);
-  const firstSize = overview || sizes.length === 0 ? overviewSize : sizes[0];
-  const orientation = (s: { w: number; h: number }) => (s.w >= s.h ? 'landscape' : 'portrait');
-  const pdf = new jsPDF({ orientation: orientation(firstSize), unit: 'pt', format: [firstSize.w, firstSize.h], compress: true });
-  pdf.setProperties({ title });
-  let first = true;
-  const newPage = (size: { w: number; h: number }) => {
-    if (!first) pdf.addPage([size.w, size.h], orientation(size));
-    first = false;
-  };
-
-  if (overview || pages.length === 0) {
-    newPage(overviewSize);
-    drawHeader(pdf, overviewSize, title, labels.overview, '');
-    pdf.addImage(canvas, 'PNG', MARGIN, MARGIN + HEADER, layout.width * PX_TO_PT, layout.height * PX_TO_PT, undefined, 'FAST');
-  }
-  pages.forEach((p, i) => {
-    const size = sizes[i];
-    newPage(size);
-    drawHeader(pdf, size, title, p.title || labels.phase(p.index + 1), layout.objective);
-    const image = crop(canvas, scale, [{ x0: 0, x1: layout.stripRight }, p], p.top, layout.height);
-    const w = (layout.stripRight + p.x1 - p.x0) * PX_TO_PT;
-    const h = (layout.height - p.top) * PX_TO_PT;
-    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN + HEADER, w, h, undefined, 'FAST');
-  });
-
-  if (notes.length) addNotes(pdf, title, notes, labels, { w: 842, h: 595 });
-  numberPages(pdf, labels);
-  return pdf.output('blob');
 }
 
 /** "n / total" at the bottom right of every page. */

@@ -235,8 +235,8 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
   let thaw = () => {};
   try {
     await nextFrame();
-    // Flows: every text kept whole, whatever the engine that draws the picture.
-    if (board.classList.contains('flow-doc')) thaw = freezeTexts(board);
+    // Maps and flows: every text kept whole, whatever the engine that draws the picture.
+    if (board.classList.contains('flow-doc') || board.classList.contains('board')) thaw = freezeTexts(board);
     canvas = await toCanvas(board, {
       pixelRatio: opts.scale,
       // Only flat exports are laid on white: elsewhere the rounded corners stay clear.
