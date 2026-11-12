@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useEffect, useRef } from 'react';
-import { activeStyles, useStore } from '../store';
+import { activeStyles, isSelected, useStore } from '../store';
 import type { BoxKey, BoxKind } from '../model/types';
 import { boxStyle, resolveStyle, textStyle } from '../model/theme';
 
@@ -12,7 +12,7 @@ import { boxStyle, resolveStyle, textStyle } from '../model/theme';
  */
 export function useBox<T extends HTMLElement>(key: BoxKey, kind: BoxKind, personaColor?: number) {
   const custom = useStore((s) => activeStyles(s)[key]);
-  const selected = useStore((s) => s.sel === key);
+  const selected = useStore((s) => isSelected(s, key));
   const pendingFocus = useStore((s) => s.pendingFocus === key);
   const select = useStore((s) => s.select);
   const ref = useRef<T>(null);

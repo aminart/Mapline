@@ -183,7 +183,7 @@ const fr = {
   'tpl.persona.back.role': 'Processus internes',
   'side.shortcuts': 'Raccourcis clavier',
   'side.shortcutsText':
-    'Ctrl+N : nouveau projet\nCtrl+O : ouvrir · Ctrl+S : enregistrer\nCtrl+E : exporter · F5 : présenter\nSuppr : supprimer la flèche sélectionnée\nCtrl+W : fermer l’onglet\nCtrl+Entrée : activité à droite\nCtrl+C / Ctrl+V : copier / coller la carte sélectionnée (aussi d’une map ou d’un flow à l’autre)\nCtrl+D : dupliquer la carte sélectionnée\nEntrée dans un tag : l’ajouter\nCtrl+Z / Ctrl+Maj+Z : annuler / rétablir\nCtrl+ + / − / 0 : zoom',
+    'Ctrl+N : nouveau projet\nCtrl+O : ouvrir · Ctrl+S : enregistrer\nCtrl+E : exporter · F5 : présenter\nSuppr : supprimer la flèche sélectionnée\nCtrl+W : fermer l’onglet\nCtrl+Entrée : activité à droite\nMaj+clic (ou Cmd+clic) : sélectionner plusieurs cartes, étapes ou phases\nCtrl+C / Ctrl+V : copier / coller la sélection (aussi d’une map ou d’un flow à l’autre)\nCtrl+D : dupliquer la sélection\nSuppr : supprimer les cartes ou étapes sélectionnées\nEntrée dans un tag : l’ajouter\nCtrl+Z / Ctrl+Maj+Z : annuler / rétablir\nCtrl+ + / − / 0 : zoom',
   'about.open': 'À propos et licences',
   'about.version': 'Version {v}',
   'about.local': 'Vos projets restent sur votre ordinateur : l’application n’envoie aucune donnée sur internet.',
@@ -204,6 +204,7 @@ const fr = {
   'tool.storyboard': 'Storyboard',
   'tool.linkHintStart': 'Cliquez l’activité de départ de la flèche. Échap pour quitter.',
   'tool.linkHintTarget': 'Cliquez maintenant l’activité cible. Recliquer une paire existante retire la flèche.',
+  'tool.picked': '{n} sélectionnés',
   'tool.noSelection': 'Cliquez dans une boîte pour personnaliser son fond, sa bordure, son texte et sa police.',
   'tool.fill': 'Fond',
   'tool.border': 'Bordure',
@@ -689,7 +690,7 @@ const en: Record<MessageKey, string> = {
   'tpl.persona.back.role': 'Internal processes',
   'side.shortcuts': 'Keyboard shortcuts',
   'side.shortcutsText':
-    'Ctrl+N: new project\nCtrl+O: open · Ctrl+S: save\nCtrl+E: export · F5: present\nDelete: delete the selected arrow\nCtrl+W: close tab\nCtrl+Enter: activity to the right\nCtrl+C / Ctrl+V: copy / paste the selected card (also from one map or flow to another)\nCtrl+D: duplicate the selected card\nEnter in a tag: add it\nCtrl+Z / Ctrl+Shift+Z: undo / redo\nCtrl+ + / − / 0: zoom',
+    'Ctrl+N: new project\nCtrl+O: open · Ctrl+S: save\nCtrl+E: export · F5: present\nDelete: delete the selected arrow\nCtrl+W: close tab\nCtrl+Enter: activity to the right\nShift+click (or Cmd+click): select several cards, steps or phases\nCtrl+C / Ctrl+V: copy / paste the selection (also from one map or flow to another)\nCtrl+D: duplicate the selection\nDelete: delete the selected cards or steps\nEnter in a tag: add it\nCtrl+Z / Ctrl+Shift+Z: undo / redo\nCtrl+ + / − / 0: zoom',
   'about.open': 'About and licences',
   'about.version': 'Version {v}',
   'about.local': 'Your projects stay on your computer: the app sends no data over the internet.',
@@ -709,6 +710,7 @@ const en: Record<MessageKey, string> = {
   'tool.storyboard': 'Storyboard',
   'tool.linkHintStart': 'Click the activity the arrow starts from. Esc to leave.',
   'tool.linkHintTarget': 'Now click the target activity. Clicking an existing pair again removes the arrow.',
+  'tool.picked': '{n} selected',
   'tool.noSelection': 'Click in a box to customise its fill, border, text and font.',
   'tool.fill': 'Fill',
   'tool.border': 'Border',
