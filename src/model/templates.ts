@@ -5,7 +5,7 @@ import type { Blueprint, FlowDoc, Id, Persona, PersonaSheet, PersonaSheetDoc, Pr
 import { templateFlow } from './flow';
 import { PROJECT_VERSION, projectFromMap } from './project';
 import { newBlock } from './sheet';
-import { uid } from './ops';
+import { DEFAULT_SCENE_FORMAT, uid } from './ops';
 import { translate, type Lang, type MessageKey } from '../i18n';
 
 export type TemplateId = 'mission-map' | 'storyboard' | 'blank';
@@ -34,7 +34,7 @@ export function createMap(id: TemplateId, lang: Lang): Blueprint {
 
 function titledMap(id: TemplateId, lang: Lang): Blueprint & { title: string } {
   const t = (key: MessageKey) => translate(lang, key);
-  const base = { objective: '', activities: {}, scenes: {}, links: [], dividers: [], tagColors: {}, styles: {}, textRows: [] };
+  const base = { objective: '', activities: {}, scenes: {}, links: [], dividers: [], tagColors: {}, styles: {}, textRows: [], sceneFormat: DEFAULT_SCENE_FORMAT };
   switch (id) {
     case 'mission-map': {
       const [user, front, back] = [uid(), uid(), uid()];

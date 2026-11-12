@@ -1,8 +1,8 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SheetBlock, TextRow } from './types';
-import { normalizePhases, uid } from './ops';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SceneFormat, SheetBlock, TextRow } from './types';
+import { normalizePhases, SCENE_FORMATS, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
 export const FILE_EXTENSION = 'mapline';
@@ -104,6 +104,7 @@ function parseMap(input: unknown): Blueprint {
     tagColors: raw.tagColors && typeof raw.tagColors === 'object' ? raw.tagColors : {},
     ...textRowsOf(raw),
     storyboard: Boolean(raw.storyboard),
+    ...(SCENE_FORMATS.includes(raw.sceneFormat as SceneFormat) ? { sceneFormat: raw.sceneFormat as SceneFormat } : {}),
   };
 }
 

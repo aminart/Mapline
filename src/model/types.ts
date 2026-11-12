@@ -49,7 +49,18 @@ export interface Scene {
   text: string;
   /** Which part of the image the block shows; centred and unzoomed when unset. */
   view?: SceneView;
+  /** 'contain' shows the whole image over a blurred copy of it; 'cover' (unset) fills the frame. */
+  fit?: SceneFit;
 }
+
+export type SceneFit = 'cover' | 'contain';
+
+/**
+ * Shape shared by every image of a storyboard: all frames then have the same
+ * size, whatever the width of their step. Unset: each frame is as wide as its
+ * step and 150 px high, as before 1.8.
+ */
+export type SceneFormat = '16:9' | '4:3' | '1:1' | '3:4';
 
 /** Framing of a scene's image inside its block. */
 export interface SceneView {
@@ -117,6 +128,8 @@ export interface Blueprint {
   /** Keyed by a box key, see BoxKey. */
   styles: Record<string, BoxStyle>;
   storyboard: boolean;
+  /** Shape of the storyboard's images; see SceneFormat. */
+  sceneFormat?: SceneFormat;
   /** Free text rows under the personas, in order. */
   textRows: TextRow[];
 }
