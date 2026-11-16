@@ -4,6 +4,7 @@
 use tauri::menu::{Menu, MenuItem, MenuItemKind};
 use tauri::{AppHandle, Manager, Runtime};
 
+mod color_sampler;
 mod safe_save;
 
 const QUIT_MENU_ID: &str = "quit";
@@ -39,13 +40,19 @@ async fn save_project_file(path: String, contents: String) -> Result<(), String>
     safe_save::save_atomic(std::path::Path::new(&path), contents.as_bytes()).map_err(|e| e.to_string())
 }
 
+/// The pipette on macOS: see `color_sampler`.
+#[tauri::command]
+async fn pick_screen_color<R: Runtime>(app: AppHandle<R>) -> Result<Option<String>, String> {
+    color_sampler::pick(app).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![save_project_file])
+        .invoke_handler(tauri::generate_handler![save_project_file, pick_screen_color])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

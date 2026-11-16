@@ -614,10 +614,84 @@
 }
 .tool-menu-panel > .swatches {
   flex-wrap: wrap;
-  width: 252px;
+  width: 270px;
 }
 .tool-menu-panel .swatches-label {
   flex-basis: 100%;
+}
+.swatch-tool {
+  cursor: pointer;
+  color: var(--muted);
+}
+.swatch-tool:hover,
+.swatch-custom:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.swatches-used {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.swatch-used {
+  position: relative;
+  display: inline-flex;
+}
+/* The × that takes a colour off the shortcuts, shown on hover or keyboard focus. */
+.swatch-hide {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.swatch-used:hover .swatch-hide,
+.swatch-hide:focus-visible {
+  opacity: 1;
+}
+.swatch-hide:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+@media (hover: none) {
+  .swatch-hide {
+    opacity: 1;
+  }
+}
+/* During an in-page pick (see lib/pipette). */
+:root.is-sampling,
+:root.is-sampling * {
+  cursor: crosshair !important;
+}
+.pipette-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #191b20;
+  color: #fff;
+  font-size: 13px;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(20, 24, 32, 0.25);
 }
 .sides-panel {
   display: flex;
