@@ -34,9 +34,11 @@ No account, no cloud. Mapline makes zero network requests: your projects are sim
 ### Built for complex UX deliverables
 Not an empty whiteboard, but a structured tool for the deliverables you actually ship:
 
-**Map your user journeys** — phases, steps, persona swimlanes, activity and decision cards, lines of visibility, alternate paths, storyboard and notes rows, smart routed arrows that never cross a card. A project holds as many maps, flows and personas as you need, and presents them all in one go.
+**Map your user journeys** — phases, steps, persona swimlanes, activity and decision cards, lines of visibility, alternate paths, storyboard and notes rows, smart routed arrows that never cross a card. A project holds as many maps, flows, sitemaps and personas as you need, and presents them all in one go.
 
 **User flows** — activity and decision cards on a grid that grow with their text, with tags and comments; branches, loops, and return links; add a card in any direction and the flow automatically reflows around it.
+
+**Sitemaps** — every screen of a product as a tree, level by level, with the global screens apart and the modals and messages each screen opens: the count of views to build, by level and by status (existing, to make, to redo). Screens can be linked to flow cards and map steps, and the PDF gives a page per branch.
 
 **Personas** — ready-to-use sheets with lists, gauges, colour-coded tags, and free-form text, seamlessly synced with your journey personas — photo included.
 

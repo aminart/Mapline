@@ -16,7 +16,8 @@ export type Drag =
   | { kind: 'divider'; id: string }
   /** grabX/grabY: where the block was taken, from its top left corner, in client pixels. */
   | { kind: 'block'; id: string; grabX: number; grabY: number }
-  | { kind: 'fnode'; id: string };
+  | { kind: 'fnode'; id: string }
+  | { kind: 'screen'; id: string };
 
 /** Where the pointer was released, in client pixels. */
 export interface DropPoint {

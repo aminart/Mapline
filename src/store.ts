@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { create } from 'zustand';
-import type { Blueprint, BoxKey, BoxStyle, Flow, Id, PersonaSheet, Project } from './model/types';
+import type { Blueprint, BoxKey, BoxStyle, Flow, Id, PersonaSheet, Project, Sitemap } from './model/types';
 import { uid } from './model/ops';
 import { parse } from './model/serialize';
-import { findDoc, firstDocId, flowOf, missionMapOf, projectFromMap, sheetOf, updateFlow, updateMap, updateSheet } from './model/project';
+import { findDoc, firstDocId, flowOf, missionMapOf, projectFromMap, sheetOf, sitemapOf, updateFlow, updateMap, updateSheet, updateSitemap } from './model/project';
 import { initialLang, rememberLang, translate, type Lang, type MessageKey } from './i18n';
 import { readSession, writeSession } from './lib/session';
 import { withLinksKept } from './model/links';
@@ -78,6 +78,12 @@ interface State extends DocState {
   compareFocus: boolean;
   /** While comparing a flow: its current state in a pane above, or its removed cards over the target. */
   compareView: 'split' | 'merged';
+  /** Sitemaps: shown as a tree or as a list. */
+  sitemapView: 'tree' | 'list';
+  /** Sitemaps: screens not matching it are dimmed; see SitemapFilter. */
+  sitemapFilter: string;
+  /** Sitemaps: screens whose children are hidden, while the app runs. */
+  folded: Record<Id, true>;
 
   /** Changes the mission map shown, as one undo step (or merged into the last with the same `coalesce`). */
   apply: (fn: (map: Blueprint) => Blueprint, opts?: { coalesce?: string }) => void;
@@ -87,6 +93,13 @@ interface State extends DocState {
   applySheet: (fn: (sheet: PersonaSheet) => PersonaSheet, opts?: { coalesce?: string }) => void;
   /** Changes the flow shown. */
   applyFlow: (fn: (flow: Flow) => Flow, opts?: { coalesce?: string }) => void;
+  /** Changes the sitemap shown. */
+  applySitemap: (fn: (sitemap: Sitemap) => Sitemap, opts?: { coalesce?: string }) => void;
+  setSitemapView: (view: 'tree' | 'list') => void;
+  setSitemapFilter: (filter: string) => void;
+  /** Hides or shows the screens under `id`. */
+  setFolded: (id: Id, folded: boolean) => void;
+  setAllFolded: (ids: Id[]) => void;
   /** Shows another document of the project. */
   setDoc: (docId: Id) => void;
   setSheetPreview: (docId: Id | null) => void;
@@ -155,6 +168,11 @@ export function activeSheet(s: DocState): PersonaSheet | undefined {
 /** The flow shown, if the document is one. */
 export function activeFlow(s: DocState): Flow | undefined {
   return flowOf(s.project, s.docId)?.flow;
+}
+
+/** The sitemap shown, if the document is one. */
+export function activeSitemap(s: DocState): Sitemap | undefined {
+  return sitemapOf(s.project, s.docId)?.sitemap;
 }
 
 /** Box styles of the document shown. */
@@ -269,6 +287,9 @@ export const useStore = create<State>((set, get) => ({
   compare: true,
   compareFocus: false,
   compareView: 'split',
+  sitemapView: 'tree',
+  sitemapFilter: 'all',
+  folded: {},
 
   apply: (fn, opts) => {
     const { docId, applyProject } = get();
@@ -286,10 +307,26 @@ export const useStore = create<State>((set, get) => ({
     applyProject((project) => updateFlow(project, docId, fn), opts);
   },
 
+  applySitemap: (fn, opts) => {
+    const { docId, applyProject } = get();
+    applyProject((project) => updateSitemap(project, docId, fn), opts);
+  },
+  setSitemapView: (sitemapView) => set({ sitemapView }),
+  setSitemapFilter: (sitemapFilter) => set({ sitemapFilter }),
+  setFolded: (id, folded) => {
+    const current = get().folded;
+    if (Boolean(current[id]) === folded) return;
+    const next = { ...current };
+    if (folded) next[id] = true;
+    else delete next[id];
+    set({ folded: next });
+  },
+  setAllFolded: (ids) => set({ folded: Object.fromEntries(ids.map((id) => [id, true as const])) }),
+
   setDoc: (docId) => {
     const s = get();
     if (docId === s.docId || !findDoc(s.project, docId)) return;
-    set({ docId, sel: null, tool: 'select', linkFrom: null, pendingFocus: null, presentStep: null, sheetPreview: null, tagFilter: [] });
+    set({ docId, sel: null, tool: 'select', linkFrom: null, pendingFocus: null, presentStep: null, sheetPreview: null, tagFilter: [], sitemapFilter: 'all' });
   },
   // The sheet preview and the comments panel share the side of the window.
   setSheetPreview: (sheetPreview) => set(sheetPreview ? { sheetPreview, commentsOpen: false } : { sheetPreview }),

@@ -1,7 +1,8 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Blueprint, BoxStyle, Flow, FlowDoc, Id, MissionMapDoc, Persona, PersonaSheet, PersonaSheetDoc, Project, ProjectDoc } from './types';
+import type { Blueprint, BoxStyle, Flow, FlowDoc, Id, MissionMapDoc, Persona, PersonaSheet, PersonaSheetDoc, Project, ProjectDoc, Sitemap, SitemapDoc } from './types';
+import { dropLinksTo } from './sitemap';
 import { setPersona, uid } from './ops';
 
 export const PROJECT_VERSION = 2;
@@ -78,6 +79,11 @@ export function removeDoc(project: Project, docId: Id): Project {
       if ((d.kind === 'mission-map' || d.kind === 'flow') && d.detachedFrom === docId) {
         const { detachedFrom: _was, ...rest } = d;
         d = rest as typeof d;
+      }
+      // Sitemaps no longer link their screens to its cards or steps.
+      if (d.kind === 'sitemap') {
+        const sitemap = dropLinksTo(d.sitemap, docId);
+        if (sitemap !== d.sitemap) d = { ...d, sitemap };
       }
       // Nor is a copy of it still sharing its sheets.
       if (d.kind === 'mission-map' && d.origin === docId) {
@@ -254,4 +260,17 @@ export function projectPersonas(project: Project): { persona: Persona; style: Bo
           .map((persona) => ({ persona, style: d.map.styles[`persona:${persona.id}`], photo: sheetFor(project, d.id, persona.id)?.sheet.photo ?? null }))
       : [],
   );
+}
+
+export function sitemapOf(project: Project, docId: Id): SitemapDoc | undefined {
+  const doc = findDoc(project, docId);
+  return doc?.kind === 'sitemap' ? doc : undefined;
+}
+
+export function updateSitemap(project: Project, docId: Id, fn: (sitemap: Sitemap) => Sitemap): Project {
+  const doc = sitemapOf(project, docId);
+  if (!doc) return project;
+  const sitemap = fn(doc.sitemap);
+  if (sitemap === doc.sitemap) return project;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? { ...doc, sitemap } : d)) };
 }

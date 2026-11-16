@@ -358,3 +358,87 @@ function addNotes(pdf: Pdf, title: string, notes: NoteEntry[], labels: PdfLabels
     y += body.length * 14 + 14;
   }
 }
+
+/** Where a sitemap's parts are on its rendered picture, in layout pixels. */
+export interface SitemapPdfLayout {
+  /** The whole picture. */
+  width: number;
+  height: number;
+  /** The tree, from its first level down; its level column ends at `railRight`. */
+  treeTop: number;
+  treeBottom: number;
+  railRight: number;
+  /** Each branch of the tree: a page each. */
+  branches: { x0: number; x1: number; top: number; name: string }[];
+  /** The global screens, when there are some. */
+  globals: { top: number; bottom: number } | null;
+  /** The counts, under the title of each page. */
+  summary: string;
+}
+
+export interface SitemapPdfPage {
+  /** Slices of the picture laid side by side (layout px), from `top` to `bottom`. */
+  parts: { x0: number; x1: number }[];
+  top: number;
+  bottom: number;
+  /** Points per layout pixel. */
+  k: number;
+  label: string;
+}
+
+/**
+ * Pages of a sitemap in PDF: a page per branch, the column naming the levels
+ * repeated on its left, then the global screens. A branch wider than the
+ * page is scaled down to fit whole; none is shown above 133 %.
+ */
+export function planSitemapPages(layout: SitemapPdfLayout, page: { w: number; h: number }, labels: { branch: (name: string) => string; globals: string }): SitemapPdfPage[] {
+  const { w: availW, h: availH } = usableArea(page);
+  const pages: SitemapPdfPage[] = [];
+  for (const b of layout.branches) {
+    const top = Math.max(layout.treeTop, b.top);
+    const treeH = layout.treeBottom - top;
+    const parts = [
+      { x0: 0, x1: layout.railRight },
+      { x0: Math.max(layout.railRight, b.x0 - PAD), x1: Math.min(layout.width, b.x1 + PAD) },
+    ];
+    const w = parts.reduce((sum, p) => sum + p.x1 - p.x0, 0);
+    const k = Math.min(MAX_PHASE_K, availW / w, availH / treeH);
+    pages.push({ parts, top, bottom: layout.treeBottom, k, label: labels.branch(b.name) });
+  }
+  if (layout.globals) {
+    const h = layout.globals.bottom - layout.globals.top;
+    const k = Math.min(MAX_PHASE_K, availW / layout.width, availH / h);
+    pages.push({ parts: [{ x0: 0, x1: layout.width }], top: layout.globals.top, bottom: layout.globals.bottom, k, label: labels.globals });
+  }
+  return pages;
+}
+
+/** A sitemap's PDF: the whole sitemap on the first page, then a page per branch and the global screens. */
+export async function sitemapPdfDocument(args: {
+  canvas: HTMLCanvasElement;
+  scale: number;
+  layout: SitemapPdfLayout;
+  title: string;
+  labels: PdfLabels & { branch: (name: string) => string; globals: string };
+}): Promise<Blob> {
+  const { canvas, scale, layout, title, labels } = args;
+  const { jsPDF } = await import('jspdf');
+  const paper = PAPER.a4;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [paper.w, paper.h], compress: true });
+  pdf.setProperties({ title });
+  const { w: availW, h: availH } = usableArea(paper);
+
+  drawHeader(pdf, paper, title, labels.overview, layout.summary);
+  const k0 = Math.min(availW / layout.width, availH / layout.height);
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN + (availW - layout.width * k0) / 2, MARGIN + HEADER, layout.width * k0, layout.height * k0, undefined, 'FAST');
+
+  for (const p of planSitemapPages(layout, paper, labels)) {
+    pdf.addPage([paper.w, paper.h], 'landscape');
+    drawHeader(pdf, paper, title, p.label, layout.summary);
+    const image = crop(canvas, scale, p.parts, p.top, p.bottom);
+    const w = p.parts.reduce((sum, part) => sum + part.x1 - part.x0, 0) * p.k;
+    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN + HEADER, w, (p.bottom - p.top) * p.k, undefined, 'FAST');
+  }
+  numberPages(pdf, labels);
+  return pdf.output('blob');
+}
