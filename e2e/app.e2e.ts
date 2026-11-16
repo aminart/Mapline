@@ -366,6 +366,29 @@ test('exports a PDF with one A4 page per phase, after the overview', async ({ pa
   for (const box of boxes) expect(box).toMatch(/\/MediaBox \[0 0 842\.?0* 595\.?0*\]/);
 });
 
+test('exports a PDF where a long phase runs over several pages, its name repeated on each', async ({ page }) => {
+  await startProject(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.locator('.phase').nth(1).getByRole('textbox', { name: 'Nom de la phase' }).fill('Pendant le séjour');
+  // Enough steps in that phase for it to need more than one A4 page.
+  for (let i = 0; i < 8; i++) await page.locator('.step').nth(2).getByRole('button', { name: 'Insérer une étape ici' }).click();
+  await addActivity(page, 0, 0, 'Une activité');
+  for (const mode of ['Pages A4', 'Une page par phase']) {
+    await page.keyboard.press('ControlOrMeta+e');
+    await page.locator('input[name=export-format][value=pdf]').check({ force: true });
+    await page.getByRole('button', { name: mode, exact: true }).click();
+    const download = page.waitForEvent('download');
+    await page.locator('dialog[open] .btn-primary').click();
+    const pdf = (await readFile(await (await download).path())).toString('latin1');
+    expect(pdf.startsWith('%PDF')).toBe(true);
+    // Overview + more than one page per phase somewhere.
+    expect((pdf.match(/\/MediaBox \[[^\]]*\]/g) ?? []).length).toBeGreaterThan(4);
+  }
+  expect(errors.filter((e) => /invalid color/i.test(e))).toEqual([]);
+});
+
 test('shows every text of the map in full: phases, steps, personas and rows grow with it', async ({ page }) => {
   await startProject(page);
   const tools = page.getByRole('toolbar', { name: 'Outils et mise en forme' });
