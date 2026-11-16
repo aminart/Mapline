@@ -8,7 +8,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
 import { FONTS, LINK_COLORS, SIZES } from '../model/theme';
 import type { FontId, LinkSide, LinkStyle } from '../model/types';
-import { ChevronDown, CursorIcon, LinkIcon, ResetIcon, StoryboardIcon, TrashIcon } from './Icons';
+import { pickColor, isSampling } from '../lib/pipette';
+import { hideUsedColor, showUsedColor, usedColors, USED_COLORS_MAX } from '../model/usedColors';
+import { ChevronDown, CloseIcon, CursorIcon, PipetteIcon, LinkIcon, ResetIcon, StoryboardIcon, TrashIcon } from './Icons';
 import { LinkSides, SideIcon } from './LinkSides';
 import { cls } from './cls';
 
@@ -20,7 +22,7 @@ export function ToolMenu(props: { label: string; title?: string; face: ReactNode
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      if (!isSampling() && !ref.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -65,6 +67,7 @@ export function ColorMenu(props: { label: string; list: string[]; value: string;
     <ToolMenu label={label} title={`${label} : ${value}`} face={chip}>
       {(close) => (
         <Swatches
+          withUsed
           label={label}
           list={list}
           value={value}
@@ -266,30 +269,64 @@ export function ArrowControls(props: {
   );
 }
 
-export function Swatches(props: { label: string; list: string[]; value: string; onPick: (hex: string, live?: boolean) => void; variant: 'fill' | 'border' | 'text' }) {
+export function Swatches(props: { label: string; list: string[]; value: string; onPick: (hex: string, live?: boolean) => void; variant: 'fill' | 'border' | 'text'; withUsed?: boolean }) {
   const t = useT();
-  const { label, list, value, onPick, variant } = props;
-  const options = list.includes(value) ? list : [...list, value];
+  const { label, list, value, onPick, variant, withUsed = false } = props;
+  const project = useStore((s) => s.project);
+  const applyProject = useStore((s) => s.applyProject);
+  const used = withUsed ? usedColors(project).filter((c) => !list.includes(c)).slice(0, USED_COLORS_MAX) : [];
+  const options = list.includes(value) || used.includes(value) ? list : [...list, value];
+  // A colour picked on purpose is offered again, even if it was taken off the shortcuts.
+  const pickOwn = (hex: string, live?: boolean) => {
+    onPick(hex, live);
+    applyProject((p) => showUsedColor(p, hex), live ? { coalesce: 'show-color' } : undefined);
+  };
+  const pipette = async () => {
+    const hex = await pickColor(t('tool.pipetteHint'));
+    if (hex) pickOwn(hex);
+  };
+  const swatch = (hex: string) => (
+    <button
+      key={hex}
+      className={cls('swatch', `swatch-${variant}`, hex === value && 'is-on')}
+      style={variant === 'fill' ? { background: hex } : variant === 'border' ? { borderColor: hex } : { color: hex }}
+      aria-label={`${label} ${hex}`}
+      aria-pressed={hex === value}
+      title={hex}
+      onClick={() => onPick(hex)}
+    >
+      {variant === 'text' ? 'A' : null}
+    </button>
+  );
   return (
     <div className="swatches" role="group" aria-label={label}>
       <span className="swatches-label">{label}</span>
-      {options.map((hex) => (
-        <button
-          key={hex}
-          className={cls('swatch', `swatch-${variant}`, hex === value && 'is-on')}
-          style={variant === 'fill' ? { background: hex } : variant === 'border' ? { borderColor: hex } : { color: hex }}
-          aria-label={`${label} ${hex}`}
-          aria-pressed={hex === value}
-          title={hex}
-          onClick={() => onPick(hex)}
-        >
-          {variant === 'text' ? 'A' : null}
-        </button>
-      ))}
+      {options.map(swatch)}
       <label className="swatch swatch-custom" title={t('tool.customColor')}>
         <span aria-hidden="true">+</span>
-        <input type="color" aria-label={`${label} : ${t('tool.customColor')}`} value={value.length === 7 ? value : '#000000'} onChange={(e) => onPick(e.target.value.toUpperCase(), true)} />
+        <input type="color" aria-label={`${label} : ${t('tool.customColor')}`} value={value.length === 7 ? value : '#000000'} onChange={(e) => pickOwn(e.target.value.toUpperCase(), true)} />
       </label>
+      <button className="swatch swatch-tool" aria-label={`${label} : ${t('tool.pipette')}`} title={t('tool.pipette')} onClick={pipette}>
+        <PipetteIcon />
+      </button>
+      {used.length > 0 && (
+        <div className="swatches-used" role="group" aria-label={t('tool.usedColors')}>
+          <span className="swatches-label">{t('tool.usedColors')}</span>
+          {used.map((hex) => (
+            <span key={hex} className="swatch-used">
+              {swatch(hex)}
+              <button
+                className="swatch-hide"
+                aria-label={t('tool.hideColor', { hex })}
+                title={t('tool.hideColor', { hex })}
+                onClick={() => applyProject((p) => hideUsedColor(p, hex))}
+              >
+                <CloseIcon size={9} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

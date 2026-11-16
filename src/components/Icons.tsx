@@ -29,6 +29,13 @@ export const PlusIcon = ({ size }: P) => (
     <path d="M12 5v14M5 12h14" />
   </Svg>
 );
+export const PipetteIcon = ({ size = 14 }: P) => (
+  <Svg size={size}>
+    <path d="m14.5 6.5 3-3a2.1 2.1 0 0 1 3 3l-3 3" />
+    <path d="m12.5 5.5 6 6" />
+    <path d="M15.5 8.5 6 18l-3 1 1-3 9.5-9.5" />
+  </Svg>
+);
 export const MinusIcon = ({ size }: P) => (
   <Svg size={size} width={2.4}>
     <path d="M5 12h14" />

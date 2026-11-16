@@ -26,3 +26,8 @@ tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-clipboard-manager = "2"
+
+# The screen colour picker (pick_screen_color) uses AppKit's NSColorSampler.
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-core-foundation", "NSColor", "NSColorSampler", "NSColorSpace"] }

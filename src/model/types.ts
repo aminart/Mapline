@@ -319,6 +319,8 @@ export interface Project {
   version: 2;
   title: string;
   docs: ProjectDoc[];
+  /** Colours taken off the "used colours" shortcuts (#RRGGBB); what they colour keeps them. */
+  hiddenColors?: string[];
 }
 
 export type BoxKind = 'obj' | 'phase' | 'step' | 'scene' | 'persona' | 'act' | 'info' | 'identity' | 'block' | 'node';
