@@ -44,7 +44,8 @@ export function parse(text: string): Project {
     return { version: PROJECT_VERSION, title: String(raw.title ?? ''), docs: [{ id: uid(), kind: 'mission-map', name: '', map: parseMap(raw) }] };
   }
   if (!Array.isArray(raw.docs) || raw.docs.length === 0) throw new ProjectFileError('invalid');
-  return { version: PROJECT_VERSION, title: String(raw.title ?? ''), docs: raw.docs.map(parseDoc) };
+  const hidden = Array.isArray(raw.hiddenColors) ? raw.hiddenColors.filter((c): c is string => typeof c === 'string' && /^#[0-9A-F]{6}$/.test(c)) : [];
+  return { version: PROJECT_VERSION, title: String(raw.title ?? ''), docs: raw.docs.map(parseDoc), ...(hidden.length ? { hiddenColors: hidden } : {}) };
 }
 
 function parseDoc(raw: unknown): ProjectDoc {

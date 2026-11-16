@@ -20,8 +20,9 @@ jobs:
       - run: npm run build
 
   # The interface in Chromium and in WebKit, Safari's engine (the macOS app).
+  # Pinned: ubuntu-latest moved to 26.04, where Playwright 1.56 can't install its browsers.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
