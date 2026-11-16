@@ -100,6 +100,29 @@ test('drags a card to an empty cell, the card following the pointer', async ({ p
   expect(await arrowsOverCards(page, CARDS)).toEqual([]);
 });
 
+test('drags the end pill to another cell, its arrows following it', async ({ page }) => {
+  await startFlow(page, 'Flow utilisateur');
+  const end = await card(page, 'Fin');
+  const before = await arrows(page).count();
+  const endTop = await top(end);
+  await end.hover();
+  const grip = end.locator('.flow-grip');
+  await expect(grip).toBeVisible();
+  const g = (await grip.boundingBox())!;
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  // The empty cell under the end.
+  const d = (await page.locator('.flow-drop[style*="left: 1268px"][style*="top: 352px"]').boundingBox())!;
+  await page.mouse.move(d.x + d.width / 2, d.y + d.height / 2, { steps: 8 });
+  await expect(page.locator('.drag-ghost')).toHaveCount(1);
+  await page.mouse.up();
+  await expect(page.locator('.drag-ghost')).toHaveCount(0);
+  const moved = await card(page, 'Fin');
+  expect(await top(moved)).not.toBe(endTop);
+  await expect(arrows(page)).toHaveCount(before);
+  expect(await arrowsOverCards(page, CARDS)).toEqual([]);
+});
+
 test('links back with the Connect tool, the loop going round the cards', async ({ page }) => {
   await startFlow(page, 'Flow utilisateur');
   await texts(page).nth(1).fill('Saisit son e-mail');
