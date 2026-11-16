@@ -8,7 +8,7 @@ const HEAD_LENGTH = 12;
 const HEAD_HALF_WIDTH = 6;
 
 /** Offset of `el` from the top-left of the page layout, in unzoomed px. */
-function layoutOffset(el: HTMLElement): { x: number; y: number } {
+export function layoutOffset(el: HTMLElement): { x: number; y: number } {
   let x = 0;
   let y = 0;
   let n: HTMLElement | null = el;
@@ -244,7 +244,7 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
   try {
     await nextFrame();
     // Maps and flows: every text kept whole, whatever the engine that draws the picture.
-    if (board.classList.contains('flow-doc') || board.classList.contains('board')) thaw = freezeTexts(board);
+    if (board.classList.contains('flow-doc') || board.classList.contains('board') || board.classList.contains('sitemap-doc')) thaw = freezeTexts(board);
     canvas = await toCanvas(board, {
       pixelRatio: opts.scale,
       // Only flat exports are laid on white: elsewhere the rounded corners stay clear.

@@ -233,3 +233,77 @@ export const TrashIcon = ({ size = 15 }: P) => (
     <path d="M4 7h16M10 7V4h4v3M6.5 7l1 13h9l1-13" />
   </Svg>
 );
+/** A small tree of screens: a sitemap. */
+export const SitemapIcon = ({ size = 14 }: P) => (
+  <Svg size={size}>
+    <rect x="9" y="3" width="6" height="5" rx="1" />
+    <rect x="3" y="16" width="6" height="5" rx="1" />
+    <rect x="15" y="16" width="6" height="5" rx="1" />
+    <path d="M12 8v4M6 16v-2.5h12V16" />
+  </Svg>
+);
+/** Lines indented under one another: a list view. */
+export const ListIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <path d="M4 6h16M8 12h12M12 18h8" />
+  </Svg>
+);
+/** A screen and a dashed one beside it: add on the same level. */
+export const AddSiblingIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <rect x="2.5" y="8" width="8" height="8" rx="1.5" />
+    <rect x="13.5" y="8" width="8" height="8" rx="1.5" strokeDasharray="2.5 2" />
+  </Svg>
+);
+/** A screen and a dashed one under it: add a sub-screen. */
+export const AddChildIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <rect x="8" y="2.5" width="8" height="6" rx="1.5" />
+    <path d="M12 8.5v4" />
+    <rect x="8" y="15.5" width="8" height="6" rx="1.5" strokeDasharray="2.5 2" />
+  </Svg>
+);
+/** Chevrons apart: expand every branch. */
+export const ExpandIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <path d="M7 9l5-5 5 5M7 15l5 5 5-5" />
+  </Svg>
+);
+/** Chevrons together: collapse the branches. */
+export const CollapseIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <path d="M7 4l5 5 5-5M7 20l5-5 5 5" />
+  </Svg>
+);
+/** A globe: a screen reached from everywhere. */
+export const GlobeIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3c2.5 2.7 3.5 5.7 3.5 9s-1 6.3-3.5 9c-2.5-2.7-3.5-5.7-3.5-9s1-6.3 3.5-9z" />
+  </Svg>
+);
+/** A funnel: filter. */
+export const FilterIcon = ({ size = 14 }: P) => (
+  <Svg size={size}>
+    <path d="M4 5h16l-6 7.5V19l-4-2v-4.5z" />
+  </Svg>
+);
+/** A window with a title bar: a modal. */
+export const ModalIcon = ({ size = 11 }: P) => (
+  <Svg size={size} width={2.6}>
+    <rect x="4" y="5" width="16" height="14" rx="2" />
+    <path d="M4 9.5h16" />
+  </Svg>
+);
+/** An exclamation mark: an error message. */
+export const ErrorMarkIcon = ({ size = 11 }: P) => (
+  <Svg size={size} width={3}>
+    <path d="M12 5v9M12 19v.01" />
+  </Svg>
+);
+/** An "i": an information message. */
+export const InfoMarkIcon = ({ size = 11 }: P) => (
+  <Svg size={size} width={3}>
+    <path d="M12 11v8M12 5v.01" />
+  </Svg>
+);

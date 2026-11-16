@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
-import { addFlow, addMap, docLabel, duplicateMapDoc, newFlowProject, newProject, newSheetProject, open } from '../actions';
+import { addFlow, addMap, docLabel, duplicateMapDoc, newFlowProject, newProject, newSheetProject, newSitemapProject, open } from '../actions';
 import { FLOW_TEMPLATES, SHEET_TEMPLATES, TEMPLATES, flowTemplateLabel, sheetTemplateLabel, templateLabel, type FlowTemplateId, type SheetTemplateId, type TemplateId } from '../model/templates';
 import { cls } from './cls';
 import { FolderIcon, MapIcon } from './Icons';
@@ -235,7 +235,36 @@ function MapCopyList() {
   );
 }
 
-type ProjectKind = 'map' | 'sheet' | 'flow';
+type ProjectKind = 'map' | 'sheet' | 'flow' | 'sitemap';
+
+/** Miniature of a sitemap: a screen and the screens under it. */
+function SitemapThumb() {
+  return (
+    <svg className="tpl-thumb" viewBox="0 0 80 52" aria-hidden="true">
+      <rect x="31" y="4" width="18" height="11" rx="2" fill="#FFFFFF" stroke="#2F55D4" strokeWidth="1" />
+      <path d="M40 15v6M14 21h52M14 21v5M40 21v5M66 21v5" stroke="#B9BFCA" strokeWidth="1" fill="none" />
+      {[5, 31, 57].map((x) => (
+        <rect key={x} x={x} y="26" width="18" height="11" rx="2" fill="#FFFFFF" stroke="#C9CED6" strokeDasharray="2 1.5" />
+      ))}
+      <rect x="5" y="42" width="70" height="7" rx="2" fill="#EDF1FC" />
+    </svg>
+  );
+}
+
+function SitemapTemplateList({ onPick }: { onPick: () => void }) {
+  const t = useT();
+  return (
+    <div className="tpl-list">
+      <button className="tpl-card" onClick={onPick}>
+        <SitemapThumb />
+        <span className="tpl-text">
+          <span className="tpl-name">{t('sitemap.tpl.blank')}</span>
+          <span className="muted-sm">{t('sitemap.tpl.blank.desc')}</span>
+        </span>
+      </button>
+    </div>
+  );
+}
 
 /** A project type switch, then that type's templates. */
 function TemplatePicker() {
@@ -244,7 +273,7 @@ function TemplatePicker() {
   return (
     <>
       <div className="segmented kind-switch" role="group" aria-label={t('new.kind')}>
-        {(['map', 'sheet', 'flow'] as const).map((k) => (
+        {(['map', 'sheet', 'flow', 'sitemap'] as const).map((k) => (
           <button key={k} className={cls(kind === k && 'is-on')} aria-pressed={kind === k} onClick={() => setKind(k)}>
             {t(`new.kind.${k}`)}
           </button>
@@ -253,6 +282,7 @@ function TemplatePicker() {
       {kind === 'map' && <TemplateList onPick={newProject} />}
       {kind === 'sheet' && <SheetTemplateList onPick={newSheetProject} />}
       {kind === 'flow' && <FlowTemplateList onPick={newFlowProject} />}
+      {kind === 'sitemap' && <SitemapTemplateList onPick={newSitemapProject} />}
     </>
   );
 }

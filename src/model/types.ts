@@ -310,8 +310,61 @@ export interface FlowDoc {
   detachedFrom?: Id;
 }
 
+/** Where a screen stands for the estimate: it exists, is to be made, or to be redone. */
+export type ScreenStatus = 'existing' | 'new' | 'redo';
+
+/** What opens over a screen without being a level of the tree: a modal, or a message. */
+export type ScreenExtraKind = 'modal' | 'error' | 'success' | 'info';
+
+/** A modal or a message of a screen. */
+export interface ScreenExtra {
+  id: Id;
+  kind: ScreenExtraKind;
+  name: string;
+}
+
+/** A link from a screen to a flow card (`node`) or a mission map step (`step`) of the project. */
+export interface ScreenLink {
+  kind: 'node' | 'step';
+  /** The flow's or the map's document. */
+  docId: Id;
+  /** The card's or the step's id. */
+  id: Id;
+}
+
+/** A screen of a sitemap and the screens under it. */
+export interface Screen {
+  id: Id;
+  name: string;
+  status: ScreenStatus;
+  /** The screens reached from it, one level down. */
+  children: Screen[];
+  /** Mission map personas using it. Unset: those of the screen above it. */
+  personaIds?: Id[];
+  /** Flow cards and map steps it shows; optional. */
+  links?: ScreenLink[];
+  /** Its modals and messages, counted apart. */
+  extras?: ScreenExtra[];
+}
+
+/** The screens of a product, by level of navigation. */
+export interface Sitemap {
+  /** Top level screens, each with its tree. */
+  roots: Screen[];
+  /** Screens reached from everywhere (account, sign in, legal notice): no children. */
+  globals: Screen[];
+}
+
+export interface SitemapDoc {
+  id: Id;
+  kind: 'sitemap';
+  /** Shown on the document's tab; the translated default when empty. */
+  name: string;
+  sitemap: Sitemap;
+}
+
 /** A document of a project. */
-export type ProjectDoc = MissionMapDoc | PersonaSheetDoc | FlowDoc;
+export type ProjectDoc = MissionMapDoc | PersonaSheetDoc | FlowDoc | SitemapDoc;
 export type DocKind = ProjectDoc['kind'];
 
 /** What a .mapline file holds: a titled set of documents. */

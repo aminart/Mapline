@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SceneFormat, SheetBlock, TextRow } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SceneFormat, Screen, ScreenExtraKind, ScreenLink, ScreenStatus, SheetBlock, Sitemap, TextRow } from './types';
 import { normalizePhases, SCENE_FORMATS, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
@@ -64,6 +64,8 @@ function parseDoc(raw: unknown): ProjectDoc {
       return { ...base, kind: 'persona', sheet: parseSheet(raw.sheet) };
     case 'flow':
       return { ...base, kind: 'flow', flow: parseFlow(raw.flow), ...baseline };
+    case 'sitemap':
+      return { ...base, kind: 'sitemap', sitemap: parseSitemap(raw.sitemap) };
     default:
       // A kind of document this version doesn't know: made by a newer app.
       throw new ProjectFileError('newer');
@@ -269,4 +271,43 @@ function parseFlow(input: unknown): Flow {
     ...(typeof input.brief === 'string' && input.brief ? { brief: input.brief } : {}),
     ...(typeof input.briefTitle === 'string' ? { briefTitle: input.briefTitle } : {}),
   };
+}
+
+const SCREEN_STATUSES: ScreenStatus[] = ['existing', 'new', 'redo'];
+const EXTRA_KINDS: ScreenExtraKind[] = ['modal', 'error', 'success', 'info'];
+
+/** A sitemap; a screen met twice (a damaged file) is kept the first time only. */
+function parseSitemap(input: unknown): Sitemap {
+  if (!isObject(input)) throw new ProjectFileError('invalid');
+  const seen = new Set<string>();
+  const screens = (v: unknown, depth: number, global: boolean): Screen[] =>
+    (Array.isArray(v) ? v : []).filter(isObject).flatMap((raw) => {
+      // A screen copied by hand keeps its content under an id of its own.
+      const read = id(raw.id);
+      const screenId = seen.has(read) ? uid() : read;
+      seen.add(screenId);
+      const personaIds = Array.isArray(raw.personaIds) ? [...new Set(raw.personaIds.filter((p): p is string => typeof p === 'string' && p !== ''))] : [];
+      const links: ScreenLink[] = (Array.isArray(raw.links) ? raw.links : [])
+        .filter(isObject)
+        .filter((l) => (l.kind === 'node' || l.kind === 'step') && typeof l.docId === 'string' && l.docId && typeof l.id === 'string' && l.id)
+        .map((l) => ({ kind: l.kind as ScreenLink['kind'], docId: l.docId as string, id: l.id as string }));
+      const extras = (Array.isArray(raw.extras) ? raw.extras : []).filter(isObject).map((x) => ({
+        id: id(x.id),
+        kind: EXTRA_KINDS.includes(x.kind as ScreenExtraKind) ? (x.kind as ScreenExtraKind) : 'modal',
+        name: str(x.name),
+      }));
+      return [
+        {
+          id: screenId,
+          name: str(raw.name),
+          status: SCREEN_STATUSES.includes(raw.status as ScreenStatus) ? (raw.status as ScreenStatus) : 'new',
+          // Global screens have no children; a tree deeper than any real product is cut.
+          children: global || depth > 40 ? [] : screens(raw.children, depth + 1, false),
+          ...(personaIds.length ? { personaIds } : {}),
+          ...(links.length ? { links } : {}),
+          ...(extras.length ? { extras } : {}),
+        },
+      ];
+    });
+  return { roots: screens(input.roots, 0, false), globals: screens(input.globals, 0, true) };
 }

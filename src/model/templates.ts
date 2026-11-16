@@ -1,7 +1,8 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Blueprint, FlowDoc, Id, Persona, PersonaSheet, PersonaSheetDoc, Project } from './types';
+import type { Blueprint, FlowDoc, Id, Persona, PersonaSheet, PersonaSheetDoc, Project, SitemapDoc } from './types';
+import { emptySitemap } from './sitemap';
 import { templateFlow } from './flow';
 import { PROJECT_VERSION, projectFromMap } from './project';
 import { newBlock } from './sheet';
@@ -147,4 +148,14 @@ export function createFlowDoc(id: FlowTemplateId, lang: Lang, name = ''): FlowDo
 /** A new project holding one flow. */
 export function createFlowProject(id: FlowTemplateId, lang: Lang): Project {
   return { version: PROJECT_VERSION, title: translate(lang, 'flow.title.new'), docs: [createFlowDoc(id, lang)] };
+}
+
+/** A new sitemap document: one empty screen to start from. */
+export function createSitemapDoc(name = ''): SitemapDoc {
+  return { id: uid(), kind: 'sitemap', name, sitemap: emptySitemap() };
+}
+
+/** A new project holding one sitemap. */
+export function createSitemapProject(lang: Lang): Project {
+  return { version: PROJECT_VERSION, title: translate(lang, 'sitemap.title.new'), docs: [createSitemapDoc()] };
 }

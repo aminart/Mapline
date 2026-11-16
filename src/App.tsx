@@ -10,6 +10,8 @@ import { SheetToolbar } from './components/SheetToolbar';
 import { SheetView } from './components/SheetView';
 import { FlowView } from './components/FlowView';
 import { FlowToolbar } from './components/FlowToolbar';
+import { SitemapView } from './components/SitemapView';
+import { SitemapToolbar } from './components/SitemapToolbar';
 import { SheetPreview } from './components/SheetPreview';
 import { DocBar } from './components/DocBar';
 import { StateBar } from './components/StateBar';
@@ -39,7 +41,7 @@ function deselect() {
 /** Clicking an empty part of the canvas or board deselects. */
 function onCanvasPointerDown(e: React.PointerEvent) {
   const target = e.target as Element;
-  if (target.closest('.box, button, input, textarea, select, label, a, .links, .link-label, .ghost, .grip, .note, dialog')) return;
+  if (target.closest('.box, button, input, textarea, select, label, a, .links, .link-label, .ghost, .grip, .note, dialog, .sitemap-list tr')) return;
   if (useStore.getState().sel) deselect();
 }
 
@@ -55,6 +57,8 @@ function DocView() {
       return <SheetView key={`${activeId}:${docId}`} />;
     case 'flow':
       return <FlowView key={`${activeId}:${docId}`} />;
+    case 'sitemap':
+      return <SitemapView key={`${activeId}:${docId}`} />;
     default:
       return null;
   }
@@ -237,8 +241,8 @@ export function App() {
     <div className={cls('app', presenting && 'is-presenting', previewing && 'has-preview')}>
       {!presenting && <TopBar />}
       {activeId && !presenting && <DocBar />}
-      {activeId && !presenting && (kind === 'persona' ? <SheetToolbar /> : kind === 'flow' ? <FlowToolbar /> : <FormatToolbar />)}
-      {activeId && !presenting && kind !== 'persona' && <StateBar />}
+      {activeId && !presenting && (kind === 'persona' ? <SheetToolbar /> : kind === 'flow' ? <FlowToolbar /> : kind === 'sitemap' ? <SitemapToolbar /> : <FormatToolbar />)}
+      {activeId && !presenting && (kind === 'mission-map' || kind === 'flow') && <StateBar />}
       <div className="workspace">
         {split ? (
           <SplitView />

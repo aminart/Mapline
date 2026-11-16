@@ -51,7 +51,7 @@ export function usedColors(project: Project): string[] {
     } else if (doc.kind === 'flow') {
       addStyles(doc.flow.styles);
       for (const l of doc.flow.links) add(l.color);
-    } else {
+    } else if (doc.kind === 'persona') {
       addStyles(doc.sheet.styles);
       for (const b of doc.sheet.blocks) add(b.accent);
     }

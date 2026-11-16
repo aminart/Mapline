@@ -358,3 +358,148 @@ function addNotes(pdf: Pdf, title: string, notes: NoteEntry[], labels: PdfLabels
     y += body.length * 14 + 14;
   }
 }
+
+/** Where a sitemap's parts are on its rendered picture, in layout pixels. */
+/** Where a branch of a sitemap is on the picture (layout px), and its sub-branches. */
+export interface BranchArea {
+  name: string;
+  x0: number;
+  x1: number;
+  top: number;
+  bottom: number;
+  children: BranchArea[];
+}
+
+/** Smallest scale of a branch page (60 %): a branch that would need less is shown by its sub-branches. */
+const MIN_BRANCH_K = 0.6 * PX_TO_PT;
+
+export interface SitemapPdfLayout {
+  /** The whole picture. */
+  width: number;
+  height: number;
+  /** The tree, from its first level down; its level column ends at `railRight`. */
+  treeTop: number;
+  treeBottom: number;
+  railRight: number;
+  /** Each branch of the tree: a page each, or a page per group of its sub-branches when too wide or tall. */
+  branches: BranchArea[];
+  /** The global screens, when there are some. */
+  globals: { top: number; bottom: number } | null;
+  /** The counts, under the title of each page. */
+  summary: string;
+}
+
+export interface SitemapPdfPage {
+  /** Slices of the picture laid side by side (layout px), from `top` to `bottom`. */
+  parts: { x0: number; x1: number }[];
+  top: number;
+  bottom: number;
+  /** Points per layout pixel. */
+  k: number;
+  label: string;
+}
+
+/**
+ * Pages of a sitemap in PDF: a page per branch, the column naming the levels
+ * repeated on its left, then the global screens. A branch is scaled down to
+ * fit whole, none shown above 133 %; one that would go under 60 % is shown
+ * by its sub-branches instead, as many side by side on a page as fit, its
+ * path named in the page's title. Cards are never cut.
+ */
+export function planSitemapPages(layout: SitemapPdfLayout, page: { w: number; h: number }, labels: { branch: (name: string) => string; globals: string }): SitemapPdfPage[] {
+  const { w: availW, h: availH } = usableArea(page);
+  const pages: SitemapPdfPage[] = [];
+  const rail = { x0: 0, x1: layout.railRight };
+  type Area = { x0: number; x1: number; top: number; bottom: number };
+  const sliceOf = (a: Area) => ({ x0: Math.max(layout.railRight, a.x0 - PAD), x1: Math.min(layout.width, a.x1 + PAD) });
+  const frame = (a: Area) => ({ top: Math.max(layout.treeTop, a.top), bottom: Math.min(layout.treeBottom, a.bottom) });
+  const scale = (a: Area) => {
+    const slice = sliceOf(a);
+    const { top, bottom } = frame(a);
+    return Math.min(MAX_PHASE_K, availW / (rail.x1 - rail.x0 + slice.x1 - slice.x0), availH / (bottom - top));
+  };
+  const fits = (a: Area) => scale(a) >= MIN_BRANCH_K;
+  const add = (a: Area, name: string) => pages.push({ parts: [rail, sliceOf(a)], ...frame(a), k: scale(a), label: labels.branch(name) });
+  const join = (list: BranchArea[]): Area => ({
+    x0: list[0].x0,
+    x1: list[list.length - 1].x1,
+    top: Math.min(...list.map((b) => b.top)),
+    bottom: Math.max(...list.map((b) => b.bottom)),
+  });
+  const show = (b: BranchArea, path: string[]) => {
+    const here = [...path, b.name];
+    if (fits(b) || b.children.length === 0) {
+      add(b, here.join(' › '));
+      return;
+    }
+    // Too big: its sub-branches, side by side as many as fit, in even pages.
+    const page = (group: BranchArea[]) =>
+      add(group.length === 1 ? group[0] : join(group), [...here, group.length === 1 ? group[0].name : `${group[0].name} … ${group[group.length - 1].name}`].join(' › '));
+    let run: BranchArea[] = [];
+    const flush = () => {
+      if (run.length) packRun(run, (g) => fits(join(g))).forEach(page);
+      run = [];
+    };
+    for (const c of b.children) {
+      if (fits(c)) run.push(c);
+      else {
+        flush();
+        show(c, here);
+      }
+    }
+    flush();
+  };
+  for (const b of layout.branches) show(b, []);
+  if (layout.globals) {
+    const h = layout.globals.bottom - layout.globals.top;
+    const k = Math.min(MAX_PHASE_K, availW / layout.width, availH / h);
+    pages.push({ parts: [{ x0: 0, x1: layout.width }], top: layout.globals.top, bottom: layout.globals.bottom, k, label: labels.globals });
+  }
+  return pages;
+}
+
+/**
+ * Splits a row of sub-branches into pages, in order: as few pages as packing
+ * them allows, each holding about as many, so no page is left nearly empty.
+ */
+export function packRun<T>(items: T[], fits: (group: T[]) => boolean): T[][] {
+  const greedy: T[][] = [];
+  for (const it of items) {
+    const last = greedy[greedy.length - 1];
+    if (last && fits([...last, it])) last.push(it);
+    else greedy.push([it]);
+  }
+  const n = greedy.length;
+  const even: T[][] = Array.from({ length: n }, (_, i) => items.slice(Math.round((i * items.length) / n), Math.round(((i + 1) * items.length) / n)));
+  return even.every((g) => g.length && fits(g)) ? even : greedy;
+}
+
+/** A sitemap's PDF: the whole sitemap on the first page, then a page per branch and the global screens. */
+export async function sitemapPdfDocument(args: {
+  canvas: HTMLCanvasElement;
+  scale: number;
+  layout: SitemapPdfLayout;
+  title: string;
+  labels: PdfLabels & { branch: (name: string) => string; globals: string };
+}): Promise<Blob> {
+  const { canvas, scale, layout, title, labels } = args;
+  const { jsPDF } = await import('jspdf');
+  const paper = PAPER.a4;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [paper.w, paper.h], compress: true });
+  pdf.setProperties({ title });
+  const { w: availW, h: availH } = usableArea(paper);
+
+  drawHeader(pdf, paper, title, labels.overview, layout.summary);
+  const k0 = Math.min(availW / layout.width, availH / layout.height);
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN + (availW - layout.width * k0) / 2, MARGIN + HEADER, layout.width * k0, layout.height * k0, undefined, 'FAST');
+
+  for (const p of planSitemapPages(layout, paper, labels)) {
+    pdf.addPage([paper.w, paper.h], 'landscape');
+    drawHeader(pdf, paper, title, p.label, layout.summary);
+    const image = crop(canvas, scale, p.parts, p.top, p.bottom);
+    const w = p.parts.reduce((sum, part) => sum + part.x1 - part.x0, 0) * p.k;
+    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN + HEADER, w, (p.bottom - p.top) * p.k, undefined, 'FAST');
+  }
+  numberPages(pdf, labels);
+  return pdf.output('blob');
+}

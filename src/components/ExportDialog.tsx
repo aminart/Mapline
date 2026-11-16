@@ -15,7 +15,7 @@ const OPTIONS_KEY = 'mapline:export';
 const FORMATS: ExportFormat[] = ['png', 'jpeg', 'pdf', 'pptx', 'csv'];
 const SCALES = [1, 2, 3];
 
-const DEFAULTS: ExportOptions = { format: 'png', scale: 2, transparent: false, storyboard: true, info: true, pdfLayout: 'a4', overview: true, notes: true, slides: 'project', slidePhases: true, slideMode: 'edit' };
+const DEFAULTS: ExportOptions = { format: 'png', scale: 2, transparent: false, storyboard: true, info: true, pdfLayout: 'a4', overview: true, notes: true, slides: 'project', slidePhases: true, slideMode: 'edit', sitemapPages: 'branches' };
 const PDF_LAYOUTS: PdfLayout[] = ['single', 'a4', 'a3', 'phases'];
 
 function loadOptions(): ExportOptions {
@@ -33,6 +33,7 @@ function loadOptions(): ExportOptions {
       slides: saved.slides === 'doc' ? 'doc' : 'project',
       slidePhases: saved.slidePhases !== false,
       slideMode: saved.slideMode === 'image' ? 'image' : 'edit',
+      sitemapPages: saved.sitemapPages === 'fit' ? 'fit' : 'branches',
     };
   } catch {
     return DEFAULTS;
@@ -50,6 +51,7 @@ export function ExportDialog() {
   const [opts, setOpts] = useState<ExportOptions>(loadOptions);
   // Sheets and flows: one picture, no table.
   const isSheet = useStore((s) => findDoc(s.project, s.docId)?.kind !== 'mission-map');
+  const isSitemap = useStore((s) => findDoc(s.project, s.docId)?.kind === 'sitemap');
   const docCount = useStore((s) => s.project.docs.length);
   const mapCount = useStore((s) => s.project.docs.filter((d) => d.kind === 'mission-map').length);
   // A sheet has no table to export, and fits on one page.
@@ -169,6 +171,18 @@ export function ExportDialog() {
                   {PDF_LAYOUTS.map((l) => (
                     <button key={l} type="button" className={cls(shown.pdfLayout === l && 'is-on')} aria-pressed={shown.pdfLayout === l} onClick={() => update({ pdfLayout: l })}>
                       {t(`export.pages.${l}` as MessageKey)}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {shown.format === 'pdf' && isSitemap && (
+              <fieldset className="field-group">
+                <legend>{t('export.sitemapPages')}</legend>
+                <div className="segmented segmented-sm">
+                  {(['branches', 'fit'] as const).map((v) => (
+                    <button key={v} type="button" className={cls(opts.sitemapPages === v && 'is-on')} aria-pressed={opts.sitemapPages === v} onClick={() => update({ sitemapPages: v })}>
+                      {t(`export.sitemapPages.${v}`)}
                     </button>
                   ))}
                 </div>
