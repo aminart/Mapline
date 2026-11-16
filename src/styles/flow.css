@@ -151,9 +151,16 @@
   height: 22px;
   border-radius: 6px;
 }
+/* Start and end pills are too short for the grip inside: it sits on the
+   top left corner, facing the delete button on the top right. */
 .flow-start .flow-grip,
 .flow-end .flow-grip {
-  display: none;
+  top: -10px;
+  right: auto;
+  left: -10px;
+  background: #191b20;
+  border-radius: 11px;
+  cursor: grab;
 }
 .flow-handle {
   position: absolute;
