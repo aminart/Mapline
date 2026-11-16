@@ -4,7 +4,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { activeSitemap, useStore, useT } from '../store';
 import * as sm from '../model/sitemap';
-import { CARD_W, layoutTree, type CardBox } from '../model/sitemapLayout';
+import { CARD_W, layoutTree, type Branch, type CardBox } from '../model/sitemapLayout';
+import type { BranchArea } from '../lib/exportPdf';
 import { projectPersonas } from '../model/project';
 import { personaAccent } from '../model/theme';
 import type { Id, Project, Screen, ScreenExtraKind, ScreenLink, Sitemap } from '../model/types';
@@ -157,8 +158,10 @@ function SitemapTree({ sitemap }: { sitemap: Sitemap }) {
       </div>
     );
   }
+  // Where each branch is, for the PDF: right of the level column, named.
+  const branchArea = (b: Branch): BranchArea => ({ name: byId.get(b.id)?.name ?? '', x0: b.x0 + RAIL_W, x1: b.x1 + RAIL_W, top: b.top, bottom: b.bottom, children: b.children.map(branchArea) });
   return (
-    <div className="sitemap-tree" style={{ width: RAIL_W + layout.width + 24, height: layout.height + 24 }} data-branches={JSON.stringify(layout.branches.map((b) => ({ ...b, x0: b.x0 + RAIL_W, x1: b.x1 + RAIL_W, name: byId.get(b.id)?.name ?? '' })))}>
+    <div className="sitemap-tree" style={{ width: RAIL_W + layout.width + 24, height: layout.height + 24 }} data-branches={JSON.stringify(layout.branches.map(branchArea))}>
       <div className="sitemap-rail" style={{ height: layout.height + 24 }}>
         {layout.levels.map((lv, i) => {
           const n = stats.levels[i] ?? 0;

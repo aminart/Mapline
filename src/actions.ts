@@ -6,7 +6,7 @@ import { isDesktop, openProject, saveExport, saveProject } from './lib/fileio';
 import { boardRef } from './components/Board';
 import { layoutOffset, measureLayout, nextFrame, renderBoardCanvas, withExportLayout, type BoardLayout, type RenderOptions } from './lib/exportImage';
 import { boardShapes, sliceShapes, type Shape } from './lib/boardShapes';
-import { crop, pdfDocument, planPhasePages, sitemapPdfDocument, type PdfLayout, type SitemapPdfLayout } from './lib/exportPdf';
+import { crop, pdfDocument, planPhasePages, sitemapPdfDocument, type BranchArea, type PdfLayout, type SitemapPdfLayout } from './lib/exportPdf';
 import { sitemapStats } from './model/sitemap';
 import { pptxDocument, type Slide } from './lib/exportPptx';
 import { copyPng, jpegBlob, pngBlob, type ExportFormat } from './lib/exportFormats';
@@ -320,14 +320,22 @@ function measureSitemap(doc: HTMLElement, width: number, height: number, summary
   const rail = doc.querySelector<HTMLElement>('.sitemap-rail');
   const globals = doc.querySelector<HTMLElement>('.sitemap-globals:not(.no-export)');
   const treeAt = tree ? at(tree) : { x: 0, y: 0 };
-  const branches = tree ? (JSON.parse(tree.dataset.branches ?? '[]') as { x0: number; x1: number; top: number; name: string }[]) : [];
+  const branches = tree ? (JSON.parse(tree.dataset.branches ?? '[]') as BranchArea[]) : [];
+  const place = (b: BranchArea): BranchArea => ({
+    name: b.name || t('sitemap.untitled'),
+    x0: b.x0 + treeAt.x,
+    x1: b.x1 + treeAt.x,
+    top: b.top + treeAt.y,
+    bottom: b.bottom + treeAt.y,
+    children: b.children.map(place),
+  });
   return {
     width,
     height,
     treeTop: treeAt.y,
     treeBottom: tree ? treeAt.y + tree.offsetHeight : 0,
     railRight: rail ? treeAt.x + rail.offsetWidth : 0,
-    branches: branches.map((b) => ({ x0: b.x0 + treeAt.x, x1: b.x1 + treeAt.x, top: b.top + treeAt.y, name: b.name || t('sitemap.untitled') })),
+    branches: branches.map(place),
     globals: globals ? { top: at(globals).y, bottom: at(globals).y + globals.offsetHeight } : null,
     summary,
   };

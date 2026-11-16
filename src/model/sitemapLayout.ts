@@ -15,6 +15,8 @@ export const LEVEL_GAP = 52;
 export const MIN_CARD_H = 76;
 /** Room kept above a branch's top card on its PDF page, short of the connector over it. */
 const BRANCH_PAD = 6;
+/** Room kept under a branch's lowest card, for the badges of modals and messages. */
+const BRANCH_PAD_BOTTOM = 14;
 
 export interface CardBox {
   id: Id;
@@ -33,13 +35,19 @@ export interface Segment {
   h: number;
 }
 
-/** A screen of the second level (or a top screen) and the room its branch takes: what a PDF page shows. */
+/**
+ * A screen and the room its branch takes: what a PDF page shows. A branch too
+ * wide for a page is shown by its sub-branches, so each one carries its own.
+ */
 export interface Branch {
   id: Id;
   x0: number;
   x1: number;
   /** Just above its card: the screens above it are left out of its page. */
   top: number;
+  /** Under its lowest card, with the badges hanging from it. */
+  bottom: number;
+  children: Branch[];
 }
 
 export interface TreeLayout {
@@ -118,23 +126,21 @@ export function layoutTree(roots: Screen[], folded: (id: Id) => boolean, heights
   const width = roots.length ? x - 2 * GAP_X : 0;
 
   // A PDF page per branch: the second level under a single top screen, else each top screen.
+  const byId = new Map(cards.map((c) => [c.id, c]));
+  const branch = (s: Screen): Branch => {
+    const own = byId.get(s.id)!;
+    const children = kids(s).map(branch);
+    return {
+      id: s.id,
+      x0: Math.min(own.x, ...children.map((c) => c.x0)),
+      x1: Math.max(own.x + own.w, ...children.map((c) => c.x1)),
+      top: Math.max(0, own.y - BRANCH_PAD),
+      bottom: Math.max(own.y + own.h + BRANCH_PAD_BOTTOM, ...children.map((c) => c.bottom)),
+      children,
+    };
+  };
   const tops = roots.length === 1 ? kids(roots[0]) : roots;
-  for (const s of tops) {
-    const own = cards.find((c) => c.id === s.id)!;
-    const span = subtreeSpan(s, kids, cards);
-    branches.push({ id: s.id, x0: Math.min(span.x0, own.x), x1: Math.max(span.x1, own.x + own.w), top: Math.max(0, own.y - BRANCH_PAD) });
-  }
+  branches.push(...tops.map(branch));
   const height = levels.length ? levels[levels.length - 1].top + levels[levels.length - 1].height : 0;
   return { cards, segments, levels, branches, width, height };
-}
-
-function subtreeSpan(s: Screen, kids: (s: Screen) => Screen[], cards: CardBox[]): { x0: number; x1: number } {
-  const ids = new Set<Id>();
-  const visit = (n: Screen) => {
-    ids.add(n.id);
-    kids(n).forEach(visit);
-  };
-  visit(s);
-  const own = cards.filter((c) => ids.has(c.id));
-  return { x0: Math.min(...own.map((c) => c.x)), x1: Math.max(...own.map((c) => c.x + c.w)) };
 }

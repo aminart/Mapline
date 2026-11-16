@@ -8,7 +8,7 @@ import { parse, serialize } from './serialize';
 import { createSitemapProject } from './templates';
 import { removeDoc } from './project';
 import type { Screen, Sitemap } from './types';
-import { planSitemapPages, type SitemapPdfLayout } from '../lib/exportPdf';
+import { packRun, planSitemapPages, type BranchArea, type SitemapPdfLayout } from '../lib/exportPdf';
 
 const screen = (id: string, children: Screen[] = [], extra: Partial<Screen> = {}): Screen => ({ id, name: id, status: 'new', children, ...extra });
 
@@ -171,6 +171,8 @@ describe('layoutTree', () => {
     expect(layout.branches.map((b) => b.id)).toEqual(['shop', 'account']);
     const shop = layout.branches[0];
     expect(shop.x1 - shop.x0).toBe(2 * CARD_W + GAP_X);
+    expect(shop.children.map((b) => b.id)).toEqual(['list', 'item']);
+    expect(shop.bottom).toBeGreaterThan(2 * (MIN_CARD_H + LEVEL_GAP) + MIN_CARD_H);
     expect(shop.top).toBeGreaterThan(MIN_CARD_H + LEVEL_GAP / 2);
     expect(shop.top).toBeLessThan(MIN_CARD_H + LEVEL_GAP);
   });
@@ -187,8 +189,8 @@ describe('layoutTree', () => {
 describe('planSitemapPages', () => {
   const A4 = { w: 842, h: 595 };
   const labels = { branch: (n: string) => `Branch ${n}`, globals: 'Globals' };
-  const layout = (branches: SitemapPdfLayout['branches'], globals: SitemapPdfLayout['globals'] = null): SitemapPdfLayout => ({
-    width: 3000,
+  const layout = (branches: BranchArea[], globals: SitemapPdfLayout['globals'] = null): SitemapPdfLayout => ({
+    width: 20000,
     height: 900,
     treeTop: 100,
     treeBottom: 700,
@@ -197,25 +199,68 @@ describe('planSitemapPages', () => {
     globals,
     summary: '',
   });
+  /** A screen's card on the third level, at `x`. */
+  const leaf = (name: string, x: number): BranchArea => ({ name, x0: x, x1: x + CARD_W, top: 358, bottom: 448, children: [] });
+  /** A branch on the second level over `children`. */
+  const node = (name: string, children: BranchArea[]): BranchArea => ({
+    name,
+    x0: children[0].x0,
+    x1: children[children.length - 1].x1,
+    top: 230,
+    bottom: Math.max(...children.map((c) => c.bottom)),
+    children,
+  });
+  const row = (prefix: string, n: number, from: number) => Array.from({ length: n }, (_, i) => leaf(`${prefix}${i + 1}`, from + i * (CARD_W + GAP_X)));
 
   it('puts each branch on its page, the level column on its left, then the global screens', () => {
-    const pages = planSitemapPages(layout([{ x0: 200, x1: 600, top: 230, name: 'Shop' }, { x0: 620, x1: 2900, top: 230, name: 'Account' }], { top: 720, bottom: 880 }), A4, labels);
+    const pages = planSitemapPages(layout([node('Shop', row('s', 2, 200)), node('Account', row('a', 3, 620))], { top: 720, bottom: 880 }), A4, labels);
     expect(pages.map((p) => p.label)).toEqual(['Branch Shop', 'Branch Account', 'Globals']);
     expect(pages[0].parts[0]).toEqual({ x0: 0, x1: 104 });
-    // Screens above the branch are left out.
-    expect(pages[0].top).toBe(230);
-    expect(pages[0].bottom).toBe(700);
-    // Never shown bigger than 133 %, a wide branch scaled down to fit whole.
-    expect(pages[0].k).toBeLessThanOrEqual(1.33);
-    const wide = pages[1];
-    const w = wide.parts.reduce((s, p) => s + p.x1 - p.x0, 0);
-    expect(w * wide.k).toBeLessThanOrEqual(A4.w);
+    // From just above the branch's card to under its lowest card.
+    expect(pages[0]).toMatchObject({ top: 230, bottom: 448 });
+    expect(pages[0].k).toBeLessThanOrEqual(1);
     expect(pages[2]).toMatchObject({ top: 720, bottom: 880 });
   });
 
+  it('scales a wide branch down to fit whole, down to 60 %', () => {
+    const [page] = planSitemapPages(layout([node('Shop', row('s', 5, 200))]), A4, labels);
+    const w = page.parts.reduce((s, p) => s + p.x1 - p.x0, 0);
+    expect(w * page.k).toBeLessThanOrEqual(A4.w);
+    expect(page.k).toBeGreaterThanOrEqual(0.45);
+  });
+
+  it('shows a branch too wide for 60 % by groups of its sub-branches, its path in the title, no card cut', () => {
+    const kids = row('s', 20, 200);
+    const pages = planSitemapPages(layout([node('Shop', kids)]), A4, labels);
+    expect(pages.length).toBeGreaterThan(1);
+    for (const p of pages) {
+      expect(p.k).toBeGreaterThanOrEqual(0.45);
+      expect(p.label).toMatch(/^Branch Shop › s\d+( … s\d+)?$/);
+      expect(p.top).toBe(358);
+    }
+    // Every card on exactly one page, whole.
+    for (const c of kids) {
+      const on = pages.filter((p) => p.parts[1].x0 <= c.x0 && p.parts[1].x1 >= c.x1);
+      expect(on, c.name).toHaveLength(1);
+    }
+  });
+
+  it('fills the pages of a row about evenly', () => {
+    const pages = packRun([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], (g) => g.length <= 8);
+    expect(pages.map((g) => g.length)).toEqual([6, 6]);
+    expect(pages.flat()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    // Uneven sizes: back to packing in order when an even split would not fit.
+    expect(packRun([5, 5, 1, 1], (g) => g.reduce((a, b) => a + b, 0) <= 7)).toEqual([[5], [5, 1, 1]]);
+  });
+
+  it('goes down as many levels as it takes', () => {
+    const wide = node('Products', row('p', 20, 200));
+    const pages = planSitemapPages(layout([{ ...node('Shop', [wide]), top: 100 }]), A4, labels);
+    expect(pages.every((p) => p.label.startsWith('Branch Shop › Products › p'))).toBe(true);
+  });
+
   it('keeps a branch within the picture', () => {
-    const [page] = planSitemapPages(layout([{ x0: 2950, x1: 3000, top: 0, name: 'Edge' }]), A4, labels);
-    expect(page.parts[1].x1).toBeLessThanOrEqual(3000);
-    expect(page.top).toBe(100);
+    const [page] = planSitemapPages(layout([leaf('Edge', 19900)]), A4, labels);
+    expect(page.parts[1].x1).toBeLessThanOrEqual(20000);
   });
 });

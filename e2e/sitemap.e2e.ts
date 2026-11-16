@@ -171,3 +171,18 @@ test('exports a sitemap in PDF, a page per branch after the overview, and in PNG
   expect(png.subarray(1, 4).toString()).toBe('PNG');
   expect(errors).toEqual([]);
 });
+
+test('exports a branch too wide for one page over several pages, by its sub-branches', async ({ page }) => {
+  await startSitemap(page);
+  await page.keyboard.type('Accueil');
+  await addChild(page, 'Catalogue');
+  await addChild(page, 'Produit 1');
+  for (let i = 2; i <= 16; i++) await addSibling(page, `Produit ${i}`);
+  await page.keyboard.press('ControlOrMeta+e');
+  await page.locator('input[name=export-format][value=pdf]').check({ force: true });
+  const download = page.waitForEvent('download');
+  await page.locator('dialog[open] .btn-primary').click();
+  const pdf = (await readFile(await (await download).path())).toString('latin1');
+  // The overview, then the sixteen screens of Catalogue on two even pages.
+  expect(pdf.match(/\/MediaBox \[[^\]]*\]/g) ?? []).toHaveLength(3);
+});
