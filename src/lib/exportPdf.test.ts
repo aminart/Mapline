@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { planPages, planPhasePages, planPhasePdfPages } from './exportPdf';
+import { pdfTextColor, planPages, planPhasePages, planPhasePdfPages } from './exportPdf';
 import type { BoardLayout } from './exportImage';
 
 /** A board with `n` steps of `cols` activity columns each, laid out like the app. */
@@ -11,7 +11,7 @@ function board(n: number, cols = 1): BoardLayout {
     const left = 260 + i * (cols * 196);
     return { left, right: left + cols * 196 - 12 };
   });
-  return { width: steps[n - 1].right + 160, height: 900, stripRight: 254, steps, objectiveBottom: 100, objective: '', phases: [] };
+  return { width: steps[n - 1].right + 160, height: 900, stripRight: 254, steps, objectiveBottom: 100, contentBottom: 900, objective: '', phases: [] };
 }
 
 const A4 = { w: 842, h: 595 };
@@ -46,7 +46,7 @@ describe('planPages', () => {
   });
 
   it('puts a small board on a single page, never enlarged', () => {
-    const small = { width: 800, height: 400, stripRight: 254, steps: [{ left: 260, right: 444 }], objectiveBottom: 90, objective: '', phases: [] };
+    const small = { width: 800, height: 400, stripRight: 254, steps: [{ left: 260, right: 444 }], objectiveBottom: 90, contentBottom: 400, objective: '', phases: [] };
     const plan = planPages(small, { w: 1191, h: 842 });
     expect(plan.pages).toHaveLength(1);
     expect(plan.k).toBe(0.75);
@@ -108,9 +108,52 @@ describe('planPhasePdfPages', () => {
     for (const p of pages) expect((254 + p.x1 - p.x0) * p.k).toBeLessThanOrEqual(842 - 56 + 0.01);
   });
 
+  it('zooms a phase in as far as its page allows, the same on each of its pages', () => {
+    const layout = withPhases(15, [1, 3, 11]);
+    layout.contentBottom = 400;
+    const pages = planPhasePdfPages(layout, A4);
+    const usable = { w: 842 - 56, h: 595 - 56 - 38 - 16 };
+    for (const p of pages) {
+      expect((254 + p.x1 - p.x0) * p.k).toBeLessThanOrEqual(usable.w + 0.01);
+      expect((400 - 100) * p.k).toBeLessThanOrEqual(usable.h + 0.01);
+    }
+    // One step, then three: bigger than 100 % (0.75 pt per px), up to 133 %.
+    expect(pages[0].k).toBeGreaterThan(0.75);
+    expect(pages[0].k).toBeLessThanOrEqual(1);
+    expect(pages[1].k).toBeGreaterThan(0.75);
+    expect(pages[1].k).toBeLessThan(pages[0].k);
+    // Several pages: one scale for the whole phase.
+    const third = pages.filter((p) => p.phase === 2);
+    expect(third.length).toBeGreaterThan(1);
+    expect(new Set(third.map((p) => p.k)).size).toBe(1);
+  });
+
+  it('leaves out the blank band under the last row when fitting the height', () => {
+    const layout = withPhases(2, [2]);
+    const full = planPhasePdfPages(layout, A4)[0].k;
+    layout.contentBottom = 780;
+    expect(planPhasePdfPages(layout, A4)[0].k).toBeGreaterThan(full);
+  });
+
   it('puts all the steps on pages of their own when the map has no phases', () => {
     const pages = planPhasePdfPages(board(3), A4);
     expect(pages).toHaveLength(1);
     expect(pages[0]).toMatchObject({ phase: -1, firstStep: 0, lastStep: 2 });
+  });
+});
+
+describe('pdfTextColor', () => {
+  it('reads the colours the browser gives', () => {
+    expect(pdfTextColor('rgb(30, 58, 158)')).toEqual([30, 58, 158]);
+    expect(pdfTextColor('rgba(200, 10, 0, 0.5)')).toEqual([200, 10, 0]);
+    expect(pdfTextColor('#FF8800')).toEqual([255, 136, 0]);
+  });
+
+  it('never hands jsPDF a see-through or unreadable colour', () => {
+    // A frozen field is see-through: jsPDF threw "invalid color" on it.
+    expect(pdfTextColor('rgba(0, 0, 0, 0)')).toEqual([30, 58, 158]);
+    expect(pdfTextColor('rgba(0,0,0,0)')).toEqual([30, 58, 158]);
+    expect(pdfTextColor('transparent')).toEqual([30, 58, 158]);
+    expect(pdfTextColor('')).toEqual([30, 58, 158]);
   });
 });

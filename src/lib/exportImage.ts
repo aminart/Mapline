@@ -50,6 +50,8 @@ export interface BoardLayout {
   steps: { left: number; right: number }[];
   /** Bottom of the objective band (and the gap under it). */
   objectiveBottom: number;
+  /** Bottom of the last part that is exported (below it: buttons and margin only). */
+  contentBottom: number;
   objective: string;
   phases: { left: number; right: number; top: number; height: number; title: string; color: string; size: number }[];
 }
@@ -187,7 +189,9 @@ export function measureLayout(board: HTMLElement): BoardLayout {
   const phases = Array.from(board.querySelectorAll<HTMLElement>('.phase')).map((el) => {
     const at = layoutOffset(el);
     const input = el.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
-    const style = input ? getComputedStyle(input) : null;
+    // While texts are frozen the field is see-through: its copy carries the colour shown.
+    const shown = input?.parentElement?.querySelector<HTMLElement>(':scope > .export-text') ?? input;
+    const style = shown ? getComputedStyle(shown) : null;
     return {
       left: at.x - origin.x,
       right: at.x - origin.x + el.offsetWidth,
@@ -198,9 +202,13 @@ export function measureLayout(board: HTMLElement): BoardLayout {
       size: style ? parseFloat(style.fontSize) : 14,
     };
   });
+  // Buttons such as "Add a persona" are left out of the picture: no blank band for them at the bottom.
+  const shown = Array.from(board.children).filter((el): el is HTMLElement => el instanceof HTMLElement && !!el.offsetParent && !el.classList.contains('no-export') && el.offsetHeight > 0);
+  const contentBottom = shown.length ? Math.min(board.offsetHeight, Math.max(...shown.map((el) => layoutOffset(el).y - origin.y + el.offsetHeight)) + 16) : board.offsetHeight;
   return {
     width: boardWidth,
     height: board.offsetHeight,
+    contentBottom,
     stripRight: steps.length ? steps[0].left - 6 : boardWidth,
     steps,
     objectiveBottom: objective ? layoutOffset(objective).y - origin.y + objective.offsetHeight + 8 : 0,
@@ -231,7 +239,7 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
   let layer: { x: number; y: number } | null = null;
   let labels: { cx: number; cy: number; w: number; h: number; text: string; color: string; border: string; font: string }[] = [];
   let boardWidth = 0;
-  let layout: BoardLayout = { width: 0, height: 0, stripRight: 0, steps: [], objectiveBottom: 0, objective: '', phases: [] };
+  let layout: BoardLayout = { width: 0, height: 0, stripRight: 0, steps: [], objectiveBottom: 0, contentBottom: 0, objective: '', phases: [] };
   let thaw = () => {};
   try {
     await nextFrame();

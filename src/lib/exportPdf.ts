@@ -3,6 +3,7 @@
 
 import type { BoardLayout } from './exportImage';
 import type { NoteEntry } from '../model/ops';
+import { parseColor } from './boardShapes';
 
 /** `fit`: the whole board scaled onto one A4 page (sheets and flows). */
 export type PdfLayout = 'single' | 'a4' | 'a3' | 'phases' | 'fit';
@@ -41,9 +42,17 @@ function usableArea(page: { w: number; h: number }) {
   return { w: page.w - 2 * MARGIN, h: page.h - 2 * MARGIN - HEADER - FOOTER };
 }
 
+/** Points per layout pixel at most on a phase page: 133 %, still sharp at the export's resolution. */
+const MAX_PHASE_K = 1;
+
+/** Height of the board printed on detail pages: from under the objective to its last exported row. */
+function printedHeight(layout: BoardLayout) {
+  return layout.contentBottom - layout.objectiveBottom;
+}
+
 /** The scale at which the board, from its objective down, fits the height of the page. */
-function heightScale(layout: BoardLayout, page: { w: number; h: number }) {
-  return Math.min(PX_TO_PT, usableArea(page).h / (layout.height - layout.objectiveBottom));
+function heightScale(layout: BoardLayout, page: { w: number; h: number }, max = PX_TO_PT) {
+  return Math.min(max, usableArea(page).h / printedHeight(layout));
 }
 
 /**
@@ -104,8 +113,14 @@ export function planPhasePdfPages(layout: BoardLayout, page: { w: number; h: num
     })
     .filter((g): g is { index: number; title: string; from: number; to: number } => g.from !== undefined);
   if (groups.length === 0) groups.push({ index: -1, title: '', from: 0, to: steps.length - 1 });
+  const availW = usableArea(page).w;
+  const tallest = heightScale(layout, page, MAX_PHASE_K);
   return groups.flatMap((g) => {
-    const pages = packSteps(layout, page, k, g.from, g.to);
+    const packed = packSteps(layout, page, k, g.from, g.to);
+    // A phase that leaves room on its pages is zoomed in, the same on each of them, as far as
+    // the height of the page allows. A step scaled down to fit a page keeps its scale.
+    const grow = Math.min(tallest, ...packed.filter((p) => p.k >= k).map((p) => availW / (layout.stripRight + p.x1 - p.x0)));
+    const pages = packed.map((p) => (p.k >= k ? { ...p, k: Math.max(k, grow) } : p));
     return pages.map((p, n) => ({ ...p, phase: g.index, title: g.title, part: n + 1, parts: pages.length }));
   });
 }
@@ -235,13 +250,14 @@ export async function pdfDocument(args: {
   }
 
   const top = layout.objectiveBottom;
+  const bottom = layout.contentBottom;
   for (const p of pages) {
     header(p.label, layout.objective);
-    const image = crop(canvas, scale, [{ x0: 0, x1: layout.stripRight }, p], top, layout.height);
+    const image = crop(canvas, scale, [{ x0: 0, x1: layout.stripRight }, p], top, bottom);
     const x = MARGIN;
     const y = MARGIN + HEADER;
     const w = (layout.stripRight + (p.x1 - p.x0)) * p.k;
-    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, (layout.height - top) * p.k, undefined, 'FAST');
+    pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, (bottom - top) * p.k, undefined, 'FAST');
     // A phase that began on an earlier page: repeat its name where it enters this one.
     for (const ph of layout.phases) {
       if (!ph.title || ph.left >= p.x0 || ph.right <= p.x0) continue;
@@ -249,7 +265,8 @@ export async function pdfDocument(args: {
       const py = y + (ph.top - top + ph.height / 2) * p.k;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(ph.size * p.k);
-      pdf.setTextColor(ph.color);
+      const [r, g, b] = pdfTextColor(ph.color);
+      pdf.setTextColor(r, g, b);
       pdf.text(ph.title, px, py, { baseline: 'middle' });
     }
   }
@@ -257,6 +274,17 @@ export async function pdfDocument(args: {
   if (notes.length) addNotes(pdf, title, notes, labels, paper);
   numberPages(pdf, labels);
   return pdf.output('blob');
+}
+
+/**
+ * A CSS colour as jsPDF takes it (0–255 each). jsPDF throws on anything but
+ * plain colours, e.g. the `rgba(0,0,0,0)` of a see-through field: such a
+ * colour, or one that can't be read, falls back to the phase title blue.
+ */
+export function pdfTextColor(css: string): [number, number, number] {
+  const c = parseColor(css);
+  const hex = c?.hex ?? '1E3A9E';
+  return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 }
 
 /** Title on the left, `right` on the right, and an optional one-line subtitle. */
