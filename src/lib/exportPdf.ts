@@ -160,8 +160,14 @@ export interface PdfLabels {
   notes: string;
 }
 
-/** Copies part of the rendered board (layout px, from `top` down) into a new canvas. */
-export function crop(canvas: HTMLCanvasElement, scale: number, parts: { x0: number; x1: number }[], top: number, height: number) {
+/**
+ * Copies part of the rendered board (layout px, from `top` down) into a new canvas.
+ * The scale is read from the canvas, not from the export options: a board too large
+ * for one canvas is drawn smaller (html-to-image stops at 16,384 px a side), and
+ * cutting it at the scale asked for took the wrong boxes, some halved.
+ */
+export function crop(canvas: HTMLCanvasElement, boardWidth: number, parts: { x0: number; x1: number }[], top: number, height: number) {
+  const scale = canvas.width / boardWidth;
   const out = document.createElement('canvas');
   out.width = Math.round(parts.reduce((w, p) => w + (p.x1 - p.x0), 0) * scale);
   out.height = Math.round((height - top) * scale);
@@ -179,7 +185,6 @@ export function crop(canvas: HTMLCanvasElement, scale: number, parts: { x0: numb
 
 export async function pdfDocument(args: {
   canvas: HTMLCanvasElement;
-  scale: number;
   layout: BoardLayout;
   title: string;
   mode: PdfLayout;
@@ -187,7 +192,7 @@ export async function pdfDocument(args: {
   notes: NoteEntry[];
   labels: PdfLabels;
 }): Promise<Blob> {
-  const { canvas, scale, layout, title, mode, overview, notes, labels } = args;
+  const { canvas, layout, title, mode, overview, notes, labels } = args;
   const { jsPDF } = await import('jspdf');
 
   if (mode === 'single') {
@@ -253,7 +258,7 @@ export async function pdfDocument(args: {
   const bottom = layout.contentBottom;
   for (const p of pages) {
     header(p.label, layout.objective);
-    const image = crop(canvas, scale, [{ x0: 0, x1: layout.stripRight }, p], top, bottom);
+    const image = crop(canvas, layout.width, [{ x0: 0, x1: layout.stripRight }, p], top, bottom);
     const x = MARGIN;
     const y = MARGIN + HEADER;
     const w = (layout.stripRight + (p.x1 - p.x0)) * p.k;
@@ -477,12 +482,11 @@ export function packRun<T>(items: T[], fits: (group: T[]) => boolean): T[][] {
 /** A sitemap's PDF: the whole sitemap on the first page, then a page per branch and the global screens. */
 export async function sitemapPdfDocument(args: {
   canvas: HTMLCanvasElement;
-  scale: number;
   layout: SitemapPdfLayout;
   title: string;
   labels: PdfLabels & { branch: (name: string) => string; globals: string };
 }): Promise<Blob> {
-  const { canvas, scale, layout, title, labels } = args;
+  const { canvas, layout, title, labels } = args;
   const { jsPDF } = await import('jspdf');
   const paper = PAPER.a4;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [paper.w, paper.h], compress: true });
@@ -496,7 +500,7 @@ export async function sitemapPdfDocument(args: {
   for (const p of planSitemapPages(layout, paper, labels)) {
     pdf.addPage([paper.w, paper.h], 'landscape');
     drawHeader(pdf, paper, title, p.label, layout.summary);
-    const image = crop(canvas, scale, p.parts, p.top, p.bottom);
+    const image = crop(canvas, layout.width, p.parts, p.top, p.bottom);
     const w = p.parts.reduce((sum, part) => sum + part.x1 - part.x0, 0) * p.k;
     pdf.addImage(image.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN + HEADER, w, (p.bottom - p.top) * p.k, undefined, 'FAST');
   }
