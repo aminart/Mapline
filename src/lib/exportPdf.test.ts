@@ -1,8 +1,8 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { describe, expect, it } from 'vitest';
-import { pdfTextColor, planPages, planPhasePages, planPhasePdfPages } from './exportPdf';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { crop, pdfTextColor, planPages, planPhasePages, planPhasePdfPages } from './exportPdf';
 import type { BoardLayout } from './exportImage';
 
 /** A board with `n` steps of `cols` activity columns each, laid out like the app. */
@@ -155,5 +155,31 @@ describe('pdfTextColor', () => {
     expect(pdfTextColor('rgba(0,0,0,0)')).toEqual([30, 58, 158]);
     expect(pdfTextColor('transparent')).toEqual([30, 58, 158]);
     expect(pdfTextColor('')).toEqual([30, 58, 158]);
+  });
+});
+
+describe('crop', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A canvas stand-in that records what is drawn on it. */
+  function fakeCanvas(width = 0, height = 0) {
+    const draws: number[][] = [];
+    const ctx = { fillStyle: '', fillRect: () => {}, drawImage: (...a: unknown[]) => draws.push(a.slice(1) as number[]) };
+    return { width, height, draws, getContext: () => ctx };
+  }
+
+  it('cuts at the scale the board was really drawn at, even when it was drawn smaller than asked', () => {
+    const out = fakeCanvas();
+    vi.stubGlobal('document', { createElement: () => out });
+    // A board 10,000 px wide asked at 2x is drawn 16,384 px wide (html-to-image's limit), not 20,000.
+    const source = fakeCanvas(16384, 1638.4);
+    crop(source as unknown as HTMLCanvasElement, 10000, [{ x0: 0, x1: 250 }, { x0: 5000, x1: 5400 }], 100, 1000);
+    const k = 16384 / 10000;
+    expect(out.width).toBe(Math.round(650 * k));
+    expect(out.height).toBe(Math.round(900 * k));
+    expect(out.draws[0][0]).toBeCloseTo(0);
+    expect(out.draws[1][0]).toBeCloseTo(5000 * k);
+    expect(out.draws[1][1]).toBeCloseTo(100 * k);
+    expect(out.draws[1][2]).toBeCloseTo(400 * k);
   });
 });

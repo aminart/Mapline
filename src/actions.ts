@@ -285,7 +285,6 @@ async function exportNow(opts: ExportOptions): Promise<boolean> {
     else {
       const pdf = await pdfDocument({
         canvas,
-        scale: opts.scale,
         layout,
         title,
         mode: single ? 'fit' : opts.pdfLayout,
@@ -353,7 +352,6 @@ async function exportSitemapPdf(opts: ExportOptions, title: string, sitemap: Sit
     const summary = `${stats.total} ${t('sitemap.total')} · ${t('sitemap.toDo', { views: stats.status.new + stats.status.redo, extras: stats.extrasToDo })}`;
     const pdf = await sitemapPdfDocument({
       canvas,
-      scale: opts.scale,
       layout: measureSitemap(doc, layout.width, layout.height, summary),
       title,
       labels: {
@@ -421,7 +419,7 @@ async function renderSlides(opts: ExportOptions): Promise<Slide[]> {
       const { canvas, layout } = await renderForExport(opts);
       if (phases && layout.phases.length > 0) {
         for (const p of planPhasePages(layout)) {
-          const image = crop(canvas, opts.scale, [{ x0: 0, x1: layout.stripRight }, p], p.top, layout.height);
+          const image = crop(canvas, layout.width, [{ x0: 0, x1: layout.stripRight }, p], p.top, layout.height);
           slides.push({ title: `${label} · ${p.title || t('pdf.phase', { n: p.index + 1 })}`, subtitle: layout.objective, image });
         }
       } else {
