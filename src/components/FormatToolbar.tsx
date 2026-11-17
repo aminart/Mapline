@@ -10,6 +10,7 @@ import { CloseIcon, TagIcon } from './Icons';
 import { cls } from './cls';
 import { TargetButton } from './StateBar';
 import { ArrowControls, ColorMenu, KindMenu, ResetButton, StoryboardToggle, TextStyleControls, ToolModes } from './ToolControls';
+import { shown } from '../lib/shownColor';
 
 export function FormatToolbar() {
   const t = useT();
@@ -117,7 +118,7 @@ export function TagManager(props: {
                     <li key={tag}>
                       <label className="tag-check">
                         <input type="checkbox" checked={on} onChange={() => toggle(tag)} aria-label={t('tags.show', { tag })} />
-                        <span className="tag" style={{ background: c.bg, color: c.fg }}>
+                        <span className="tag" style={{ background: shown(c.bg, 'bg'), color: shown(c.fg, 'ink') }}>
                           {tag}
                         </span>
                         <span className="muted-sm">{count}</span>
@@ -127,7 +128,7 @@ export function TagManager(props: {
                           <button
                             key={i}
                             className={cls('swatch swatch-xs', p.bg === c.bg && 'is-on')}
-                            style={{ background: p.bg, borderColor: p.fg }}
+                            style={{ background: shown(p.bg, 'bg'), borderColor: shown(p.fg, 'ink') }}
                             aria-label={`${t('tags.color', { tag })} ${i + 1}`}
                             onClick={() => setColor(tag, i)}
                           />

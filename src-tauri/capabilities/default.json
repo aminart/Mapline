@@ -9,6 +9,7 @@
     "core:default",
     "core:window:allow-destroy",
     "core:window:allow-set-fullscreen",
+    "core:window:allow-set-theme",
     "dialog:default",
     "fs:default",
     "fs:allow-read-text-file",

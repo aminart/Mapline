@@ -61,7 +61,7 @@ function Objective() {
   const b = useBox<HTMLTextAreaElement>('obj', 'obj');
   return (
     <label className={cls('box objective', b.selected && 'is-selected')} style={b.box}>
-      <span className="eyebrow" style={{ color: b.style.color }}>
+      <span className="eyebrow" style={{ color: b.text.color }}>
         {t('board.objective')}
       </span>
       <FitText
@@ -156,7 +156,7 @@ function PhaseBox(props: { phase: Phase; index: number; span: number; isLast: bo
         style={b.text}
       />
       <FlowLinks kind="phase" id={phase.id} />
-      <div className="box-actions no-export" style={{ color: b.style.color }}>
+      <div className="box-actions no-export" style={{ color: b.text.color }}>
         {canRemove && (
           <span
             className="grip grip-phase"

@@ -686,3 +686,31 @@ test('moves a phase with its steps and activities', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+z');
   await expect(phaseNames.nth(0)).toHaveValue('Ph1');
 });
+
+test('switches to the dark theme, keeps it, and still exports in light', async ({ page }) => {
+  await startProject(page);
+  await addActivity(page, 0, 0, 'Une activité');
+  const exportPng = async () => {
+    await page.keyboard.press('ControlOrMeta+e');
+    await page.locator('input[name=export-format][value=png]').check({ force: true });
+    const download = page.waitForEvent('download');
+    await page.locator('dialog[open] .btn-primary').click();
+    return readFile(await (await download).path());
+  };
+  await page.locator('.board').click({ position: { x: 4, y: 4 } });
+  const light = await exportPng();
+
+  await page.getByLabel('Thème et raccourcis clavier').click();
+  await page.getByRole('group', { name: 'Thème' }).getByRole('button', { name: 'Sombre' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  // The board turns dark on screen...
+  const shownFill = await page.locator('.persona-grid [data-act]').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(shownFill).not.toBe('rgb(255, 255, 255)');
+  // ...while its pictures stay as in the light theme.
+  await page.keyboard.press('Escape');
+  await page.locator('.board').click({ position: { x: 4, y: 4 } });
+  expect((await exportPng()).equals(light)).toBe(true);
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});

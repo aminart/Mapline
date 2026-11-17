@@ -8,6 +8,7 @@ import { setSheetIdentity, sheetIdentity } from '../model/project';
 import { BLOCK_ACCENTS, PERSONA_PALETTE, personaAccent, tagColor } from '../model/theme';
 import type { BlockPlace, BlockView, PersonaSheet, SheetBlock, SheetItem } from '../model/types';
 import { readImage } from '../lib/image';
+import { shown, shownBox, themable } from '../lib/shownColor';
 import { docLabel, withBusy } from '../actions';
 import { boardRef } from './Board';
 import { useBox } from './useBox';
@@ -157,7 +158,7 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
     applyProject((p) => setSheetIdentity(p, docId, patch), { coalesce: `${key}:${docId}` });
 
   return (
-    <section className={cls('box sheet-identity', b.selected && 'is-selected')} style={{ background: bg, borderColor: custom?.bc ?? bg, color }}>
+    <section className={cls('box sheet-identity', b.selected && 'is-selected')} style={identityStyle(bg, custom?.bc ?? bg, color)}>
       <Avatar sheet={sheet} name={identity.name} accent={accent} onAccent={onAccent} />
       <FitText
         singleLine
@@ -303,7 +304,7 @@ function Chips(props: {
       {tags.map((tag) => {
         const c = colorOf(tag);
         return (
-          <span key={tag} className={cls('tag', editable && 'tag-pickable')} style={{ background: c.bg, color: c.fg }}>
+          <span key={tag} className={cls('tag', editable && 'tag-pickable')} style={{ background: shown(c.bg, 'bg'), color: shown(c.fg, 'ink') }}>
             {editable ? (
               <button className="tag-name" aria-label={t('tags.edit', { tag })} title={t('tags.edit', { tag })} aria-expanded={editing === tag} onClick={() => setEditing(tag)}>
                 {tag}
@@ -385,7 +386,7 @@ function BlockCard({ sheet, block, place, grid }: { sheet: PersonaSheet; block: 
     <section
       ref={ref}
       className={cls('box sheet-block', b.selected && 'is-selected')}
-      style={{ ...b.box, borderTopColor: block.accent, ...gridArea(place) }}
+      style={{ ...b.box, borderTopColor: shown(block.accent, 'line'), ...gridArea(place) }}
       data-block={block.id}
     >
       <header className="sheet-block-head">
@@ -407,7 +408,7 @@ function BlockCard({ sheet, block, place, grid }: { sheet: PersonaSheet; block: 
           aria-label={t('sheet.blockTitle')}
           placeholder={t('sheet.blockTitle')}
           value={block.title}
-          style={{ color: block.accent }}
+          style={{ color: shown(block.accent, 'ink') }}
           onFocus={b.onFocus}
           onChange={(e) => {
             const v = e.target.value;
@@ -490,7 +491,7 @@ function Line(props: { block: SheetBlock; item: SheetItem; prevId: string | null
   };
   return (
     <li className={cls('sheet-line', !item.text.trim() && 'is-empty')}>
-      <span className="sheet-bullet" style={{ background: block.accent }} aria-hidden="true" />
+      <span className="sheet-bullet" style={{ background: shown(block.accent, 'line') }} aria-hidden="true" />
       <textarea
         ref={ref}
         rows={1}
@@ -561,7 +562,7 @@ function GaugeRow({ block, item, onFocus }: { block: SheetBlock; item: SheetItem
         </button>
       </div>
       {/* The bar is what shows and exports; the slider on top of it only edits. */}
-      <div className="sheet-gauge-bar" style={{ '--gauge': block.accent } as CSSProperties}>
+      <div className="sheet-gauge-bar" style={{ '--gauge': shown(block.accent, 'line') } as CSSProperties}>
         <div className="sheet-gauge-track" aria-hidden="true">
           <div className="sheet-gauge-fill" style={{ width: `${item.level ?? so.DEFAULT_LEVEL}%`, background: block.accent }} />
         </div>
@@ -638,4 +639,13 @@ function AddBlock({ count, row }: { count: number; row: number }) {
       )}
     </div>
   );
+}
+
+/**
+ * The identity card's colours as shown: Mapline's tints follow the theme; a
+ * fill of the user's own keeps dark text on it, as in the light theme.
+ */
+function identityStyle(bg: string, bc: string, color: string | undefined): CSSProperties {
+  const v = shownBox(bg, bc, color);
+  return { background: v.bg, borderColor: v.bc, color: v.color ?? (themable(bg, 'bg') ? undefined : '#1B1D2A') };
 }

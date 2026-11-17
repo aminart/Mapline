@@ -6,12 +6,16 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { installCloseGuard } from './lib/closeGuard';
 import { installInputModality } from './lib/inputModality';
-import { restoreSession } from './store';
+import { restoreSession, useStore } from './store';
+import { applyTheme } from './lib/appTheme';
+import { installDarkPalette } from './lib/shownColor';
 import 'night-navy/night-navy.css';
 import './fonts.css';
 import './styles.css';
 
 installInputModality();
+installDarkPalette();
+applyTheme(useStore.getState().theme);
 
 // The last session's projects are read first, so they show from the start.
 await restoreSession();

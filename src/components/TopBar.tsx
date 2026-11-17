@@ -1,10 +1,11 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
 import { open, save } from '../actions';
 import type { Lang } from '../i18n';
+import type { ThemePref } from '../lib/appTheme';
 import { CheckIcon, DownloadIcon, FolderIcon, LogoIcon, NoteIcon, PlayIcon, PlusIcon, RedoIcon, UndoIcon } from './Icons';
 import { projectComments } from '../model/comments';
 import { startPresentation } from './Presentation';
@@ -115,7 +116,7 @@ function HelpButton() {
   return (
     <>
       <details className="help" ref={ref}>
-        <summary className="nn-icon-btn" aria-label={t('side.shortcuts')} title={t('side.shortcuts')}>
+        <summary className="nn-icon-btn" aria-label={t('top.help')} title={t('top.help')}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
@@ -123,6 +124,7 @@ function HelpButton() {
           </svg>
         </summary>
         <div className="help-panel">
+          <ThemeSwitch />
           <h2>{t('side.shortcuts')}</h2>
           <p>{t('side.shortcutsText')}</p>
           <button
@@ -139,6 +141,51 @@ function HelpButton() {
       {/* Outside the details element, which hides its content when closed. */}
       <AboutDialog open={about} onClose={() => setAbout(false)} />
     </>
+  );
+}
+
+const THEME_ICONS: Record<ThemePref, ReactNode> = {
+  light: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </>
+  ),
+  dark: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />,
+  system: (
+    <>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+    </>
+  ),
+};
+
+function ThemeIcon({ theme }: { theme: ThemePref }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {THEME_ICONS[theme]}
+    </svg>
+  );
+}
+
+/** Light, dark or as the system, in the help menu (the bar has no room left). */
+function ThemeSwitch() {
+  const t = useT();
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
+  const options: ThemePref[] = ['light', 'dark', 'system'];
+  return (
+    <div className="theme-switch">
+      <h2>{t('top.theme')}</h2>
+      <div className="segmented" role="group" aria-label={t('top.theme')}>
+        {options.map((o) => (
+          <button key={o} className={cls(theme === o && 'is-on')} aria-pressed={theme === o} onClick={() => setTheme(o)}>
+            <ThemeIcon theme={o} />
+            {t(`top.theme.${o}`)}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
