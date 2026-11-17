@@ -6,6 +6,7 @@ import type { Blueprint, BoxKey, BoxStyle, Flow, Id, PersonaSheet, Project, Site
 import { uid } from './model/ops';
 import { parse } from './model/serialize';
 import { findDoc, firstDocId, flowOf, missionMapOf, projectFromMap, sheetOf, sitemapOf, updateFlow, updateMap, updateSheet, updateSitemap } from './model/project';
+import { applyTheme, initialTheme, type ThemePref } from './lib/appTheme';
 import { initialLang, rememberLang, translate, type Lang, type MessageKey } from './i18n';
 import { readSession, writeSession } from './lib/session';
 import { withLinksKept } from './model/links';
@@ -47,6 +48,8 @@ interface State extends DocState {
   tabs: Tab[];
   activeId: string | null;
   lang: Lang;
+  /** Light, dark, or as the system is set. */
+  theme: ThemePref;
   /** Box to focus once it is mounted (after creating it). */
   pendingFocus: BoxKey | null;
   /**
@@ -131,6 +134,7 @@ interface State extends DocState {
   setLinkFrom: (id: Id | null) => void;
   setZoom: (zoom: number) => void;
   setLang: (lang: Lang) => void;
+  setTheme: (theme: ThemePref) => void;
   setNewProjectOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
   toggleTagFilter: (tag: string) => void;
@@ -270,6 +274,7 @@ export const useStore = create<State>((set, get) => ({
   tabs: [],
   activeId: null,
   lang: initialLang(),
+  theme: initialTheme(),
   pendingFocus: null,
   multi: [],
   tool: 'select',
@@ -453,6 +458,10 @@ export const useStore = create<State>((set, get) => ({
     rememberLang(lang);
     document.documentElement.lang = lang;
     set({ lang });
+  },
+  setTheme: (theme) => {
+    applyTheme(theme, true);
+    set({ theme });
   },
   setNewProjectOpen: (newProjectOpen) => set({ newProjectOpen }),
   setExportOpen: (exportOpen) => set({ exportOpen }),

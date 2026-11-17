@@ -58,7 +58,7 @@
   flex: none;
   width: 24px;
   height: 24px;
-  border: 2px solid #fff;
+  border: 2px solid var(--surface);
   border-radius: 12px;
   overflow: hidden;
   /* Centred by its line height, not by flex: the PDF/PNG picture (html-to-image)
@@ -80,8 +80,8 @@
   object-fit: cover;
 }
 .flow-choice {
-  background: #fffbeb;
-  border-color: #d9a93b;
+  background: var(--amber-soft);
+  border-color: var(--choice-line);
   border-top-width: 3px;
 }
 .flow-choice .flow-text {
@@ -97,14 +97,14 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #854d0e;
+  color: var(--amber-ink);
 }
 .flow-start,
 .flow-end {
   justify-content: center;
   border: 0;
   border-radius: 22px;
-  background: #191b20;
+  background: var(--pill);
 }
 .flow-start .flow-pill-text,
 .flow-end .flow-pill-text {
@@ -123,11 +123,11 @@
 }
 .flow-start .flow-pill-text::placeholder,
 .flow-end .flow-pill-text::placeholder {
-  color: #c9cdd6;
+  color: var(--pill-ink);
 }
 .flow-start.is-selected,
 .flow-end.is-selected {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
 }
 .flow-card:hover .card-btn,
 .flow-card:focus-within .card-btn {
@@ -135,13 +135,13 @@
 }
 .flow-start .card-btn,
 .flow-end .card-btn {
-  color: #c9cdd6;
+  color: var(--pill-ink);
 }
 .flow-start .card-del,
 .flow-end .card-del {
   top: -10px;
   right: -10px;
-  background: #191b20;
+  background: var(--pill);
   border-radius: 11px;
 }
 .flow-grip {
@@ -158,7 +158,7 @@
   top: -10px;
   right: auto;
   left: -10px;
-  background: #191b20;
+  background: var(--pill);
   border-radius: 11px;
   cursor: grab;
 }
@@ -170,7 +170,7 @@
   padding: 0;
   border: 1px solid var(--accent);
   border-radius: 12px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   display: flex;
   align-items: center;
@@ -202,7 +202,7 @@
   pointer-events: none;
 }
 body.is-dragging .flow-drop {
-  border: 1.5px dashed #c9ced6;
+  border: 1.5px dashed var(--dash-soft);
   pointer-events: auto;
 }
 .flow-drop.is-drop-target,
@@ -229,7 +229,7 @@ body.is-dragging .flow-drop {
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid #c7ccd4;
+  border: 1px solid var(--dash-soft);
   border-radius: 11px;
   background: var(--surface);
   color: var(--muted);
@@ -240,7 +240,7 @@ body.is-dragging .flow-drop {
 .flow-insert-btn:hover,
 .flow-insert.is-open .flow-insert-btn {
   border-color: var(--accent);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 .flow-insert-menu {
@@ -251,7 +251,7 @@ body.is-dragging .flow-drop {
   display: flex;
   gap: 6px;
   padding: 6px;
-  background: #191b20;
+  background: var(--pill);
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(20, 24, 32, 0.25);
 }
@@ -277,7 +277,7 @@ body.is-dragging .flow-drop {
   gap: 5px;
   height: 26px;
   padding: 0 9px 0 3px;
-  border: 1px solid var(--line, #d6d9e0);
+  border: 1px solid var(--line);
   border-radius: 13px;
   background: transparent;
   color: inherit;

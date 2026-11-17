@@ -1,0 +1,124 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * Thème sombre. La page porte toujours data-theme="light" ou "dark" (lib/appTheme.ts) :
+ * les jetons de Night Navy (--nn-*) passent en sombre d'eux-mêmes, ceux de Mapline ici.
+ * Les couleurs des documents (cases, pastilles, étiquettes) passent par lib/shownColor.ts.
+ * Un tableau en cours d'export (.is-exporting) reprend les valeurs claires (base.css) :
+ * images, PDF et PowerPoint restent en clair.
+ */
+:root[data-theme='dark'] {
+  --dots: #262b45;
+  --shade: 225, 230, 255;
+  --accent-rgb: 142, 155, 255;
+  --sunken: #151830;
+  --ghost-bg: #12152a;
+  --dash: #4a5178;
+  --dash-soft: #3a4063;
+  --sel-ring: #34418c;
+  --link-halo: var(--surface);
+  --link-halo-on: var(--sel-ring);
+  --link-target: #5b6ad6;
+  /* Flèches au repos : un peu plus marquées que sur fond clair. */
+  --link-rest: 0.6;
+  --pill: #2f3554;
+  --pill-ink: #a9afc8;
+  --strong: #eef0fb;
+  --strong-hover: #ffffff;
+  --segmented: #1f2340;
+  --gauge-track: #2a2e45;
+  --veil: rgba(255, 255, 255, 0.06);
+  --veil-strong: rgba(255, 255, 255, 0.12);
+  --quote: rgba(10, 12, 22, 0.35);
+  --chip-hover: #26306a;
+  --card-bg: #1c2038;
+  --amber: #d09b3c;
+  --amber-ink: #f0c46a;
+  --amber-soft: #2e2611;
+  --amber-chip: #3a3114;
+  --amber-line: #5a4520;
+  --choice-line: #b88d2e;
+  --green: #1e8a52;
+  --green-ink: #4ccb8e;
+  --green-soft: #0f2a1f;
+  --added-soft: #0f2a1f;
+  --added-ink: #4ccb8e;
+  --modified-soft: #2c220f;
+  --modified-ink: #f5c77e;
+  --removed-soft: #262a45;
+  --removed-ink: #c6cadf;
+  --removed-muted: #858cad;
+}
+
+/* Le bouton fort (Enregistrer) devient clair sur fond sombre : son texte aussi s'inverse. */
+:root[data-theme='dark'] .btn-strong {
+  color: #111427;
+}
+
+/* Les fenêtres se détachent du fond par un trait plutôt que par l'ombre. */
+:root[data-theme='dark'] .dialog {
+  outline: 1px solid var(--line);
+}
+
+/* Arborescence : couleurs d'état et de type d'écran, plus claires sur fond sombre. */
+:root[data-theme='dark'] .sitemap-doc:not(.is-exporting),
+:root[data-theme='dark'] .tool-pill .sitemap-xmark,
+:root[data-theme='dark'] .sitemap-menu .btn .sitemap-xmark {
+  --st-existing: #4ccb8e;
+  --st-existing-soft: #0f2a1f;
+  --st-new: #8ea4ff;
+  --st-new-soft: #1d2551;
+  --st-redo: #f0a066;
+  --st-redo-soft: #3a2418;
+  --x-modal: #b3a6f5;
+  --x-modal-soft: #251e3d;
+  --x-error: #f1847b;
+  --x-error-soft: #331715;
+  --x-success: #4ccb8e;
+  --x-success-soft: #0f2a1f;
+  --x-info: #7fb2ec;
+  --x-info-soft: #13243a;
+}
+
+/* Miniatures des modèles (Templates.tsx) : leurs couleurs claires, assombries. */
+:root[data-theme='dark'] .tpl-thumb [fill='#191B20'] {
+  fill: #3a4062;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#FFFFFF'] {
+  fill: #1c2038;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#DDE1E7'] {
+  fill: #363c5a;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#C9D5F6'],
+:root[data-theme='dark'] .tpl-thumb [fill='#C9D3EE'] {
+  fill: #34418c;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#E3ECFF'] {
+  fill: #1f2b55;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#EDF1FC'] {
+  fill: #1d2551;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#FDF0E8'] {
+  fill: #3a2418;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#E7F4F2'] {
+  fill: #13322e;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#FFFBEB'] {
+  fill: #2e2611;
+}
+:root[data-theme='dark'] .tpl-thumb [fill='#C9CED6'] {
+  fill: #4a5178;
+}
+:root[data-theme='dark'] .tpl-thumb [stroke='#C9CED6'],
+:root[data-theme='dark'] .tpl-thumb [stroke='#DDE1E7'] {
+  stroke: #4a5178;
+}
+
+/* Choix segmentés : le choix actif ressort au-dessus du rail. */
+:root[data-theme='dark'] .segmented button.is-on {
+  background: var(--nn-line-strong);
+}

@@ -74,7 +74,7 @@
 .row-head-text:hover,
 .row-head-title:focus,
 .row-head-text:focus {
-  background: rgba(20, 24, 32, 0.05);
+  background: rgba(var(--shade), 0.05);
 }
 .board.is-exporting .row-head-title,
 .board.is-exporting .row-head-text {
@@ -147,7 +147,7 @@
 }
 
 .add-dashed {
-  border: 1.5px dashed #b9bfca;
+  border: 1.5px dashed var(--dash);
   border-radius: var(--radius);
   background: transparent;
   color: var(--muted);
@@ -354,7 +354,7 @@
   font-size: 11px;
 }
 .chip-primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 .chip:disabled {
@@ -389,7 +389,7 @@
   height: 150px;
   border: 1.5px dashed var(--dots);
   border-radius: 8px;
-  background: #f7f8fa;
+  background: var(--sunken);
   color: var(--muted);
   display: flex;
   flex-direction: column;
@@ -472,9 +472,9 @@
 .ghost {
   position: absolute;
   inset: 0;
-  border: 1.5px dashed #d3d7de;
+  border: 1.5px dashed var(--dash-soft);
   border-radius: 10px;
-  background: #fafbfc;
+  background: var(--ghost-bg);
   color: var(--placeholder);
   display: flex;
   align-items: center;
@@ -495,10 +495,10 @@
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid #e9d38f;
+  border: 1px solid var(--amber-line);
   border-radius: 7px;
-  background: #fffbeb;
-  color: #a16207;
+  background: var(--amber-soft);
+  color: var(--amber);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -510,7 +510,7 @@
   opacity: 1;
 }
 .ghost-choice:hover {
-  border-color: #a16207;
+  border-color: var(--amber);
 }
 .choice-tag {
   display: flex;
@@ -521,7 +521,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #854d0e;
+  color: var(--amber-ink);
 }
 .card-choice textarea {
   font-weight: 600;
@@ -589,7 +589,7 @@
 }
 .tag-x:hover {
   opacity: 1;
-  background: rgba(20, 24, 32, 0.08);
+  background: rgba(var(--shade), 0.08);
 }
 .tag-add {
   height: 20px;
@@ -648,7 +648,7 @@
   color: var(--muted);
 }
 .card-del:hover {
-  background: rgba(20, 24, 32, 0.07);
+  background: rgba(var(--shade), 0.07);
 }
 .card-add {
   right: -19px;
@@ -718,19 +718,19 @@
   position: absolute;
   inset: -4px;
   border-radius: 12px;
-  border: 2px dashed #8ea3e8;
+  border: 2px dashed var(--link-target);
   background: transparent;
   cursor: crosshair;
   z-index: 6;
 }
 .link-target:hover {
   border-color: var(--accent);
-  background: rgba(47, 85, 212, 0.06);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 .link-target.is-source {
   border-style: solid;
   border-color: var(--accent);
-  background: rgba(47, 85, 212, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .links {
@@ -749,7 +749,7 @@
   cursor: pointer;
 }
 .link-hit:hover {
-  stroke: rgba(47, 85, 212, 0.18);
+  stroke: rgba(var(--accent-rgb), 0.18);
 }
 .link-label {
   position: absolute;
@@ -770,7 +770,7 @@
   cursor: pointer;
 }
 .link-label.is-selected {
-  box-shadow: 0 0 0 3px #c9d5f6;
+  box-shadow: 0 0 0 3px var(--sel-ring);
 }
 
 /* Zoom */
@@ -829,7 +829,7 @@
  * card (or the hovered or selected arrow) come forward, the others fade more.
  */
 .links g {
-  opacity: 0.4;
+  opacity: var(--link-rest, 0.4);
   transition: opacity 0.15s;
 }
 .links g .link-line {
@@ -858,7 +858,7 @@
   opacity: 0.15;
 }
 .card.is-link-end {
-  box-shadow: 0 0 0 2px rgba(47, 85, 212, 0.35);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35);
 }
 /* Exports and presentations show every arrow at full strength. */
 .is-exporting .links g,

@@ -15,6 +15,7 @@ import { useFlowDiff, useFlowFocus } from './useDiff';
 import { showTwin } from './compareNav';
 import { ChangeTag } from './ChangeMarks';
 import { cls } from './cls';
+import { shown } from '../lib/shownColor';
 
 /**
  * The current state of the flow shown, read only, over its target: cards
@@ -49,7 +50,7 @@ export function BaseFlow() {
             .filter(({ link }) => link.label)
             .map(({ link, points }) => {
               const at = pointAlong(points, 0.25);
-              const color = link.color ?? LINK_COLORS[0];
+              const color = shown(link.color ?? LINK_COLORS[0], 'line');
               return (
                 <span key={link.id} className={cls('link-label flow-base-label', compared && (removedLinks.has(link.id) ? 'diff-removed-link' : 'diff-same'))} style={{ left: at.x, top: at.y, color, borderColor: color }}>
                   {link.label}
@@ -84,7 +85,7 @@ export function BaseArrows(props: { routed: RoutedLink[]; removed: Set<Id>; comp
       <defs>
         {routed.map(({ link }) => (
           <marker key={link.id} id={`mm-${prefix}-${link.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0 0 L10 5 L0 10 z" fill={removed.has(link.id) ? REMOVED_GREY : (link.color ?? LINK_COLORS[0])} />
+            <path d="M0 0 L10 5 L0 10 z" fill={removed.has(link.id) ? REMOVED_GREY : shown(link.color ?? LINK_COLORS[0], 'line')} />
           </marker>
         ))}
       </defs>
@@ -98,7 +99,7 @@ export function BaseArrows(props: { routed: RoutedLink[]; removed: Set<Id>; comp
             <path
               d={d}
               fill="none"
-              stroke={gone ? REMOVED_GREY : (link.color ?? LINK_COLORS[0])}
+              stroke={gone ? REMOVED_GREY : shown(link.color ?? LINK_COLORS[0], 'line')}
               strokeWidth={1.75}
               strokeLinecap="round"
               strokeDasharray={dash.length ? dash.join(' ') : undefined}

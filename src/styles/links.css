@@ -45,7 +45,7 @@
   cursor: pointer;
 }
 .flow-chip:hover {
-  background: #d5defa;
+  background: var(--chip-hover);
 }
 .flow-chip-name {
   overflow: hidden;
@@ -329,7 +329,7 @@
   padding: 3px 10px;
   border: 0;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--veil);
   color: var(--accent-ink);
   font-size: 12px;
   font-weight: 600;
@@ -337,7 +337,7 @@
   cursor: pointer;
 }
 .sheet-flow:hover {
-  background: #fff;
+  background: var(--veil-strong);
 }
 .sheet-flow-name {
   overflow: hidden;

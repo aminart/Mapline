@@ -4,6 +4,7 @@
 import type { CSSProperties } from 'react';
 import type { BoxKind, BoxStyle, FontId } from './types';
 import { paletteFromFill, readableOn } from './color';
+import { shownBox } from '../lib/shownColor';
 
 export const PERSONA_PALETTE = [
   { color: '#2F55D4', tint: '#EDF1FC' },
@@ -86,12 +87,15 @@ export function flowCardTop(custom: BoxStyle | undefined, accent: string): strin
   return custom?.top ?? custom?.bc ?? accent;
 }
 
+/** Text style of a box as shown on screen (see lib/shownColor for the dark theme). */
 export function textStyle(s: ResolvedStyle): CSSProperties {
-  return { color: s.color, fontFamily: FONTS[s.font], fontSize: s.size, fontWeight: s.weight };
+  return { color: shownBox(s.bg, s.bc, s.color).color, fontFamily: FONTS[s.font], fontSize: s.size, fontWeight: s.weight };
 }
 
+/** Fill and border of a box as shown on screen (see lib/shownColor for the dark theme). */
 export function boxStyle(s: ResolvedStyle): CSSProperties {
-  return { background: s.bg, borderColor: s.bc };
+  const shownStyle = shownBox(s.bg, s.bc);
+  return { background: shownStyle.bg, borderColor: shownStyle.bc };
 }
 
 /** Choice cards (decision points), in maps and flows: amber unless restyled. */

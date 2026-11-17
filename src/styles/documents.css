@@ -54,7 +54,7 @@
   background: transparent;
 }
 .doc-tab:not(.is-active):hover {
-  background: rgba(20, 24, 32, 0.04);
+  background: rgba(var(--shade), 0.04);
 }
 .doc-tab.is-active .doc-tab-btn {
   color: var(--ink);

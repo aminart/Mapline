@@ -7,6 +7,7 @@ import { DEFAULT_LEVEL } from '../model/sheet';
 import { personaAccent, tagColor } from '../model/theme';
 import type { SheetBlock } from '../model/types';
 import { CloseIcon } from './Icons';
+import { shown } from '../lib/shownColor';
 
 /** A persona's sheet, summed up beside the mission map. */
 export function SheetPreview() {
@@ -58,7 +59,7 @@ export function SheetPreview() {
           {sheet.tags.map((tag) => {
             const c = tagColor(tag, {});
             return (
-              <span key={tag} className="tag" style={{ background: c.bg, color: c.fg }}>
+              <span key={tag} className="tag" style={{ background: shown(c.bg, 'bg'), color: shown(c.fg, 'ink') }}>
                 {tag}
               </span>
             );

@@ -7,6 +7,7 @@ import { MAX_TAG_LENGTH } from '../model/ops';
 import { TAG_PALETTE, tagColor } from '../model/theme';
 import { CheckIcon, CloseIcon, NoteIcon, PlusIcon } from './Icons';
 import { cls } from './cls';
+import { shown } from '../lib/shownColor';
 
 /**
  * A note kept off the board: a small marker on the card, the text in a
@@ -135,7 +136,7 @@ export function TagRow(props: {
       {tags.map((tag) => {
         const c = tagColor(tag, colors);
         return (
-          <span key={tag} className="tag tag-pickable" style={{ background: c.bg, color: c.fg }}>
+          <span key={tag} className="tag tag-pickable" style={{ background: shown(c.bg, 'bg'), color: shown(c.fg, 'ink') }}>
             <button className="tag-name" aria-label={t('tags.edit', { tag })} title={t('tags.edit', { tag })} aria-expanded={editing === tag} onClick={() => setEditing(tag)}>
               {tag}
             </button>
@@ -253,7 +254,7 @@ export function TagEditor(props: {
           <button
             key={i}
             className={cls('swatch swatch-xs', p.bg === c.bg && 'is-on')}
-            style={{ background: p.bg, borderColor: p.fg }}
+            style={{ background: shown(p.bg, 'bg'), borderColor: shown(p.fg, 'ink') }}
             aria-label={`${t('tags.color', { tag })} ${i + 1}`}
             onClick={() => onColor(tag, i)}
           />

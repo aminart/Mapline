@@ -108,16 +108,16 @@
   line-height: 1.4;
 }
 .change-added {
-  background: #e7f8ef;
-  color: #067647;
+  background: var(--added-soft);
+  color: var(--added-ink);
 }
 .change-modified {
-  background: #fef0e1;
-  color: #93370d;
+  background: var(--modified-soft);
+  color: var(--modified-ink);
 }
 .change-removed {
-  background: #eaecf0;
-  color: #344054;
+  background: var(--removed-soft);
+  color: var(--removed-ink);
 }
 .change-before {
   margin: -2px 10px 8px;
@@ -290,7 +290,7 @@
 .link-label.diff-removed-link {
   border-style: dashed;
   border-color: #98a2b3 !important;
-  color: #667085 !important;
+  color: var(--removed-muted) !important;
 }
 
 /* The change just gone to blinks once; a card's other version is outlined. */

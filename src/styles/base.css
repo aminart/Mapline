@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 :root {
-  /* Couleurs et police du design system commun Night Navy (night-navy.css), thème clair. */
+  /* Couleurs et police du design system commun Night Navy (night-navy.css). Le thème sombre
+     redéfinit ces jetons dans theme.css ; un tableau en cours d'export les remet en clair. */
   --ink: var(--nn-ink);
   --ink-2: var(--nn-ink-body);
   --muted: var(--nn-ink-muted);
@@ -10,17 +11,96 @@
   --line: var(--nn-line);
   --line-soft: var(--nn-surface-3);
   --ground: var(--nn-bg);
-  --dots: #c9cdd9;
   --surface: var(--nn-surface);
   --surface-2: var(--nn-surface-2);
   --accent: var(--nn-accent);
   --accent-ink: var(--nn-primary-hover);
   --accent-soft: var(--nn-accent-soft);
+  /* Fond des boutons et pastilles pleins, avec un texte blanc. */
+  --accent-fill: var(--nn-primary);
   --danger: var(--nn-danger);
   --radius: 12px;
   font-family: var(--nn-font-sans);
   color: var(--ink);
   background: var(--ground);
+}
+
+/* Couleurs propres à Mapline, en clair. Mêmes valeurs sur un tableau en cours d'export. */
+:root,
+.is-exporting {
+  --dots: #c9cdd9;
+  /* Teinte des survols : rgba(var(--shade), opacité). */
+  --shade: 20, 24, 32;
+  --accent-rgb: 47, 85, 212;
+  --sunken: #f7f8fa;
+  --ghost-bg: #fafbfc;
+  --dash: #b9bfca;
+  --dash-soft: #d3d7de;
+  --sel-ring: #c9d5f6;
+  --link-halo: #ffffff;
+  --link-halo-on: #c9d5f6;
+  --link-target: #8ea3e8;
+  --pill: #191b20;
+  --pill-ink: #c9cdd6;
+  --strong: #191b20;
+  --strong-hover: #33363d;
+  --segmented: #f1f3f6;
+  --gauge-track: #e6e9ee;
+  --veil: rgba(255, 255, 255, 0.7);
+  --veil-strong: #ffffff;
+  --quote: rgba(255, 255, 255, 0.85);
+  --chip-hover: #d5defa;
+  --card-bg: #ffffff;
+  --amber: #a16207;
+  --amber-ink: #854d0e;
+  --amber-soft: #fffbeb;
+  --amber-chip: #fff1bf;
+  --amber-line: #eedc9a;
+  --choice-line: #d9a93b;
+  --green: #15803d;
+  --green-ink: #1f7a3d;
+  --green-soft: #e3f4e8;
+  --added-soft: #e7f8ef;
+  --added-ink: #067647;
+  --modified-soft: #fef0e1;
+  --modified-ink: #93370d;
+  --removed-soft: #eaecf0;
+  --removed-ink: #344054;
+  --removed-muted: #667085;
+}
+
+/* Un tableau exporté reste en clair, quel que soit le thème (PNG, JPEG, PDF, PowerPoint). */
+.is-exporting {
+  color-scheme: light;
+  --ink: #1b1d2a;
+  --ink-2: #2b2e3e;
+  --muted: #4a4e61;
+  --placeholder: #5a5f73;
+  --line: #e2e4ec;
+  --line-soft: #f2f3f8;
+  --ground: #f5f6f9;
+  --surface: #ffffff;
+  --surface-2: #f7f8fe;
+  --accent: #0f1d96;
+  --accent-ink: #0a1470;
+  --accent-soft: #eef0fb;
+  --accent-fill: #0f1d96;
+  --danger: #b42318;
+  --nn-bg: #f5f6f9;
+  --nn-surface: #ffffff;
+  --nn-surface-2: #f7f8fe;
+  --nn-surface-3: #f2f3f8;
+  --nn-line: #e2e4ec;
+  --nn-line-strong: #d5d8e3;
+  --nn-ink: #1b1d2a;
+  --nn-ink-body: #2b2e3e;
+  --nn-ink-muted: #4a4e61;
+  --nn-ink-subtle: #5a5f73;
+  --nn-accent: #0f1d96;
+  --nn-accent-soft: #eef0fb;
+  --nn-primary: #0f1d96;
+  --nn-primary-hover: #0a1470;
+  color: var(--ink);
 }
 
 * {

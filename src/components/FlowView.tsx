@@ -27,6 +27,7 @@ import { showTwin } from './compareNav';
 import { placeGhosts, type LinkDiff } from '../model/states';
 import { FlowPresentationFocus } from './Presentation';
 import { BeforeText, ChangeTag } from './ChangeMarks';
+import { shown } from '../lib/shownColor';
 
 const DIRECTIONS: fo.Direction[] = ['up', 'right', 'down', 'left'];
 
@@ -225,7 +226,7 @@ function Arrows(props: { routed: RoutedLink[]; width: number; height: number; li
       <defs>
         {routed.map(({ link }) => (
           <marker key={link.id} id={`mm-flow-${link.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0 0 L10 5 L0 10 z" fill={link.color ?? LINK_COLORS[0]} />
+            <path d="M0 0 L10 5 L0 10 z" fill={link.color ?? LINK_COLORS[0]} style={{ fill: shown(link.color ?? LINK_COLORS[0], 'line') }} />
           </marker>
         ))}
       </defs>
@@ -240,13 +241,14 @@ function Arrows(props: { routed: RoutedLink[]; width: number; height: number; li
             {marked && !selected ? (
               <path d={d} className="link-halo link-diff-halo" fill="none" stroke={LINK_DIFF_COLORS[marked]} strokeWidth={7} strokeLinecap="round" />
             ) : (
-              <path d={d} className="link-halo" fill="none" stroke={selected ? '#C9D5F6' : '#FFFFFF'} strokeWidth={selected ? 8 : 5} strokeLinecap="round" />
+              <path d={d} className="link-halo" fill="none" stroke={selected ? '#C9D5F6' : '#FFFFFF'} style={{ stroke: selected ? 'var(--link-halo-on)' : 'var(--link-halo)' }} strokeWidth={selected ? 8 : 5} strokeLinecap="round" />
             )}
             <path
               d={d}
               className="link-line"
               fill="none"
               stroke={link.color ?? LINK_COLORS[0]}
+              style={{ stroke: shown(link.color ?? LINK_COLORS[0], 'line') }}
               strokeWidth={1.75}
               strokeLinecap="round"
               strokeDasharray={dash.length ? dash.join(' ') : undefined}
@@ -271,7 +273,7 @@ function ArrowExtras({ routed, change, reveal }: { routed: RoutedLink; change?: 
   const focusLater = useStore((s) => s.focusLater);
   const [menu, setMenu] = useState(false);
   const { link, points } = routed;
-  const color = link.color ?? LINK_COLORS[0];
+  const color = shown(link.color ?? LINK_COLORS[0], 'line');
   // The label near the start (choices name their branches), the ⊕ halfway.
   const at = pointAlong(points, link.label ? 0.25 : 0.5);
   const mid = pointAlong(points, link.label ? 0.6 : 0.5);

@@ -26,7 +26,7 @@
   width: 100%;
   height: auto;
   border-radius: 6px;
-  background: #f7f8fa;
+  background: var(--sunken);
 }
 .tpl-list .tpl-card {
   padding: 14px;
@@ -43,6 +43,8 @@
 .dialog {
   width: min(760px, calc(100vw - 32px));
   border: 0;
+  background: var(--surface);
+  color: var(--ink);
   border-radius: 16px;
   padding: 0;
   box-shadow: 0 20px 60px rgba(20, 24, 32, 0.25);

@@ -21,6 +21,7 @@ import { FitText } from './FitText';
 import { useMapDiff } from './useDiff';
 import { cellKey, restoreActivity } from '../model/states';
 import { BeforeText, ChangeTag, RemovedCard } from './ChangeMarks';
+import { shown } from '../lib/shownColor';
 
 export function PersonaGrid() {
   const personas = useMap((m) => m.personas);
@@ -328,9 +329,9 @@ function ActivityCard(props: {
       style={{
         ...b.box,
         // Choices are amber unless given a fill or border of their own.
-        ...(choice && !b.hasCustomFill ? { background: CHOICE_STYLE.bg } : {}),
-        ...(choice && !b.hasCustomBorder ? { borderColor: CHOICE_STYLE.bc } : {}),
-        borderTopColor: b.hasCustomBorder ? b.style.bc : accent,
+        ...(choice && !b.hasCustomFill ? { background: shown(CHOICE_STYLE.bg, 'bg') } : {}),
+        ...(choice && !b.hasCustomBorder ? { borderColor: shown(CHOICE_STYLE.bc, 'line') } : {}),
+        borderTopColor: b.hasCustomBorder ? b.box.borderColor : accent,
       }}
     >
       {change && <ChangeTag change={change} />}
@@ -549,7 +550,7 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
         <defs>
           {drawn.map((p) => (
             <marker key={p.id} id={`mm-arrow-${p.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0 0 L10 5 L0 10 z" fill={p.color} />
+              <path d="M0 0 L10 5 L0 10 z" fill={p.color} style={{ fill: shown(p.color, 'line') }} />
             </marker>
           ))}
         </defs>
@@ -557,12 +558,13 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
           const selected = sel === `link:${p.id}`;
           return (
             <g key={p.id} data-link-steps={p.steps} className={cls(focusing && (focused.has(p.id) ? 'is-focus' : 'is-faded'))}>
-              <path d={p.d} className="link-halo" fill="none" stroke={selected ? '#C9D5F6' : '#FFFFFF'} strokeWidth={selected ? 8 : 5} strokeLinecap="round" />
+              <path d={p.d} className="link-halo" fill="none" stroke={selected ? '#C9D5F6' : '#FFFFFF'} style={{ stroke: selected ? 'var(--link-halo-on)' : 'var(--link-halo)' }} strokeWidth={selected ? 8 : 5} strokeLinecap="round" />
               <path
                 d={p.d}
                 className="link-line"
                 fill="none"
                 stroke={p.color}
+                style={{ stroke: shown(p.color, 'line') }}
                 strokeWidth={1.75}
                 strokeLinecap="round"
                 strokeDasharray={p.dash.length ? p.dash.join(' ') : undefined}
@@ -582,7 +584,7 @@ function LinksLayer({ container }: { container: HTMLDivElement | null }) {
             key={p.id}
             data-link-steps={p.steps}
             className={cls('link-label', sel === `link:${p.id}` && 'is-selected', focusing && (focused.has(p.id) ? 'is-focus' : 'is-faded'))}
-            style={{ left: p.mid.x, top: p.mid.y, color: p.color, borderColor: p.color }}
+            style={{ left: p.mid.x, top: p.mid.y, color: shown(p.color, 'line'), borderColor: shown(p.color, 'line') }}
             onClick={() => select(`link:${p.id}`)}
           >
             {p.label}

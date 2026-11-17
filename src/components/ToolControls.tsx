@@ -9,6 +9,7 @@ import { useStore, useT } from '../store';
 import { FONTS, LINK_COLORS, SIZES } from '../model/theme';
 import type { FontId, LinkSide, LinkStyle } from '../model/types';
 import { pickColor, isSampling } from '../lib/pipette';
+import { shown, type ColorRole } from '../lib/shownColor';
 import { hideUsedColor, showUsedColor, usedColors, USED_COLORS_MAX } from '../model/usedColors';
 import { ChevronDown, CloseIcon, CursorIcon, PipetteIcon, LinkIcon, ResetIcon, StoryboardIcon, TrashIcon } from './Icons';
 import { LinkSides, SideIcon } from './LinkSides';
@@ -49,19 +50,22 @@ export function ToolMenu(props: { label: string; title?: string; face: ReactNode
 }
 
 /** One colour setting: a chip showing the colour, its palette in a menu. */
-export function ColorMenu(props: { label: string; list: string[]; value: string; variant: 'fill' | 'border' | 'text' | 'top'; onPick: (hex: string, live?: boolean) => void }) {
+export function ColorMenu(props: { label: string; list: string[]; value: string; variant: 'fill' | 'border' | 'text' | 'top'; role?: ColorRole; onPick: (hex: string, live?: boolean) => void }) {
   const { label, list, value, variant, onPick } = props;
+  // Shown as on the board: in the dark theme, Mapline's colours have dark counterparts.
+  const role = props.role ?? roleOf(variant);
+  const face = shown(value, role);
   const chip =
     variant === 'border' ? (
-      <span className="color-chip color-chip-border" style={{ borderColor: value }} />
+      <span className="color-chip color-chip-border" style={{ borderColor: face }} />
     ) : variant === 'text' ? (
-      <span className="color-chip-text" style={{ borderColor: value }}>
+      <span className="color-chip-text" style={{ borderColor: face }}>
         A
       </span>
     ) : variant === 'top' ? (
-      <span className="color-chip color-chip-top" style={{ ['--chip' as string]: value }} />
+      <span className="color-chip color-chip-top" style={{ ['--chip' as string]: face }} />
     ) : (
-      <span className="color-chip" style={{ background: value }} />
+      <span className="color-chip" style={{ background: face }} />
     );
   return (
     <ToolMenu label={label} title={`${label} : ${value}`} face={chip}>
@@ -72,6 +76,7 @@ export function ColorMenu(props: { label: string; list: string[]; value: string;
           list={list}
           value={value}
           variant={variant === 'top' ? 'fill' : variant}
+          role={role}
           onPick={(hex, live) => {
             onPick(hex, live);
             if (!live) close();
@@ -243,7 +248,7 @@ export function ArrowControls(props: {
           </button>
         ))}
       </div>
-      <ColorMenu label={t('link.color')} list={LINK_COLORS} value={link.color ?? LINK_COLORS[0]} variant="fill" onPick={(hex, live) => update({ color: hex }, live)} />
+      <ColorMenu label={t('link.color')} list={LINK_COLORS} value={link.color ?? LINK_COLORS[0]} variant="fill" role="line" onPick={(hex, live) => update({ color: hex }, live)} />
       <ToolMenu
         label={t('link.sides')}
         title={`${t('link.sides')} : ${sides}`}
@@ -269,9 +274,10 @@ export function ArrowControls(props: {
   );
 }
 
-export function Swatches(props: { label: string; list: string[]; value: string; onPick: (hex: string, live?: boolean) => void; variant: 'fill' | 'border' | 'text'; withUsed?: boolean }) {
+export function Swatches(props: { label: string; list: string[]; value: string; onPick: (hex: string, live?: boolean) => void; variant: 'fill' | 'border' | 'text'; role?: ColorRole; withUsed?: boolean }) {
   const t = useT();
   const { label, list, value, onPick, variant, withUsed = false } = props;
+  const role = props.role ?? roleOf(variant);
   const project = useStore((s) => s.project);
   const applyProject = useStore((s) => s.applyProject);
   const used = withUsed ? usedColors(project).filter((c) => !list.includes(c)).slice(0, USED_COLORS_MAX) : [];
@@ -289,7 +295,7 @@ export function Swatches(props: { label: string; list: string[]; value: string; 
     <button
       key={hex}
       className={cls('swatch', `swatch-${variant}`, hex === value && 'is-on')}
-      style={variant === 'fill' ? { background: hex } : variant === 'border' ? { borderColor: hex } : { color: hex }}
+      style={variant === 'fill' ? { background: shown(hex, role) } : variant === 'border' ? { borderColor: shown(hex, role) } : { color: shown(hex, role) }}
       aria-label={`${label} ${hex}`}
       aria-pressed={hex === value}
       title={hex}
@@ -329,4 +335,9 @@ export function Swatches(props: { label: string; list: string[]; value: string; 
       )}
     </div>
   );
+}
+
+/** How a colour menu's colours are used: fills, lines or text. */
+function roleOf(variant: 'fill' | 'border' | 'text' | 'top'): ColorRole {
+  return variant === 'fill' ? 'bg' : variant === 'text' ? 'ink' : 'line';
 }
