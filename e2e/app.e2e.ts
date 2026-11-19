@@ -239,9 +239,13 @@ test('switches to English', async ({ page }) => {
 test('asks before closing a tab with unsaved changes', async ({ page }) => {
   await startProject(page);
   await addActivity(page, 0, 0, 'Pas encore enregistrée');
-  page.once('dialog', (dialog) => dialog.dismiss());
   await (await openProjects(page)).getByRole('button', { name: /Fermer/ }).click();
-  await expect(page.locator('.project-item')).toHaveCount(1);
+  // Mapline's own question, not the system's box; Annuler keeps the tab.
+  const ask = page.getByRole('alertdialog');
+  await expect(ask).toContainText('modifications non enregistrées');
+  await ask.getByRole('button', { name: 'Annuler' }).click();
+  await expect(ask).toBeHidden();
+  await expect(await openProjects(page)).toHaveCount(1);
 });
 
 test('shows the project in the main bar, its documents as tabs, and adds a second map', async ({ page }) => {
@@ -634,8 +638,14 @@ test('gives every storyboard image the same frame, whole or filling it', async (
   await expect(frames).toHaveCount(2);
 
   // New maps use 4:3: both frames have the same size.
-  const format = page.getByRole('combobox', { name: 'Format des images' });
-  await expect(format).toHaveValue('4:3');
+  const format = {
+    // Mapline's own menu: open it, pick the format.
+    selectOption: async (label: string) => {
+      await page.getByRole('button', { name: 'Format des images', exact: true }).click();
+      await page.getByRole('group', { name: 'Format des images' }).getByRole('button', { name: label, exact: true }).click();
+    },
+  };
+  await expect(page.getByRole('button', { name: 'Format des images', exact: true })).toHaveText('4:3');
   const [a, b] = [(await frames.nth(0).boundingBox())!, (await frames.nth(1).boundingBox())!];
   expect(Math.abs(a.width - b.width)).toBeLessThan(1);
   expect(Math.abs(a.width / a.height - 4 / 3)).toBeLessThan(0.02);
@@ -659,7 +669,7 @@ test('gives every storyboard image the same frame, whole or filling it', async (
   expect(Math.abs(c.width / c.height - 3 / 4)).toBeLessThan(0.02);
 
   // Back to the step width: 150 px high, as wide as the step.
-  await format.selectOption('');
+  await format.selectOption('Largeur de l’étape');
   const d = (await frames.nth(0).boundingBox())!;
   expect(Math.round(d.height)).toBe(150);
 });
@@ -775,4 +785,31 @@ test('adds any kind of document from one « Ajouter » menu', async ({ page }) =
   await expect(page.getByRole('menuitem')).toHaveCount(0);
   await addDocument(page, 'Nouvelle arborescence');
   await expect(page.locator('.doc-tab')).toHaveCount(2);
+});
+
+test('picks a font and a size from Mapline’s own menus', async ({ page }) => {
+  await startProject(page);
+  await addActivity(page, 0, 0, 'Une activité');
+  await page.getByRole('button', { name: 'Police', exact: true }).click();
+  await page.getByRole('group', { name: 'Police' }).getByRole('button', { name: /Lora/ }).click();
+  await page.getByRole('button', { name: 'Taille', exact: true }).click();
+  await page.getByRole('group', { name: 'Taille' }).getByRole('button', { name: '18', exact: true }).click();
+  const text = cell(page, 0, 0).getByRole('textbox', { name: 'Activité' });
+  await expect(text).toHaveCSS('font-family', /Lora/);
+  await expect(text).toHaveCSS('font-size', '18px');
+});
+
+test('the start screen offers new and open once, and lists recent files', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('mapline:recent', JSON.stringify([{ path: '/Users/a/Projets/Clinique.mapline', title: 'Clinique du Parc', at: Date.UTC(2026, 10, 18, 9) }])));
+  await page.goto('/');
+  await expect(page.locator('.topbar').getByRole('button', { name: 'Ouvrir', exact: true })).toHaveCount(0);
+  await expect(page.locator('.topbar').getByRole('button', { name: 'Nouveau projet' })).toHaveCount(0);
+  await expect(page.locator('.recent-item')).toHaveCount(1);
+  await expect(page.locator('.recent-item')).toContainText('Clinique du Parc');
+  await expect(page.locator('.recent-item')).toContainText('/Users/a/Projets');
+  // Once a project is open, the bar has them, and only Enregistrer is filled.
+  await page.locator('.start .tpl-card').first().click();
+  await expect(page.locator('.topbar').getByRole('button', { name: 'Nouveau projet' })).toBeVisible();
+  await expect(page.locator('.topbar .btn-primary:visible')).toHaveCount(1);
+  await expect(page.locator('.topbar .btn-primary:visible')).toHaveText('Enregistrer');
 });

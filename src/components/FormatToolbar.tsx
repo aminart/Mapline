@@ -1,6 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { askConfirm } from '../lib/confirm';
 import { activeMap, selectedKeys, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
 import type { BoxKind } from '../model/types';
@@ -139,10 +140,11 @@ export function TagManager(props: {
                         aria-label={t('tags.delete', { tag })}
                         title={t('tags.delete', { tag })}
                         onClick={() => {
-                          if (window.confirm(t('tags.confirmDelete', { tag, n: count }))) {
+                          void askConfirm({ message: t('tags.confirmDelete', { tag, n: count }), confirm: t('confirm.removeTag'), danger: true }).then((ok) => {
+                            if (!ok) return;
                             if (on) toggle(tag);
                             deleteTag(tag);
-                          }
+                          });
                         }}
                       >
                         <CloseIcon size={12} />

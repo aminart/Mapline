@@ -9,8 +9,8 @@ test('lists the notes of the project in one panel and marks them resolved', asyn
   await addActivity(page, 0, 0, 'Remplit le formulaire');
   const card = cell(page, 0, 0).locator('.card');
   await card.hover();
-  await card.getByRole('button', { name: 'Ajouter une note' }).click();
-  await page.getByRole('dialog', { name: 'Note' }).locator('textarea').fill('Trop de champs obligatoires ?');
+  await card.getByRole('button', { name: 'Ajouter un commentaire' }).click();
+  await page.getByRole('dialog', { name: 'Commentaire' }).locator('textarea').fill('Trop de champs obligatoires ?');
   await page.mouse.click(5, 300);
 
   const button = page.getByRole('button', { name: 'Commentaires', exact: true });
@@ -34,7 +34,7 @@ test('lists the notes of the project in one panel and marks them resolved', asyn
 
   // From the card's note too.
   await card.locator('.note-btn').click();
-  await page.getByRole('dialog', { name: 'Note' }).getByRole('button', { name: 'Marquer comme résolue' }).click();
+  await page.getByRole('dialog', { name: 'Commentaire' }).getByRole('button', { name: 'Marquer comme résolu' }).click();
   await expect(card.locator('.note')).toHaveClass(/is-resolved/);
   await expect(panel.locator('.comment.is-resolved')).toHaveCount(1);
 

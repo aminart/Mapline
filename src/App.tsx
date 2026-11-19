@@ -1,6 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { useEffect, useRef, useState } from 'react';
 import { useStore, useT } from './store';
 import { closeTab, open, save } from './actions';
@@ -277,6 +278,7 @@ export function App() {
       {activeId && <NewSheetDialog />}
       {activeId && <NewFlowDialog />}
       {activeId && <NewMapDialog />}
+      <ConfirmDialog />
       <BusyOverlay />
       {activeId && <ExportDialog />}
     </div>

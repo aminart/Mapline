@@ -3,7 +3,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
-import { addFlow, addMap, docLabel, duplicateMapDoc, newFlowProject, newProject, newSheetProject, newSitemapProject, open } from '../actions';
+import { addFlow, addMap, docLabel, duplicateMapDoc, newFlowProject, newProject, newSheetProject, newSitemapProject, open, openRecent } from '../actions';
+import { recentFiles, recentFolder } from '../lib/recent';
 import { FLOW_TEMPLATES, SHEET_TEMPLATES, TEMPLATES, flowTemplateLabel, sheetTemplateLabel, templateLabel, type FlowTemplateId, type SheetTemplateId, type TemplateId } from '../model/templates';
 import { cls } from './cls';
 import { FolderIcon, MapIcon } from './Icons';
@@ -78,14 +79,14 @@ function SheetThumb({ id }: { id: SheetTemplateId }) {
   );
 }
 
-export function SheetTemplateList({ onPick, picked }: { onPick: (id: SheetTemplateId) => void; picked?: SheetTemplateId }) {
+export function SheetTemplateList({ onPick }: { onPick: (id: SheetTemplateId) => void }) {
   const t = useT();
   return (
     <div className="tpl-list">
       {SHEET_TEMPLATES.map((id) => {
         const { label, description } = sheetTemplateLabel(id);
         return (
-          <button key={id} className={cls('tpl-card', picked === id && 'is-on')} aria-pressed={picked === undefined ? undefined : picked === id} onClick={() => onPick(id)}>
+          <button key={id} className="tpl-card" onClick={() => onPick(id)}>
             <SheetThumb id={id} />
             <span className="tpl-text">
               <span className="tpl-name">{t(label)}</span>
@@ -334,11 +335,40 @@ export function StartScreen() {
       <h1>{t('start.title')}</h1>
       <p className="muted">{t('start.text')}</p>
       <TemplatePicker />
+      <RecentList />
       <div className="start-actions">
         <button className="btn" onClick={open}>
           <FolderIcon /> {t('start.open')}
         </button>
       </div>
     </div>
+  );
+}
+
+/** The project files last opened or saved (desktop), most recent first. */
+function RecentList() {
+  const t = useT();
+  const lang = useStore((s) => s.lang);
+  const [list] = useState(recentFiles);
+  if (list.length === 0) return null;
+  const when = new Intl.DateTimeFormat(lang === 'fr' ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return (
+    <section className="recent" aria-labelledby="recent-title">
+      <h2 id="recent-title" className="recent-title">
+        {t('start.recent')}
+      </h2>
+      <ul className="recent-list">
+        {list.map((r) => (
+          <li key={r.path}>
+            <button className="recent-item" title={r.path} onClick={() => void openRecent(r.path)}>
+              <FolderIcon />
+              <span className="recent-name">{r.title}</span>
+              <span className="recent-path">{recentFolder(r.path)}</span>
+              <span className="recent-when">{when.format(r.at)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

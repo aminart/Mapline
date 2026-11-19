@@ -245,8 +245,8 @@ test('adds tags and a note on a flow card, as on map activities', async ({ page 
   await page.keyboard.press('Escape');
   await expect(card.locator('.tag')).toHaveText(['irritant']);
   await card.hover();
-  await card.getByRole('button', { name: 'Ajouter une note' }).click();
-  await page.getByRole('dialog', { name: 'Note' }).locator('textarea').fill('À valider avec le support');
+  await card.getByRole('button', { name: 'Ajouter un commentaire' }).click();
+  await page.getByRole('dialog', { name: 'Commentaire' }).locator('textarea').fill('À valider avec le support');
   await page.mouse.click(5, 300);
   await expect(card.locator('.note')).toHaveClass(/has-note/);
   await page.locator('.toolbar summary').filter({ hasText: 'Tags' }).click();

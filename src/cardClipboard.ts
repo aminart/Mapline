@@ -17,6 +17,7 @@
  * the card last copied.
  */
 
+import { askConfirm } from './lib/confirm';
 import { activeFlow, activeMap, selectedKeys, t, useStore } from './store';
 import { findDoc, projectPersonas } from './model/project';
 import { activityKeyOf, normalizePhases, phaseIndexOf, removeActivity, removeStep } from './model/ops';
@@ -364,14 +365,17 @@ function removeGroup(): boolean {
     }, map));
   } else if (g.kind === 'step') {
     const flows = g.ids.flatMap((id) => flowsDetailing(s.project, s.docId, 'step', id));
+    const removeSteps = () =>
+      useStore.getState().apply((map) => g.ids.reduce((m, id) => {
+        const i = m.steps.findIndex((st) => st.id === id);
+        return i >= 0 ? removeStep(m, i) : m;
+      }, map));
     if (flows.length) {
       const names = flows.map((f) => f.name || t('flow.default')).join(', ');
-      if (!window.confirm(t('links.confirmRemoveStep', { n: flows.length, names }))) return true;
+      void askConfirm({ message: t('links.confirmRemoveStep', { n: flows.length, names }), confirm: t('confirm.remove'), danger: true }).then((ok) => ok && removeSteps());
+      return true;
     }
-    s.apply((map) => g.ids.reduce((m, id) => {
-      const i = m.steps.findIndex((st) => st.id === id);
-      return i >= 0 ? removeStep(m, i) : m;
-    }, map));
+    removeSteps();
   } else return false;
   s.select(null);
   return true;

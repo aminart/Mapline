@@ -10,7 +10,7 @@ async function createFirstSheet(page: Page) {
   await page.locator('.persona').first().hover();
   await page.getByRole('button', { name: 'Créer sa fiche' }).first().click();
   await expect(page.getByRole('heading', { name: 'Nouvelle fiche persona' })).toBeVisible();
-  await page.locator('dialog[open]').getByRole('button', { name: 'Créer la fiche' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Persona classique' }).click();
   await expect(page.locator('.sheet')).toBeVisible();
 }
 
@@ -141,11 +141,12 @@ test('exports a sheet as PNG and PDF', async ({ page }) => {
 test('asks before deleting a sheet', async ({ page }) => {
   await startProject(page);
   await createFirstSheet(page);
-  page.once('dialog', (dialog) => dialog.dismiss());
+  const ask = page.getByRole('alertdialog');
   await page.locator('.doc-tab').nth(1).getByRole('button', { name: /^Supprimer/ }).click();
+  await ask.getByRole('button', { name: 'Annuler' }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(2);
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('.doc-tab').nth(1).getByRole('button', { name: /^Supprimer/ }).click();
+  await ask.getByRole('button', { name: 'Supprimer', exact: true }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(1);
   await expect(page.locator('.board')).toBeVisible();
 });
@@ -156,7 +157,7 @@ test('picks the persona of a new sheet from a list', async ({ page }) => {
   const target = page.getByRole('combobox', { name: 'Pour quel persona ?' });
   await expect(target).toHaveValue(/\|/);
   await target.selectOption({ label: 'Front office' });
-  await page.locator('dialog[open]').getByRole('button', { name: 'Créer la fiche' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Persona classique' }).click();
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Fiche · Front office']);
 });
 

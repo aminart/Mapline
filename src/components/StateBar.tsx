@@ -1,6 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { askConfirm } from '../lib/confirm';
 import { activeFlow, useStore, useT } from '../store';
 import { docLabel, makeTargetDoc } from '../actions';
 import { useState } from 'react';
@@ -68,7 +69,7 @@ export function StateBar() {
   const diff = mapDiff ?? flowDiff?.diff;
   const counts = diff ? diffCounts(diff) : null;
   const detach = () => {
-    if (window.confirm(t('state.detachConfirm', { name: docLabel(project, base.id) }))) applyProject((p) => detachTarget(p, docId));
+    void askConfirm({ message: t('state.detachConfirm', { name: docLabel(project, base.id) }), confirm: t('confirm.detach') }).then((ok) => ok && applyProject((p) => detachTarget(p, docId)));
   };
   return (
     <div className="state-bar" role="region" aria-label={t('state.label')}>

@@ -90,18 +90,6 @@
   background: var(--surface-2);
 }
 
-.btn-strong {
-  border-color: var(--strong);
-  background: var(--strong);
-  color: #fff;
-  font-weight: 600;
-}
-.btn-strong:hover {
-  background: var(--strong-hover);
-}
-.btn-strong:active {
-  transform: translateY(1px);
-}
 .save-btn {
   /* Room for "Saved ✓" so the bar doesn't shift. */
   min-width: 118px;

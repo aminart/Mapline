@@ -4,7 +4,7 @@
 // The pieces of the map's and the flow's toolbars, kept to one line: tools as
 // icons, and each colour palette or rarely used setting behind a small menu.
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useStore, useT } from '../store';
 import { FONTS, LINK_COLORS, SIZES } from '../model/theme';
 import type { FontId, LinkSide, LinkStyle } from '../model/types';
@@ -130,19 +130,28 @@ export function ResetButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** A card's type, in a menu: one button per type, the current one pressed. */
-export function KindMenu<K extends string>(props: { value: K; options: { key: K; label: string }[]; onPick: (k: K) => void }) {
-  const t = useT();
-  const { value, options, onPick } = props;
-  const current = options.find((o) => o.key === value)?.label ?? value;
+/**
+ * A choice among a few values, as Mapline's own menu rather than the system's list: one button per
+ * value, the current one pressed. Each option may carry a style (a font shown in itself).
+ */
+export function SelectMenu<K extends string | number>(props: {
+  label: string;
+  value: K;
+  options: { key: K; label: string; style?: CSSProperties }[];
+  onPick: (k: K) => void;
+  className?: string;
+}) {
+  const { label, value, options, onPick, className } = props;
+  const current = options.find((o) => o.key === value);
   return (
-    <ToolMenu label={t('tool.cardKind')} title={`${t('tool.cardKind')} : ${current}`} face={<span className="tool-pill-text">{current}</span>}>
+    <ToolMenu className={className} label={label} title={`${label} : ${current?.label ?? value}`} face={<span className="tool-pill-text" style={current?.style}>{current?.label ?? value}</span>}>
       {(close) => (
-        <div className="menu-list" role="group" aria-label={t('tool.cardKind')}>
+        <div className="menu-list" role="group" aria-label={label}>
           {options.map((o) => (
             <button
               key={o.key}
               className={cls('menu-item', o.key === value && 'is-on')}
+              style={o.style}
               aria-pressed={o.key === value}
               onClick={() => {
                 if (o.key !== value) onPick(o.key);
@@ -158,6 +167,12 @@ export function KindMenu<K extends string>(props: { value: K; options: { key: K;
   );
 }
 
+/** A card's type, in a menu: one button per type, the current one pressed. */
+export function KindMenu<K extends string>(props: { value: K; options: { key: K; label: string }[]; onPick: (k: K) => void }) {
+  const t = useT();
+  return <SelectMenu label={t('tool.cardKind')} {...props} />;
+}
+
 export interface TextStyle {
   font: FontId;
   size: number;
@@ -168,20 +183,20 @@ function TextStyleFields({ cur, set }: { cur: TextStyle; set: (patch: Partial<Te
   const t = useT();
   return (
     <>
-      <select className="tool-select" aria-label={t('tool.font')} title={t('tool.font')} value={cur.font} onChange={(e) => set({ font: e.target.value as FontId })}>
-        {(Object.keys(FONTS) as FontId[]).map((f) => (
-          <option key={f} value={f}>
-            {t(`font.${f}`)}
-          </option>
-        ))}
-      </select>
-      <select className="tool-select" aria-label={t('tool.size')} title={t('tool.size')} value={cur.size} onChange={(e) => set({ size: Number(e.target.value) })}>
-        {(SIZES.includes(cur.size) ? SIZES : [...SIZES, cur.size].sort((a, b) => a - b)).map((n) => (
-          <option key={n} value={n}>
-            {n}
-          </option>
-        ))}
-      </select>
+      <SelectMenu
+        className="font-menu"
+        label={t('tool.font')}
+        value={cur.font}
+        options={(Object.keys(FONTS) as FontId[]).map((f) => ({ key: f, label: t(`font.${f}`), style: { fontFamily: FONTS[f] } }))}
+        onPick={(font) => set({ font })}
+      />
+      <SelectMenu
+        className="size-menu"
+        label={t('tool.size')}
+        value={cur.size}
+        options={(SIZES.includes(cur.size) ? SIZES : [...SIZES, cur.size].sort((a, b) => a - b)).map((n) => ({ key: n, label: String(n) }))}
+        onPick={(size) => set({ size })}
+      />
       <button className={cls('tool-icon tool-bold', cur.weight >= 600 && 'is-on')} aria-pressed={cur.weight >= 600} aria-label={t('tool.bold')} title={t('tool.bold')} onClick={() => set({ weight: cur.weight >= 600 ? 400 : 700 })}>
         B
       </button>

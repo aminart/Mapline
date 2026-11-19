@@ -349,7 +349,7 @@
   font-size: 12px;
   color: var(--muted);
 }
-.sb-format .tool-select {
+.sb-format .tool-menu {
   align-self: flex-start;
   max-width: 100%;
 }

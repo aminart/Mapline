@@ -17,7 +17,6 @@ export function NewSheetDialog() {
   const project = useStore((s) => s.project);
   const docId = useStore((s) => s.docId);
   const ref = useRef<HTMLDialogElement>(null);
-  const [template, setTemplate] = useState<SheetTemplateId>('classic');
   // 'map|persona', 'all|map' for every persona of a map without a sheet, or 'none' for a standalone sheet.
   const [target, setTarget] = useState<string>('none');
 
@@ -43,7 +42,8 @@ export function NewSheetDialog() {
 
   const [kind, mapId, personaId] = target === 'none' ? ['none'] : target.startsWith('all|') ? ['all', target.slice(4)] : ['one', ...target.split('|')];
   const allCount = kind === 'all' ? without(maps.find((m) => m.id === mapId)!).length : 0;
-  const create = () => {
+  // As in the other « Nouveau… » dialogs, a click on a template creates: the persona is chosen first.
+  const create = (template: SheetTemplateId) => {
     if (kind === 'one') addSheets(template, mapId as Id, [personaId as Id]);
     else if (kind === 'all') addSheets(template, mapId as Id, without(maps.find((m) => m.id === mapId)!).map((p) => p.id));
     else addSheets(template, null, []);
@@ -61,7 +61,6 @@ export function NewSheetDialog() {
     >
       <div className="dialog-body">
         <h2 id="new-sheet-title">{t('sheet.new.title')}</h2>
-        <SheetTemplateList picked={template} onPick={setTemplate} />
         {maps.length > 0 && (
           <label className="field-group field-stack">
             <span className="field-legend">{t('sheet.new.for')}</span>
@@ -95,12 +94,11 @@ export function NewSheetDialog() {
             </select>
           </label>
         )}
+        <p className="muted-sm">{kind === 'all' ? t('sheet.new.pickAll', { n: allCount }) : t('sheet.new.pick')}</p>
+        <SheetTemplateList onPick={create} />
         <div className="dialog-actions">
           <button className="btn" onClick={() => setOpen(null)}>
             {t('new.cancel')}
-          </button>
-          <button className="btn btn-primary" onClick={create}>
-            {kind === 'all' ? t('sheet.new.createAll', { n: allCount }) : t('sheet.new.create')}
           </button>
         </div>
       </div>
