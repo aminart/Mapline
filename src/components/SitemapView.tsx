@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { activeSitemap, useStore, useT } from '../store';
+import { isSingular } from '../i18n';
 import * as sm from '../model/sitemap';
 import { CARD_W, layoutTree, type Branch, type CardBox } from '../model/sitemapLayout';
 import type { BranchArea } from '../lib/exportPdf';
@@ -97,11 +98,14 @@ function useDeleteKey() {
 /** The counts: every view to plan, per level and status, the modals and messages. */
 export function SitemapSummary({ sitemap }: { sitemap: Sitemap }) {
   const t = useT();
+  const lang = useStore((s) => s.lang);
   const stats = sm.sitemapStats(sitemap);
+  const one = (n: number) => isSingular(lang, n);
+  const toDo = stats.status.new + stats.status.redo;
   return (
     <div className="sitemap-summary">
       <span className="sitemap-total">
-        <strong>{stats.total}</strong> {t('sitemap.total')}
+        <strong>{stats.total}</strong> {t(one(stats.total) ? 'sitemap.totalOne' : 'sitemap.total')}
       </span>
       <span className="sitemap-chips">
         {stats.levels.map((n, i) => (
@@ -123,7 +127,10 @@ export function SitemapSummary({ sitemap }: { sitemap: Sitemap }) {
           </span>
         ))}
       </span>
-      <span className="sitemap-todo">{t('sitemap.toDo', { views: stats.status.new + stats.status.redo, extras: stats.extrasToDo })}</span>
+      <span className="sitemap-todo">{t('sitemap.toDo', {
+          views: t(one(toDo) ? 'sitemap.viewOne' : 'sitemap.views', { n: toDo }),
+          extras: t(one(stats.extrasToDo) ? 'sitemap.extraOne' : 'sitemap.extrasN', { n: stats.extrasToDo }),
+        })}</span>
     </div>
   );
 }

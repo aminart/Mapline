@@ -231,6 +231,7 @@ test('presents step by step', async ({ page }) => {
 
 test('switches to English', async ({ page }) => {
   await startProject(page);
+  await page.getByLabel('Thème, langue et raccourcis clavier').click();
   await page.getByRole('button', { name: 'EN', exact: true }).click();
   await expect(page.getByRole('button', { name: 'New project' })).toBeVisible();
 });
@@ -700,7 +701,7 @@ test('switches to the dark theme, keeps it, and still exports in light', async (
   await page.locator('.board').click({ position: { x: 4, y: 4 } });
   const light = await exportPng();
 
-  await page.getByLabel('Thème et raccourcis clavier').click();
+  await page.getByLabel('Thème, langue et raccourcis clavier').click();
   await page.getByRole('group', { name: 'Thème' }).getByRole('button', { name: 'Sombre' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   // The board turns dark on screen...
@@ -713,4 +714,26 @@ test('switches to the dark theme, keeps it, and still exports in light', async (
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});
+
+test('keeps the main bar on one line on common laptop widths', async ({ page }) => {
+  await startProject(page);
+  for (const width of [1024, 1280, 1366, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    const height = await page.locator('.topbar').evaluate((el) => el.getBoundingClientRect().height);
+    expect(height, `${width} px`).toBeLessThan(80);
+  }
+});
+
+test('a one-step phase keeps its name whole, its buttons shown on hover', async ({ page }) => {
+  await startProject(page);
+  const phase = page.locator('.phase').last();
+  const actions = phase.locator('.box-actions');
+  await expect(actions).toHaveCSS('opacity', '0');
+  await phase.hover();
+  await expect(actions).toHaveCSS('opacity', '1');
+  const name = phase.getByRole('textbox', { name: 'Nom de la phase' });
+  await name.fill('Pendant');
+  // One line: the name is not broken letter by letter.
+  expect(await name.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(30);
 });

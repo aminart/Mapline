@@ -8,6 +8,8 @@
   min-width: 0;
   overflow: auto;
   padding: 32px;
+  /* Room to scroll the board's last row out from under the zoom control. */
+  padding-bottom: 96px;
   background-color: var(--ground);
   background-image: radial-gradient(var(--dots) 1px, transparent 1px);
   background-size: 20px 20px;
@@ -141,6 +143,43 @@
 .box-actions {
   display: flex;
   align-items: center;
+}
+/* A phase's grip, ‹ › and × float above its top edge, shown on hover or when selected: kept inside the
+   phase, they took ~90 px and a one-step phase's name broke letter by letter. */
+.phase .box-actions {
+  position: absolute;
+  top: -15px;
+  right: 8px;
+  z-index: 3;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2) !important;
+  box-shadow: 0 2px 8px rgba(20, 24, 32, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.phase .box-actions:empty {
+  display: none;
+}
+.phase:hover .box-actions,
+.phase:focus-within .box-actions,
+.phase.is-selected .box-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.phase .box-actions .icon-btn {
+  width: 24px;
+  height: 24px;
+}
+@media (hover: none) {
+  .phase .box-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .box-actions .icon-btn {
   color: inherit;
@@ -604,6 +643,15 @@
   align-items: center;
   gap: 3px;
 }
+/* The pill stays 20 px high like the tags beside it; its hit area reaches 24 px. */
+.tag-add {
+  position: relative;
+}
+.tag-add::after {
+  content: '';
+  position: absolute;
+  inset: -3px -2px;
+}
 .tag-add:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -638,10 +686,10 @@
   opacity: 1;
 }
 .card-del {
-  top: 4px;
-  right: 4px;
-  width: 22px;
-  height: 22px;
+  top: 3px;
+  right: 3px;
+  width: 24px;
+  height: 24px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -790,8 +838,8 @@
   z-index: 20;
 }
 .zoom-ctl button {
-  min-width: 36px;
-  height: 36px;
+  min-width: 32px;
+  height: 32px;
   border: 0;
   border-radius: 8px;
   background: transparent;

@@ -304,9 +304,19 @@
   align-self: flex-start;
   padding-top: 8px;
 }
-/* Narrow windows: New project and Open keep their icons only. */
-@media (max-width: 1360px) {
-  .topbar .btn-label {
+/* Narrow windows: New project and Open keep their icons only (the bar stays on one line down to 1200 px
+   with a long project name), then Present and Export too. */
+@media (max-width: 1440px) {
+  .topbar .btn:not(.btn-compact) .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+@media (max-width: 1200px) {
+  .topbar .btn-compact .btn-label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -812,13 +822,15 @@
   }
 }
 
-/* Choix du thème, en tête du menu d'aide. */
-.theme-switch {
+/* Choix du thème et de la langue, en tête du menu d'aide. */
+.theme-switch,
+.lang-switch {
   margin-bottom: 14px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--line);
 }
-.theme-switch .segmented button {
+.theme-switch .segmented button,
+.lang-switch .segmented button {
   flex: 1;
   display: inline-flex;
   align-items: center;
