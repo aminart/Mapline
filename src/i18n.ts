@@ -16,7 +16,7 @@ const fr = {
   'top.redo': 'Rétablir',
   'top.projectName': 'Nom du projet',
   'top.language': 'Langue',
-  'top.help': 'Thème et raccourcis clavier',
+  'top.help': 'Thème, langue et raccourcis clavier',
   'top.theme': 'Thème',
   'top.theme.light': 'Clair',
   'top.theme.dark': 'Sombre',
@@ -543,12 +543,15 @@ const fr = {
   'sitemap.views': '{n} vues',
   'sitemap.viewOne': '{n} vue',
   'sitemap.total': 'vues à prévoir',
+  'sitemap.totalOne': 'vue à prévoir',
+  'sitemap.extrasN': '{n} modales et messages',
+  'sitemap.extraOne': '{n} modale ou message',
   'sitemap.globals': 'Écrans globaux',
   'sitemap.globalsHint': 'Accessibles depuis tous les écrans, comptés une seule fois.',
   'sitemap.globalsDrop': 'Glissez un écran ici pour le rendre global.',
   'sitemap.globalLevel': 'Global',
   'sitemap.extras': 'Modales et messages',
-  'sitemap.toDo': 'À développer : {views} vues + {extras} modales et messages',
+  'sitemap.toDo': 'À développer : {views} + {extras}',
   'sitemap.extra.modal': 'Modale',
   'sitemap.extra.error': 'Erreur',
   'sitemap.extra.success': 'Succès',
@@ -626,7 +629,7 @@ const en: Record<MessageKey, string> = {
   'top.redo': 'Redo',
   'top.projectName': 'Project name',
   'top.language': 'Language',
-  'top.help': 'Theme and keyboard shortcuts',
+  'top.help': 'Theme, language and keyboard shortcuts',
   'top.theme': 'Theme',
   'top.theme.light': 'Light',
   'top.theme.dark': 'Dark',
@@ -1148,12 +1151,15 @@ const en: Record<MessageKey, string> = {
   'sitemap.views': '{n} views',
   'sitemap.viewOne': '{n} view',
   'sitemap.total': 'views to plan',
+  'sitemap.totalOne': 'view to plan',
+  'sitemap.extrasN': '{n} modals and messages',
+  'sitemap.extraOne': '{n} modal or message',
   'sitemap.globals': 'Global screens',
   'sitemap.globalsHint': 'Reached from every screen, counted once.',
   'sitemap.globalsDrop': 'Drag a screen here to make it global.',
   'sitemap.globalLevel': 'Global',
   'sitemap.extras': 'Modals and messages',
-  'sitemap.toDo': 'To develop: {views} views + {extras} modals and messages',
+  'sitemap.toDo': 'To develop: {views} + {extras}',
   'sitemap.extra.modal': 'Modal',
   'sitemap.extra.error': 'Error',
   'sitemap.extra.success': 'Success',
@@ -1218,6 +1224,11 @@ const en: Record<MessageKey, string> = {
 };
 
 const MESSAGES: Record<Lang, Record<MessageKey, string>> = { fr, en };
+
+/** Whether a count takes the singular: 0 and 1 in French, only 1 in English. */
+export function isSingular(lang: Lang, n: number): boolean {
+  return lang === 'fr' ? n <= 1 : n === 1;
+}
 
 export function translate(lang: Lang, key: MessageKey, vars?: Record<string, string | number>): string {
   let s = MESSAGES[lang][key];

@@ -46,18 +46,17 @@ export function TopBar() {
             <RedoIcon />
           </button>
           <CommentsButton />
-          <button className="btn" onClick={startPresentation} title={`${t('present.start')} (F5)`}>
-            <PlayIcon size={14} /> {t('present.start')}
+          <button className="btn btn-compact" onClick={startPresentation} title={`${t('present.start')} (F5)`} aria-label={t('present.start')}>
+            <PlayIcon size={14} /> <span className="btn-label">{t('present.start')}</span>
           </button>
-          <button className="btn" onClick={() => setExportOpen(true)} title={`${t('top.export')} (Ctrl+E)`}>
-            <DownloadIcon /> {t('top.export')}
+          <button className="btn btn-compact" onClick={() => setExportOpen(true)} title={`${t('top.export')} (Ctrl+E)`} aria-label={t('top.export')}>
+            <DownloadIcon /> <span className="btn-label">{t('top.export')}</span>
           </button>
           <SaveButton />
         </>
       )}
       <div className="nn-appbar-tools">
         <HelpButton />
-        <LangSwitch />
       </div>
     </header>
   );
@@ -125,6 +124,7 @@ function HelpButton() {
         </summary>
         <div className="help-panel">
           <ThemeSwitch />
+          <LangSwitch />
           <h2>{t('side.shortcuts')}</h2>
           <p>{t('side.shortcutsText')}</p>
           <button
@@ -189,6 +189,7 @@ function ThemeSwitch() {
   );
 }
 
+/** French or English, in the help menu too, so the bar keeps to one line on a 1366 px screen. */
 function LangSwitch() {
   const t = useT();
   const lang = useStore((s) => s.lang);
@@ -198,12 +199,15 @@ function LangSwitch() {
     { id: 'en', label: 'EN' },
   ];
   return (
-    <div className="nn-segmented" role="group" aria-label={t('top.language')}>
-      {options.map((o) => (
-        <button key={o.id} className={cls(lang === o.id && 'is-on')} aria-pressed={lang === o.id} lang={o.id} onClick={() => setLang(o.id)}>
-          {o.label}
-        </button>
-      ))}
+    <div className="lang-switch">
+      <h2>{t('top.language')}</h2>
+      <div className="segmented" role="group" aria-label={t('top.language')}>
+        {options.map((o) => (
+          <button key={o.id} className={cls(lang === o.id && 'is-on')} aria-pressed={lang === o.id} lang={o.id} onClick={() => setLang(o.id)}>
+            {o.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

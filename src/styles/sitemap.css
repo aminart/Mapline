@@ -4,17 +4,17 @@
 /* A sitemap: the counts, the tree of screens by level (or the list), the global screens. */
 
 .sitemap-doc {
-  --st-existing: #2f7d4f;
+  --st-existing: #2a7046;
   --st-existing-soft: #e6f4ea;
   --st-new: #2f55d4;
   --st-new-soft: #edf1fc;
-  --st-redo: #b4541a;
+  --st-redo: #a14a14;
   --st-redo-soft: #fbeee4;
   --x-modal: #5b4bb7;
   --x-modal-soft: #efecfb;
   --x-error: #b42318;
   --x-error-soft: #fdecea;
-  --x-success: #2f7d4f;
+  --x-success: #2a7046;
   --x-success-soft: #e6f4ea;
   --x-info: #2563a8;
   --x-info-soft: #e8f0fa;
@@ -360,10 +360,10 @@
   background: var(--card-bg);
 }
 .sitemap-grip {
-  top: 4px;
-  right: 4px;
-  width: 22px;
-  height: 22px;
+  top: 3px;
+  right: 3px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
   color: var(--muted);
   cursor: grab;
@@ -526,17 +526,17 @@
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: var(--st-existing, #2f7d4f);
+  background: var(--st-existing, #2a7046);
 }
 .sitemap-status-dot.is-existing {
-  background: #2f7d4f;
+  background: #2a7046;
 }
 .sitemap-status-dot.is-new {
   background: transparent;
   border: 1.5px dashed #2f55d4;
 }
 .sitemap-status-dot.is-redo {
-  background: #b4541a;
+  background: #a14a14;
 }
 .sitemap-status-item {
   display: flex;
@@ -548,7 +548,7 @@
   --x-modal-soft: #efecfb;
   --x-error: #b42318;
   --x-error-soft: #fdecea;
-  --x-success: #2f7d4f;
+  --x-success: #2a7046;
   --x-success-soft: #e6f4ea;
   --x-info: #2563a8;
   --x-info-soft: #e8f0fa;
@@ -566,7 +566,7 @@
   --x-modal-soft: #efecfb;
   --x-error: #b42318;
   --x-error-soft: #fdecea;
-  --x-success: #2f7d4f;
+  --x-success: #2a7046;
   --x-success-soft: #e6f4ea;
   --x-info: #2563a8;
   --x-info-soft: #e8f0fa;
