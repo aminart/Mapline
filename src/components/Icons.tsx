@@ -307,3 +307,10 @@ export const InfoMarkIcon = ({ size = 11 }: P) => (
     <path d="M12 11v8M12 5v.01" />
   </Svg>
 );
+
+/** Four corners pointing out: fit the document to the window. */
+export const FitIcon = ({ size }: P) => (
+  <Svg size={size}>
+    <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" />
+  </Svg>
+);

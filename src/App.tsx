@@ -1,6 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { useEffect, useRef, useState } from 'react';
 import { useStore, useT } from './store';
 import { closeTab, open, save } from './actions';
@@ -17,14 +18,14 @@ import { DocBar } from './components/DocBar';
 import { StateBar } from './components/StateBar';
 import { BaseFlow } from './components/FlowCompare';
 import { useFlowSplit } from './components/useDiff';
-import { ChevronDown, ChevronRight } from './components/Icons';
+import { ChevronDown, ChevronRight, FitIcon } from './components/Icons';
 import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
 import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
 import { BusyOverlay } from './components/BusyOverlay';
 import { CommentsPanel } from './components/CommentsPanel';
 import { ExportDialog } from './components/ExportDialog';
-import { PresentationBar, presentGo, startPresentation, stopPresentation } from './components/Presentation';
+import { PresentationBar, fitToWindow, presentGo, startPresentation, stopPresentation } from './components/Presentation';
 import { removeLink } from './model/ops';
 import { removeFlowLink } from './model/flow';
 import { findDoc } from './model/project';
@@ -230,6 +231,7 @@ export function App() {
       else if (k === '=' || k === '+') s.setZoom(s.zoom + 0.1);
       else if (k === '-') s.setZoom(s.zoom - 0.1);
       else if (k === '0') s.setZoom(1);
+      else if (k === '1') fitToWindow();
       else return;
       e.preventDefault();
     };
@@ -266,12 +268,17 @@ export function App() {
           <button aria-label={t('zoom.in')} onClick={() => setZoom(zoom + 0.1)}>
             +
           </button>
+          <span className="zoom-sep" aria-hidden="true" />
+          <button className="zoom-fit" aria-label={t('zoom.fit')} title={`${t('zoom.fit')} (Ctrl+1)`} onClick={fitToWindow}>
+            <FitIcon size={15} />
+          </button>
         </div>
       )}
       <NewProjectDialog />
       {activeId && <NewSheetDialog />}
       {activeId && <NewFlowDialog />}
       {activeId && <NewMapDialog />}
+      <ConfirmDialog />
       <BusyOverlay />
       {activeId && <ExportDialog />}
     </div>

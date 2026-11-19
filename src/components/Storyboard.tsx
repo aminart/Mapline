@@ -10,6 +10,7 @@ import type { SceneFit, SceneFormat, SceneView, Step } from '../model/types';
 import { imageBackdrop, imageSize, readImage } from '../lib/image';
 import { withBusy } from '../actions';
 import { useBox } from './useBox';
+import { SelectMenu } from './ToolControls';
 import { CloseIcon, CropIcon, FitContainIcon, FitCoverIcon, ImageIcon } from './Icons';
 import { ACTIVITY_COL } from './layout';
 import { cls } from './cls';
@@ -25,24 +26,15 @@ export function StoryboardRow() {
       <div className="row-head">
         <span className="eyebrow eyebrow-accent">{t('sb.title')}</span>
         <span className="muted">{t('sb.text')}</span>
-        <label className="sb-format no-export">
+        <div className="sb-format no-export">
           <span>{t('sb.format')}</span>
-          <select
-            className="tool-select"
+          <SelectMenu
+            label={t('sb.format')}
             value={format ?? ''}
-            onChange={(e) => {
-              const v = (e.target.value || null) as SceneFormat | null;
-              apply((d) => ops.setSceneFormat(d, v));
-            }}
-          >
-            <option value="">{t('sb.formatStep')}</option>
-            {ops.SCENE_FORMATS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={[{ key: '', label: t('sb.formatStep') }, ...ops.SCENE_FORMATS.map((f) => ({ key: f, label: f }))]}
+            onPick={(v) => apply((d) => ops.setSceneFormat(d, (v || null) as SceneFormat | null))}
+          />
+        </div>
         <button className="chip no-export" onClick={() => apply((d) => ({ ...d, storyboard: false }))}>
           {t('sb.hide')}
         </button>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { expect, test, type Page } from '@playwright/test';
-import { addActivity, startProject } from './helpers';
+import { addActivity, startProject, addDocument } from './helpers';
 
 /** The texts of the cards of persona row `row`, left to right ('' for an empty cell). */
 const rowCells = (page: Page, row: number) =>
@@ -60,7 +60,7 @@ test('copies several cards and pastes them on another map', async ({ page }) => 
   await page.locator('.persona-row').nth(0).locator('.card textarea').nth(1).click({ modifiers: ['Shift'] });
   await page.keyboard.press('ControlOrMeta+c');
 
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await addDocument(page, 'Nouvelle map');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Map vide' }).click();
   await addActivity(page, 0, 0, '');
   await page.keyboard.press('ControlOrMeta+v');
@@ -97,7 +97,7 @@ test('copies and pastes whole steps and phases', async ({ page }) => {
 
 test('picks several flow cards and duplicates them with their arrows', async ({ page }) => {
   await startProject(page);
-  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   const nodes = page.locator('.flow [data-node]');
   await expect(nodes).toHaveCount(2);

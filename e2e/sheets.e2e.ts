@@ -3,14 +3,14 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { addActivity, clippedFields, fillWithLongText, startProject, openProjects } from './helpers';
+import { addActivity, clippedFields, fillWithLongText, startProject, openProjects, addDocument } from './helpers';
 
 /** Creates the sheet of the first persona of the map, from its button. */
 async function createFirstSheet(page: Page) {
   await page.locator('.persona').first().hover();
   await page.getByRole('button', { name: 'Créer sa fiche' }).first().click();
   await expect(page.getByRole('heading', { name: 'Nouvelle fiche persona' })).toBeVisible();
-  await page.locator('dialog[open]').getByRole('button', { name: 'Créer la fiche' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Persona classique' }).click();
   await expect(page.locator('.sheet')).toBeVisible();
 }
 
@@ -141,22 +141,23 @@ test('exports a sheet as PNG and PDF', async ({ page }) => {
 test('asks before deleting a sheet', async ({ page }) => {
   await startProject(page);
   await createFirstSheet(page);
-  page.once('dialog', (dialog) => dialog.dismiss());
+  const ask = page.getByRole('alertdialog');
   await page.locator('.doc-tab').nth(1).getByRole('button', { name: /^Supprimer/ }).click();
+  await ask.getByRole('button', { name: 'Annuler' }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(2);
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('.doc-tab').nth(1).getByRole('button', { name: /^Supprimer/ }).click();
+  await ask.getByRole('button', { name: 'Supprimer', exact: true }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(1);
   await expect(page.locator('.board')).toBeVisible();
 });
 
 test('picks the persona of a new sheet from a list', async ({ page }) => {
   await startProject(page);
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle fiche persona' }).click();
+  await addDocument(page, 'Nouvelle fiche persona');
   const target = page.getByRole('combobox', { name: 'Pour quel persona ?' });
   await expect(target).toHaveValue(/\|/);
   await target.selectOption({ label: 'Front office' });
-  await page.locator('dialog[open]').getByRole('button', { name: 'Créer la fiche' }).click();
+  await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Persona classique' }).click();
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Fiche · Front office']);
 });
 
@@ -183,7 +184,7 @@ test('a sheet photo shows on the persona everywhere in the project', async ({ pa
   await docTab(page, 'Map').click();
   await expect(page.locator('.persona').first().locator('.avatar img')).toBeVisible();
   // A flow card done by this persona shows the photo too.
-  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
   await page.locator('.flow [data-node]').nth(1).locator('textarea').click();
   await page.getByRole('toolbar').getByRole('button', { name: 'Personas' }).click();
@@ -267,7 +268,7 @@ test('reuses the personas of a map on a new map, sharing their sheets', async ({
   await addActivity(page, 0, 0, 'Prendre rendez-vous');
   await createFirstSheet(page);
   await docTab(page, 'Map').click();
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await addDocument(page, 'Nouvelle map');
   await page.getByRole('button', { name: 'Reprendre les personas · Map' }).click();
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Map (copie)', 'Fiche · Patient']);
   await expect(page.locator('.doc-tab.is-active')).toHaveText('Map (copie)');
@@ -278,7 +279,7 @@ test('reuses the personas of a map on a new map, sharing their sheets', async ({
   await expect(page.getByRole('button', { name: /Voir la fiche de/ })).toHaveCount(1);
 
   await docTab(page, 'Map').first().click();
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await addDocument(page, 'Nouvelle map');
   await page.getByRole('button', { name: 'Dupliquer toute la map · Map', exact: true }).click();
   await expect(page.locator('.doc-tab.is-active')).toHaveText('Map (copie)');
   await expect(page.locator('.persona-grid [data-act]')).toHaveCount(1);

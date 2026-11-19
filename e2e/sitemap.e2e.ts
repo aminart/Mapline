@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { startProject } from './helpers';
+import { startProject, addDocument } from './helpers';
 
 /** Opens the app on a new sitemap project: its first screen is ready to be named. */
 async function startSitemap(page: Page) {
@@ -101,7 +101,7 @@ test('moves a screen by its handle, into the global screens', async ({ page }) =
 test('links a screen to a step of a map, then filters on it', async ({ page }) => {
   await startProject(page);
   await page.locator('.step').nth(1).getByRole('textbox', { name: 'Nom de l’étape' }).fill('Choisir');
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle arborescence' }).click();
+  await addDocument(page, 'Nouvelle arborescence');
   await page.keyboard.type('Accueil');
   await addChild(page, 'Recherche');
   await toolbar(page).getByRole('button', { name: 'Liens' }).click();

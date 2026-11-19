@@ -1,6 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { askConfirm } from '../lib/confirm';
 import { createRef, useRef, type CSSProperties } from 'react';
 import { t as translate, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
@@ -244,7 +245,7 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
           </span>
           {t('board.step', { n: index + 1 })}
         </span>
-        <button className="icon-btn no-export" aria-label={t('board.removeStep')} onClick={() => removeLinked('step', step.id, (d) => ops.removeStep(d, index))}>
+        <button className="icon-btn step-del no-export" aria-label={t('board.removeStep')} title={t('board.removeStep')} onClick={() => removeLinked('step', step.id, (d) => ops.removeStep(d, index))}>
           <CloseIcon />
         </button>
       </div>
@@ -286,9 +287,8 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
 function removeLinked(kind: FlowSource['kind'], id: Id, fn: (map: Blueprint) => Blueprint) {
   const { project, docId, apply } = useStore.getState();
   const flows = flowsDetailing(project, docId, kind, id);
-  if (flows.length > 0) {
-    const names = flows.map((f) => f.name || translate('flow.default')).join(', ');
-    if (!window.confirm(translate(kind === 'phase' ? 'links.confirmRemovePhase' : 'links.confirmRemoveStep', { n: flows.length, names }))) return;
-  }
-  apply(fn);
+  if (flows.length === 0) return apply(fn);
+  const names = flows.map((f) => f.name || translate('flow.default')).join(', ');
+  const message = translate(kind === 'phase' ? 'links.confirmRemovePhase' : 'links.confirmRemoveStep', { n: flows.length, names });
+  void askConfirm({ message, confirm: translate(kind === 'phase' ? 'confirm.merge' : 'confirm.remove'), danger: true }).then((ok) => ok && useStore.getState().apply(fn));
 }

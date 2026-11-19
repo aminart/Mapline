@@ -52,7 +52,7 @@ export function AboutDialog({ open, onClose }: { open: boolean; onClose: () => v
             </thead>
             <tbody>
               {PACKAGES.map((p) => (
-                <tr key={p.name}>
+                <tr key={`${p.name}@${p.version}`}>
                   <td>
                     {p.name} <span className="muted-sm">{p.version}</span>
                     {p.url && <span className="about-url">{p.url.replace(/^git\+/, '').replace(/\.git$/, '')}</span>}

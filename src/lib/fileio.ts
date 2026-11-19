@@ -75,6 +75,12 @@ export async function openProject(): Promise<{ project: Project; path: string | 
   return { project: parse(await readTextFile(path)), path };
 }
 
+/** Opens the project file at `path` (desktop): a recent file. */
+export async function openProjectAt(path: string): Promise<Project> {
+  const { readTextFile } = await import('@tauri-apps/plugin-fs');
+  return parse(await readTextFile(path));
+}
+
 /** Saves an exported file (image, PDF, CSV) under the project title. */
 export async function saveExport(blob: Blob, title: string, ext: string, filterName: string): Promise<void> {
   if (!isDesktop) {

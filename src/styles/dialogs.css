@@ -209,3 +209,81 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Questions asked before a removal (lib/confirm): narrow, the message, then the two answers. */
+.confirm-dialog {
+  width: min(440px, calc(100vw - 32px));
+}
+.confirm-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.btn-primary.btn-danger {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+.btn-primary.btn-danger:hover {
+  filter: brightness(0.92);
+  background: var(--danger);
+}
+
+/* Start screen: the files last opened or saved (desktop). */
+.recent {
+  margin-top: 8px;
+}
+.recent-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.recent-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.recent-list li + li {
+  border-top: 1px solid var(--line);
+}
+.recent-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+}
+.recent-item:hover,
+.recent-item:focus-visible {
+  background: var(--surface-2);
+}
+.recent-item > svg {
+  color: var(--muted);
+}
+.recent-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-path,
+.recent-when {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}

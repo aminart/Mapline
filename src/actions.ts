@@ -1,8 +1,10 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { askConfirm } from './lib/confirm';
 import { activeMap, t, useStore } from './store';
-import { isDesktop, openProject, saveExport, saveProject } from './lib/fileio';
+import { isDesktop, openProject, openProjectAt, saveExport, saveProject } from './lib/fileio';
+import { forgetRecent, rememberRecent } from './lib/recent';
 import { boardRef } from './components/Board';
 import { layoutOffset, measureLayout, nextFrame, renderBoardCanvas, withExportLayout, type BoardLayout, type RenderOptions } from './lib/exportImage';
 import { boardShapes, sliceShapes, type Shape } from './lib/boardShapes';
@@ -168,10 +170,11 @@ export function makeTargetDoc(id: Id) {
 
 /** Removes a document from the active project, after asking. */
 export function removeDocument(id: Id) {
-  const { project, applyProject } = useStore.getState();
+  const { project } = useStore.getState();
   if (project.docs.length <= 1) return;
-  if (!window.confirm(t('doc.confirmRemove', { name: docLabel(project, id) }))) return;
-  applyProject((p) => withLinksKept(p, (q) => removeDoc(q, id)));
+  void askConfirm({ message: t('doc.confirmRemove', { name: docLabel(project, id) }), confirm: t('confirm.remove'), danger: true }).then(
+    (ok) => ok && useStore.getState().applyProject((p) => withLinksKept(p, (q) => removeDoc(q, id))),
+  );
 }
 
 export async function save(saveAs = false): Promise<boolean> {
@@ -183,6 +186,7 @@ export async function save(saveAs = false): Promise<boolean> {
     // file is downloaded: there is no path to remember.
     if (isDesktop && !path) return false;
     markSaved(path);
+    if (path) rememberRecent(path, project.title || t('app.untitled'));
     return true;
   } catch (err) {
     report(err);
@@ -194,16 +198,33 @@ export async function open() {
   try {
     const result = await openProject();
     if (!result) return;
-    const { tabs, filePath, activeId, switchTab, openTab } = useStore.getState();
-    // Already open: just bring it to the front.
-    const existing = result.path
-      ? (activeId && filePath === result.path ? activeId : tabs.find((tab) => tab.filePath === result.path)?.id)
-      : undefined;
-    if (existing) switchTab(existing);
-    else openTab(result.project, result.path);
+    showOpened(result.project, result.path);
   } catch (err) {
     report(err);
   }
+}
+
+/** Opens a file of the start screen's recent list; one that is gone leaves the list. */
+export async function openRecent(path: string) {
+  let project: Project;
+  try {
+    project = await openProjectAt(path);
+  } catch (err) {
+    forgetRecent(path);
+    report(err);
+    return;
+  }
+  showOpened(project, path);
+}
+
+/** Shows an opened project: in its own tab, or the tab it is already in. */
+function showOpened(project: Project, path: string | null) {
+  if (path) rememberRecent(path, project.title || t('app.untitled'));
+  const { tabs, filePath, activeId, switchTab, openTab } = useStore.getState();
+  // Already open: just bring it to the front.
+  const existing = path ? (activeId && filePath === path ? activeId : tabs.find((tab) => tab.filePath === path)?.id) : undefined;
+  if (existing) switchTab(existing);
+  else openTab(project, path);
 }
 
 export function closeTab(id: string) {
@@ -211,8 +232,8 @@ export function closeTab(id: string) {
   const tab = id === s.activeId ? { project: s.project, dirty: s.dirty } : s.tabs.find((x) => x.id === id);
   if (!tab) return;
   const name = tab.project.title || t('app.untitled');
-  if (tab.dirty && !window.confirm(t('confirm.closeTab', { name }))) return;
-  s.closeTab(id);
+  if (!tab.dirty) return s.closeTab(id);
+  void askConfirm({ message: t('confirm.closeTab', { name }), confirm: t('confirm.close'), danger: true }).then((ok) => ok && useStore.getState().closeTab(id));
 }
 
 export interface ExportOptions extends RenderOptions {

@@ -51,11 +51,6 @@
   --removed-muted: #858cad;
 }
 
-/* Le bouton fort (Enregistrer) devient clair sur fond sombre : son texte aussi s'inverse. */
-:root[data-theme='dark'] .btn-strong {
-  color: #111427;
-}
-
 /* Les fenêtres se détachent du fond par un trait plutôt que par l'ombre. */
 :root[data-theme='dark'] .dialog {
   outline: 1px solid var(--line);

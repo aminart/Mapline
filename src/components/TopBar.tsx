@@ -30,12 +30,17 @@ export function TopBar() {
         <span>Mapline</span>
       </div>
       <ProjectSwitcher />
-      <button className="btn btn-primary" onClick={() => setNewProjectOpen(true)} title={`${t('top.newProject')} (Ctrl+N)`} aria-label={t('top.newProject')}>
-        <PlusIcon /> <span className="btn-label">{t('top.newProject')}</span>
-      </button>
-      <button className="btn" onClick={open} title={`${t('top.open')} (Ctrl+O)`} aria-label={t('top.open')}>
-        <FolderIcon /> <span className="btn-label">{t('top.open')}</span>
-      </button>
+      {/* With no project open, the start screen offers both: the bar doesn't repeat them. */}
+      {hasProject && (
+        <>
+          <button className="btn" onClick={() => setNewProjectOpen(true)} title={`${t('top.newProject')} (Ctrl+N)`} aria-label={t('top.newProject')}>
+            <PlusIcon /> <span className="btn-label">{t('top.newProject')}</span>
+          </button>
+          <button className="btn" onClick={open} title={`${t('top.open')} (Ctrl+O)`} aria-label={t('top.open')}>
+            <FolderIcon /> <span className="btn-label">{t('top.open')}</span>
+          </button>
+        </>
+      )}
       <div className="spacer" />
       {hasProject && (
         <>
@@ -88,7 +93,7 @@ function SaveButton() {
     return () => clearTimeout(timer);
   }, [savedAt]);
   return (
-    <button className={cls('btn btn-strong save-btn', flash && 'is-saved')} onClick={() => save()} title={`${t('top.save')} (Ctrl+S)`}>
+    <button className={cls('btn btn-primary save-btn', flash && 'is-saved')} onClick={() => save()} title={`${t('top.save')} (Ctrl+S)`}>
       {flash ? (
         <>
           <CheckIcon /> {t('top.saved')}

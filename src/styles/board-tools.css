@@ -305,3 +305,27 @@ body.is-dragging {
 .segmented-sm button svg {
   margin-right: 2px;
 }
+
+/* The × of a step or a persona shows on hover, focus or selection only: always shown, a map of
+   five steps and three personas carried eight crosses at rest. */
+.step-del,
+.persona-del {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.step:hover .step-del,
+.step:focus-within .step-del,
+.step.is-selected .step-del,
+.step-del:focus-visible,
+.persona:hover .persona-del,
+.persona:focus-within .persona-del,
+.persona.is-selected .persona-del,
+.persona-del:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .step-del,
+  .persona-del {
+    opacity: 1;
+  }
+}

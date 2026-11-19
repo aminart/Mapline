@@ -118,14 +118,32 @@ export function presentGo(delta: number | 'overview') {
   }
 }
 
-/** Fits the whole board in the window. */
-function fitZoom(): number {
+/**
+ * Fits the whole document in the window, never larger than life. The room
+ * kept free is the canvas padding, plus the presentation bar when presenting.
+ */
+export function fitZoom(bottom = 140): number {
   const board = boardRef.current;
   const canvas = board?.closest('.canvas');
   if (!board || !(canvas instanceof HTMLElement)) return 1;
   const w = (canvas.clientWidth - 64) / board.offsetWidth;
-  const h = (canvas.clientHeight - 140) / board.offsetHeight;
+  const h = (canvas.clientHeight - bottom) / board.offsetHeight;
   return Math.min(1, w, h);
+}
+
+/** A map's step: the board's whole height in the window, never larger than life. */
+function heightZoom(): number {
+  const board = boardRef.current;
+  const canvas = board?.closest('.canvas');
+  if (!board || !(canvas instanceof HTMLElement)) return 1;
+  return Math.min(1, (canvas.clientHeight - 140) / board.offsetHeight);
+}
+
+/** « Ajuster à l'écran » while editing: the whole document, back at its top left corner. */
+export function fitToWindow() {
+  const s = useStore.getState();
+  s.setZoom(fitZoom(32 + 96));
+  requestAnimationFrame(() => boardRef.current?.closest('.canvas')?.scrollTo({ left: 0, top: 0 }));
 }
 
 /** Zooms a flow so that its cards fill the window's height, a bit larger than life. */
@@ -150,8 +168,8 @@ export function PresentationBar() {
   const isFlow = findDoc(project, docId)?.kind === 'flow';
   const columns = isFlow && flow ? flowColumns(flow) : [];
 
-  // A whole document fits the window; a map's step is shown at full size and
-  // centred; a flow's column larger, centred, the cards after it still hidden.
+  // A whole document fits the window; a map's step is shown with the map's whole
+  // height, centred; a flow's column larger, centred, the cards after it still hidden.
   useEffect(() => {
     if (step === null) return;
     if (step < 0) {
@@ -172,7 +190,8 @@ export function PresentationBar() {
       });
       return;
     }
-    setZoom(1);
+    // The whole height of the map, so that no persona row hides under the bar on a small screen.
+    setZoom(heightZoom());
     const id = doc.steps[step]?.id;
     requestAnimationFrame(() => {
       boardRef.current

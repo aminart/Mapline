@@ -1,6 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { askConfirm } from '../lib/confirm';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { activeMap, t as translate, useMap, useStore, useT } from '../store';
 import * as ops from '../model/ops';
@@ -113,7 +114,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
           />
         </div>
         <div className="persona-actions no-export">
-          <button className="icon-btn" aria-label={t('board.removePersona')} onClick={() => removePersona(persona.id)}>
+          <button className="icon-btn persona-del" aria-label={t('board.removePersona')} title={t('board.removePersona')} onClick={() => removePersona(persona.id)}>
             <CloseIcon />
           </button>
           <button
@@ -625,7 +626,10 @@ function removePersona(personaId: Id) {
     const parts: string[] = [];
     if (sheet) parts.push(translate('links.personaSheet', { name: sheetIdentity(project, sheet.sheet).name || translate('doc.unnamed') }));
     if (flows.length > 0) parts.push(translate('links.personaFlows', { n: flows.length, names: flows.map((f) => f.name || translate('flow.default')).join(', ') }));
-    if (!window.confirm(translate('links.confirmRemovePersona', { what: parts.join(translate('links.and')) }))) return;
+    void askConfirm({ message: translate('links.confirmRemovePersona', { what: parts.join(translate('links.and')) }), confirm: translate('confirm.remove'), danger: true }).then(
+      (ok) => ok && useStore.getState().apply((d) => ops.removePersona(d, personaId)),
+    );
+    return;
   }
   apply((d) => ops.removePersona(d, personaId));
 }
