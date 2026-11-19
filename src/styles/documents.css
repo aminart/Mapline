@@ -103,6 +103,50 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+.doc-add-menu {
+  margin: 0 0 4px 4px;
+}
+.doc-add-menu > .tool-pill {
+  height: 28px;
+  padding: 0 10px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+}
+.doc-add-menu > .tool-pill:hover,
+.doc-add-menu > .tool-pill.is-open {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.doc-add-menu .tool-menu-panel {
+  padding: 6px;
+}
+.doc-add-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 210px;
+}
+.doc-add-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+}
+.doc-add-item > svg {
+  color: var(--muted);
+}
+.doc-add-item:hover,
+.doc-add-item:focus-visible {
+  background: var(--surface-2);
+}
 
 /* New project and new sheet dialogs */
 

@@ -11,7 +11,7 @@ const KINDS: BoxKind[] = ['obj', 'phase', 'step', 'scene', 'persona', 'act', 'in
 describe('colours in the dark theme', () => {
   it('gives every default box, swatch, tag and tint a dark counterpart', () => {
     for (const kind of KINDS) expect(themable(defaultStyle(kind).bg, 'bg'), kind).toBe(true);
-    for (const kind of KINDS) expect(themable(defaultStyle(kind).color, 'ink'), kind).toBe(kind !== 'obj');
+    for (const kind of KINDS) expect(themable(defaultStyle(kind).color, 'ink'), kind).toBe(true);
     for (const hex of FILL_SWATCHES) expect(themable(hex, 'bg'), hex).toBe(true);
     for (const hex of BORDER_SWATCHES) expect(themable(hex, 'line') || themable(hex, 'bg'), hex).toBe(true);
     for (const hex of TEXT_SWATCHES.filter((h) => h !== '#FFFFFF')) expect(themable(hex, 'ink'), hex).toBe(true);

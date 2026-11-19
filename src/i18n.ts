@@ -54,6 +54,7 @@ const fr = {
   'flow.named': 'Flow · {name}',
   'doc.addFlow': 'Nouveau flow',
   'doc.addMap': 'Nouvelle map',
+  'doc.addAny': 'Ajouter',
   'board.addChoiceHere': 'Ajouter une carte choix ici',
   'tool.cardKind': 'Type',
   'map.new.title': 'Nouvelle map',
@@ -188,7 +189,7 @@ const fr = {
   'tpl.persona.back.role': 'Processus internes',
   'side.shortcuts': 'Raccourcis clavier',
   'side.shortcutsText':
-    'Ctrl+N : nouveau projet\nCtrl+O : ouvrir · Ctrl+S : enregistrer\nCtrl+E : exporter · F5 : présenter\nSuppr : supprimer la flèche sélectionnée\nCtrl+W : fermer l’onglet\nCtrl+Entrée : activité à droite\nMaj+clic (ou Cmd+clic) : sélectionner plusieurs cartes, étapes ou phases\nCtrl+C / Ctrl+V : copier / coller la sélection (aussi d’une map ou d’un flow à l’autre)\nCtrl+D : dupliquer la sélection\nSuppr : supprimer les cartes ou étapes sélectionnées\nEntrée dans un tag : l’ajouter\nCtrl+Z / Ctrl+Maj+Z : annuler / rétablir\nCtrl+ + / − / 0 : zoom',
+    'Ctrl+N : nouveau projet\nCtrl+O : ouvrir · Ctrl+S : enregistrer\nCtrl+E : exporter · F5 : présenter\nSuppr : supprimer la flèche sélectionnée\nCtrl+W : fermer l’onglet\nCtrl+Entrée : activité à droite\nMaj+clic (ou Cmd+clic) : sélectionner plusieurs cartes, étapes ou phases\nCtrl+C / Ctrl+V : copier / coller la sélection (aussi d’une map ou d’un flow à l’autre)\nCtrl+D : dupliquer la sélection\nSuppr : supprimer les cartes ou étapes sélectionnées\nEntrée dans un tag : l’ajouter\nCtrl+Z / Ctrl+Maj+Z : annuler / rétablir\nCtrl+ + / − / 0 : zoom · Ctrl+1 : ajuster à l’écran',
   'about.open': 'À propos et licences',
   'about.version': 'Version {v}',
   'about.local': 'Vos projets restent sur votre ordinateur : l’application n’envoie aucune donnée sur internet.',
@@ -432,6 +433,7 @@ const fr = {
   'zoom.out': 'Dézoomer',
   'zoom.in': 'Zoomer',
   'zoom.reset': 'Réinitialiser le zoom',
+  'zoom.fit': 'Ajuster à l’écran',
 
   // Files and messages
   'file.filter': 'Projet Mapline',
@@ -665,6 +667,7 @@ const en: Record<MessageKey, string> = {
   'flow.named': 'Flow · {name}',
   'doc.addFlow': 'New flow',
   'doc.addMap': 'New map',
+  'doc.addAny': 'Add',
   'board.addChoiceHere': 'Add a choice card here',
   'tool.cardKind': 'Type',
   'map.new.title': 'New map',
@@ -799,7 +802,7 @@ const en: Record<MessageKey, string> = {
   'tpl.persona.back.role': 'Internal processes',
   'side.shortcuts': 'Keyboard shortcuts',
   'side.shortcutsText':
-    'Ctrl+N: new project\nCtrl+O: open · Ctrl+S: save\nCtrl+E: export · F5: present\nDelete: delete the selected arrow\nCtrl+W: close tab\nCtrl+Enter: activity to the right\nShift+click (or Cmd+click): select several cards, steps or phases\nCtrl+C / Ctrl+V: copy / paste the selection (also from one map or flow to another)\nCtrl+D: duplicate the selection\nDelete: delete the selected cards or steps\nEnter in a tag: add it\nCtrl+Z / Ctrl+Shift+Z: undo / redo\nCtrl+ + / − / 0: zoom',
+    'Ctrl+N: new project\nCtrl+O: open · Ctrl+S: save\nCtrl+E: export · F5: present\nDelete: delete the selected arrow\nCtrl+W: close tab\nCtrl+Enter: activity to the right\nShift+click (or Cmd+click): select several cards, steps or phases\nCtrl+C / Ctrl+V: copy / paste the selection (also from one map or flow to another)\nCtrl+D: duplicate the selection\nDelete: delete the selected cards or steps\nEnter in a tag: add it\nCtrl+Z / Ctrl+Shift+Z: undo / redo\nCtrl+ + / − / 0: zoom · Ctrl+1: fit to window',
   'about.open': 'About and licences',
   'about.version': 'Version {v}',
   'about.local': 'Your projects stay on your computer: the app sends no data over the internet.',
@@ -1041,6 +1044,7 @@ const en: Record<MessageKey, string> = {
   'zoom.out': 'Zoom out',
   'zoom.in': 'Zoom in',
   'zoom.reset': 'Reset zoom',
+  'zoom.fit': 'Fit to window',
 
   'file.filter': 'Mapline project',
   'file.png': 'PNG image',

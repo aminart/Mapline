@@ -113,7 +113,7 @@ function PersonaRow(props: { persona: Persona; index: number; hasDivider: boolea
           />
         </div>
         <div className="persona-actions no-export">
-          <button className="icon-btn" aria-label={t('board.removePersona')} onClick={() => removePersona(persona.id)}>
+          <button className="icon-btn persona-del" aria-label={t('board.removePersona')} title={t('board.removePersona')} onClick={() => removePersona(persona.id)}>
             <CloseIcon />
           </button>
           <button

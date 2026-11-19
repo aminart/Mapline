@@ -4,7 +4,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { addActivity, arrowsOverCards, cell, clippedFields, fillWithLongText, link, personaRows, startProject, openProjects } from './helpers';
+import { addActivity, arrowsOverCards, cell, clippedFields, fillWithLongText, link, personaRows, startProject, openProjects, addDocument } from './helpers';
 
 const legacyFile = fileURLToPath(new URL('./fixtures/projet-v0.9.missionmap', import.meta.url));
 
@@ -247,7 +247,7 @@ test('asks before closing a tab with unsaved changes', async ({ page }) => {
 test('shows the project in the main bar, its documents as tabs, and adds a second map', async ({ page }) => {
   await startProject(page);
   await expect(page.locator('.topbar').getByRole('textbox', { name: 'Nom du projet' })).toHaveValue('Nouvelle map');
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await addDocument(page, 'Nouvelle map');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Map vide' }).click();
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Map 2']);
   await expect(page.locator('.persona-row')).toHaveCount(1);
@@ -271,7 +271,7 @@ test('adds a choice card in a map and turns it into an activity', async ({ page 
 
 test('presents every document of the project in turn', async ({ page }) => {
   await startProject(page);
-  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   await page.locator('.doc-tab').filter({ hasText: 'Map' }).locator('.doc-tab-btn').click();
   await page.getByRole('button', { name: 'Présenter', exact: true }).click();
@@ -497,7 +497,7 @@ test('exports PowerPoint slides: one per document, a map cut into its phases, it
   await startProject(page);
   await addActivity(page, 0, 0, 'Prendre rendez-vous');
   // A second document: a flow.
-  await page.getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   await expect(page.locator('.doc-tab')).toHaveCount(2);
   const exportSlides = async () => {
@@ -736,4 +736,43 @@ test('a one-step phase keeps its name whole, its buttons shown on hover', async 
   await name.fill('Pendant');
   // One line: the name is not broken letter by letter.
   expect(await name.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(30);
+});
+
+test('fits the whole map in the window, from the zoom control or Ctrl+1', async ({ page }) => {
+  await startProject(page);
+  await page.setViewportSize({ width: 1024, height: 700 });
+  await page.getByRole('button', { name: 'Ajuster à l’écran' }).click();
+  const zoom = page.locator('.zoom-value');
+  await expect(zoom).not.toHaveText('100 %');
+  const canvas = await page.locator('main.canvas').boundingBox();
+  const board = await page.locator('.board').boundingBox();
+  expect(board!.x + board!.width).toBeLessThanOrEqual(canvas!.x + canvas!.width);
+  expect(board!.y + board!.height).toBeLessThanOrEqual(canvas!.y + canvas!.height);
+  await zoom.click();
+  await expect(zoom).toHaveText('100 %');
+  await page.keyboard.press('ControlOrMeta+1');
+  await expect(zoom).not.toHaveText('100 %');
+});
+
+test('shows the × of a step or a persona on hover only', async ({ page }) => {
+  await startProject(page);
+  const del = page.locator('.step').first().getByRole('button', { name: 'Supprimer cette étape' });
+  await expect(del).toHaveCSS('opacity', '0');
+  await page.locator('.step').first().hover();
+  await expect(del).toHaveCSS('opacity', '1');
+  const personaDel = page.locator('.persona').first().getByRole('button', { name: 'Supprimer ce persona' });
+  await expect(personaDel).toHaveCSS('opacity', '0');
+  await page.locator('.persona').first().hover();
+  await expect(personaDel).toHaveCSS('opacity', '1');
+});
+
+test('adds any kind of document from one « Ajouter » menu', async ({ page }) => {
+  await startProject(page);
+  await expect(page.locator('.docbar .doc-add')).toHaveCount(0);
+  await page.locator('.docbar').getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveText(['Nouvelle map', 'Nouvelle fiche persona', 'Nouveau flow', 'Nouvelle arborescence']);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem')).toHaveCount(0);
+  await addDocument(page, 'Nouvelle arborescence');
+  await expect(page.locator('.doc-tab')).toHaveCount(2);
 });

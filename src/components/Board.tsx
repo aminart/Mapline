@@ -244,7 +244,7 @@ function StepHeader({ step, index, onInsertBefore }: { step: Step; index: number
           </span>
           {t('board.step', { n: index + 1 })}
         </span>
-        <button className="icon-btn no-export" aria-label={t('board.removeStep')} onClick={() => removeLinked('step', step.id, (d) => ops.removeStep(d, index))}>
+        <button className="icon-btn step-del no-export" aria-label={t('board.removeStep')} title={t('board.removeStep')} onClick={() => removeLinked('step', step.id, (d) => ops.removeStep(d, index))}>
           <CloseIcon />
         </button>
       </div>

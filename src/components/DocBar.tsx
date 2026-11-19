@@ -8,6 +8,7 @@ import { renameDoc } from '../model/project';
 import type { ProjectDoc } from '../model/types';
 import { CloseIcon, FlowIcon, MapIcon, PencilIcon, PersonIcon, PlusIcon, SitemapIcon } from './Icons';
 import { cls } from './cls';
+import { ToolMenu } from './ToolControls';
 import { baselineOf, targetsOf } from '../model/states';
 
 /** The documents of the active project, as tabs: its maps, persona sheets and flows. */
@@ -65,18 +66,42 @@ export function DocBar() {
           </div>
         );
       })}
-      <button className="doc-add" onClick={() => setNewMapOpen(true)}>
-        <PlusIcon size={12} /> {t('doc.addMap')}
-      </button>
-      <button className="doc-add" onClick={() => setNewSheet({ personaId: null })}>
-        <PlusIcon size={12} /> {t('doc.add')}
-      </button>
-      <button className="doc-add" onClick={() => setNewFlowOpen(true)}>
-        <PlusIcon size={12} /> {t('doc.addFlow')}
-      </button>
-      <button className="doc-add" onClick={addSitemap}>
-        <PlusIcon size={12} /> {t('doc.addSitemap')}
-      </button>
+      {/* One button for the four kinds of document: four used to take ~600 px of the bar. */}
+      <ToolMenu
+        className="doc-add-menu"
+        label={t('doc.addAny')}
+        face={
+          <>
+            <PlusIcon size={12} /> {t('doc.addAny')}
+          </>
+        }
+      >
+        {(close) => (
+          <div className="doc-add-list" role="menu">
+            {(
+              [
+                [<MapIcon key="i" />, t('doc.addMap'), () => setNewMapOpen(true)],
+                [<PersonIcon key="i" />, t('doc.add'), () => setNewSheet({ personaId: null })],
+                [<FlowIcon key="i" />, t('doc.addFlow'), () => setNewFlowOpen(true)],
+                [<SitemapIcon key="i" />, t('doc.addSitemap'), addSitemap],
+              ] as const
+            ).map(([icon, label, run]) => (
+              <button
+                key={label}
+                className="doc-add-item"
+                role="menuitem"
+                onClick={() => {
+                  close();
+                  run();
+                }}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </ToolMenu>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { expect, test } from '@playwright/test';
-import { addActivity, cell, startProject } from './helpers';
+import { addActivity, cell, startProject, addDocument } from './helpers';
 
 const docTab = (page: import('@playwright/test').Page, name: string | RegExp) => page.locator('.doc-tab').filter({ hasText: name }).locator('.doc-tab-btn');
 const shots = process.env.LINKS_SHOTS;
@@ -91,7 +91,7 @@ test('flags a flow card with several personas', async ({ page }) => {
   const rows = page.locator('.persona-row');
   await rows.nth(0).getByRole('textbox', { name: 'Nom du persona' }).fill('Patiente');
   await rows.nth(1).getByRole('textbox', { name: 'Nom du persona' }).fill('Secrétaire');
-  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
   const card = page.locator('.flow [data-node]').nth(1);
   await card.locator('textarea').click();

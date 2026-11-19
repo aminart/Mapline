@@ -3,7 +3,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { arrowsOverCards, clippedFields, fillWithLongText, startProject, openProjects } from './helpers';
+import { arrowsOverCards, clippedFields, fillWithLongText, startProject, openProjects, addDocument } from './helpers';
 
 const CARDS = '.flow [data-node]';
 
@@ -182,7 +182,7 @@ test('chooses the sides an arrow leaves and enters by, then back to automatic', 
 
 test('a flow inside a map project, saved and opened again', async ({ page }, info) => {
   await startProject(page);
-  await page.getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   await expect(page.locator('.flow')).toBeVisible();
   // Renamed from its tab: the name is no longer on the toolbar.
@@ -349,7 +349,7 @@ test('puts back a deleted end box from the card type', async ({ page }) => {
 
 test('centres the persona initials on flow cards, on screen and in exports', async ({ page }) => {
   await startProject(page);
-  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow utilisateur' }).click();
   await page.locator('.flow [data-node]').nth(1).locator('textarea').click();
   const chips = page.locator('.flow-persona-picks .persona-chip');

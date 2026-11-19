@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { expect, test, type Page } from '@playwright/test';
-import { addActivity, cell, startProject } from './helpers';
+import { addActivity, cell, startProject, addDocument } from './helpers';
 
 /** The texts of the cards of persona row `row`, left to right. */
 const rowTexts = (page: Page, row: number) =>
@@ -56,14 +56,14 @@ test('pastes a card from one map to another, and into a flow', async ({ page }) 
   await addActivity(page, 0, 0, 'Reçoit l’e-mail');
   await page.keyboard.press('ControlOrMeta+c');
 
-  await page.locator('.docbar').getByRole('button', { name: 'Nouvelle map' }).click();
+  await addDocument(page, 'Nouvelle map');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Map vide' }).click();
   await expect(page.locator('.doc-tab')).toHaveText(['Map', 'Map 2']);
   await addActivity(page, 0, 0, '');
   await page.keyboard.press('ControlOrMeta+v');
   await expect.poll(() => rowTexts(page, 0)).toEqual(['Reçoit l’e-mail']);
 
-  await page.locator('.docbar').getByRole('button', { name: 'Nouveau flow' }).click();
+  await addDocument(page, 'Nouveau flow');
   await page.locator('dialog[open] .tpl-card').filter({ hasText: 'Flow vide' }).click();
   await expect(page.locator('.flow')).toBeVisible();
   // Nothing selected: the card goes at the end of the flow.

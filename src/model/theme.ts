@@ -30,7 +30,8 @@ export const SIZES = [12, 13, 14, 16, 18, 20, 24, 28];
 export type ResolvedStyle = Required<Omit<BoxStyle, 'top'>>;
 
 const BASE: Record<BoxKind, ResolvedStyle> = {
-  obj: { bg: '#191B20', bc: '#191B20', color: '#FFFFFF', font: 'inter', size: 20, weight: 600 },
+  // White and outlined, no longer black: the heaviest band of the screen was a text read once.
+  obj: { bg: '#FFFFFF', bc: '#DDE1E7', color: '#191B20', font: 'inter', size: 18, weight: 600 },
   phase: { bg: '#E8EDFB', bc: '#E8EDFB', color: '#1E3A9E', font: 'inter', size: 14, weight: 600 },
   step: { bg: '#F4F6FA', bc: '#F4F6FA', color: '#191B20', font: 'inter', size: 16, weight: 600 },
   scene: { bg: '#FFFFFF', bc: '#E6E9EE', color: '#191B20', font: 'inter', size: 13, weight: 400 },
