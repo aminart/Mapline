@@ -12,6 +12,7 @@ import { startPresentation } from './Presentation';
 import { AboutDialog } from './About';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { cls } from './cls';
+import { hasNotes, useWhatsNew } from '../lib/whatsNew';
 
 export function TopBar() {
   const t = useT();
@@ -132,6 +133,17 @@ function HelpButton() {
           <LangSwitch />
           <h2>{t('side.shortcuts')}</h2>
           <p>{t('side.shortcutsText')}</p>
+          {hasNotes() && (
+            <button
+              className="text-btn help-about"
+              onClick={() => {
+                if (ref.current) ref.current.open = false;
+                useWhatsNew.getState().showLatest();
+              }}
+            >
+              {t('whatsNew.menu')}
+            </button>
+          )}
           <button
             className="text-btn help-about"
             onClick={() => {
