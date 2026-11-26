@@ -14,8 +14,9 @@ import { pptxDocument, type Slide } from './lib/exportPptx';
 import { copyPng, jpegBlob, pngBlob, type ExportFormat } from './lib/exportFormats';
 import { buildCsv } from './lib/exportCsv';
 import { ProjectFileError } from './model/serialize';
-import { createFlowDoc, createFlowProject, createFromTemplate, createMap, createSheet, createSheetProject, createSitemapDoc, createSitemapProject, sheetDoc, type FlowTemplateId, type SheetTemplateId, type TemplateId } from './model/templates';
-import { addDoc, duplicateMap, findDoc, missionMapOf, removeDoc, sheetIdentity, type CopyKind } from './model/project';
+import { createFlowDoc, createFlowProject, createFromTemplate, createMap, createSheet, createSheetProject, createPersonaLinksDoc, createSitemapDoc, createSitemapProject, sheetDoc, type FlowTemplateId, type SheetTemplateId, type TemplateId } from './model/templates';
+import { addDoc, duplicateMap, findDoc, missionMapOf, removeDoc, sheetIdentity, updatePersonaLinks, type CopyKind } from './model/project';
+import { addNodes, projectPersonaInfos } from './model/personaLinks';
 import type { Id, MissionMapDoc, Project, Sitemap } from './model/types';
 import { withLinksKept } from './model/links';
 import { uid } from './model/ops';
@@ -102,6 +103,34 @@ export function addSitemap() {
   focusLater(`screen:${doc.sitemap.roots[0].id}`);
 }
 
+/** Adds a persona links page to the active project, with every persona of the project on it, and shows it. */
+export function addPersonaLinks() {
+  const { applyProject, setDoc, project, lang } = useStore.getState();
+  const count = project.docs.filter((d) => d.kind === 'persona-links').length;
+  const doc = createPersonaLinksDoc(lang, projectPersonaInfos(project).map((p) => p.ref), count ? String(count + 1) : '');
+  applyProject((p) => addDoc(p, doc));
+  setDoc(doc.id);
+}
+
+/**
+ * A new persona, from a persona links page: its sheet (with no map) is added
+ * to the project, and the persona to the page, selected. The page stays shown.
+ */
+export function addPersonaFromLinks(name: string) {
+  const { applyProject, docId, lang, select } = useStore.getState();
+  const sheet = sheetDoc({ ...createSheet('classic', lang), name: name.trim() });
+  let node: Id | undefined;
+  applyProject((p) => {
+    const withSheet = addDoc(p, sheet);
+    return updatePersonaLinks(withSheet, docId, (links) => {
+      const r = addNodes(links, [{ kind: 'sheet', id: sheet.id }]);
+      node = r.ids[0];
+      return r.links;
+    });
+  });
+  if (node) select(`pnode:${node}`);
+}
+
 /** Adds a map to the active project and shows it. */
 export function addMap(template: TemplateId) {
   const { applyProject, setDoc, setNewMapOpen, lang, project } = useStore.getState();
@@ -150,6 +179,7 @@ export function docLabel(project: Project, id: Id): string {
   if (doc.kind === 'mission-map') return doc.name || t('doc.missionMap');
   if (doc.kind === 'flow') return doc.name ? t('flow.named', { name: doc.name }) : t('flow.default');
   if (doc.kind === 'sitemap') return doc.name ? t('sitemap.named', { name: doc.name }) : t('sitemap.default');
+  if (doc.kind === 'persona-links') return doc.name ? t('plinks.named', { name: doc.name }) : t('plinks.default');
   return t('doc.sheet', { name: sheetIdentity(project, doc.sheet).name || t('doc.unnamed') });
 }
 
@@ -157,7 +187,7 @@ export function docLabel(project: Project, id: Id): string {
 export function makeTargetDoc(id: Id) {
   const { project, applyProject, setDoc } = useStore.getState();
   const doc = findDoc(project, id);
-  if (!doc || doc.kind === 'persona' || doc.kind === 'sitemap') return;
+  if (!doc || doc.kind === 'persona' || doc.kind === 'sitemap' || doc.kind === 'persona-links') return;
   const name = doc.name || (doc.kind === 'mission-map' ? t('doc.missionMap') : '');
   let made: Id | null = null;
   applyProject((p) => {

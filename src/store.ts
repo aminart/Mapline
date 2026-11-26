@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { create } from 'zustand';
-import type { Blueprint, BoxKey, BoxStyle, Flow, Id, PersonaSheet, Project, Sitemap } from './model/types';
+import type { Blueprint, BoxKey, BoxStyle, Flow, Id, PersonaLinks, PersonaSheet, Project, Sitemap } from './model/types';
 import { uid } from './model/ops';
 import { parse } from './model/serialize';
-import { findDoc, firstDocId, flowOf, missionMapOf, projectFromMap, sheetOf, sitemapOf, updateFlow, updateMap, updateSheet, updateSitemap } from './model/project';
+import { findDoc, firstDocId, flowOf, missionMapOf, personaLinksOf, projectFromMap, sheetOf, sitemapOf, updateFlow, updateMap, updatePersonaLinks, updateSheet, updateSitemap } from './model/project';
 import { applyTheme, initialTheme, type ThemePref } from './lib/appTheme';
 import { initialLang, rememberLang, translate, type Lang, type MessageKey } from './i18n';
 import { readSession, writeSession } from './lib/session';
@@ -87,6 +87,17 @@ interface State extends DocState {
   sitemapFilter: string;
   /** Sitemaps: screens whose children are hidden, while the app runs. */
   folded: Record<Id, true>;
+  /** Persona links: personas where placed, or in circles around one. */
+  plinksView: 'network' | 'circles';
+  /** Persona links: the node the circles are centred on (null: the one with most relations). */
+  plinksCenter: Id | null;
+  /** Persona links: kinds of relation not shown. */
+  plinksHidden: Id[];
+  plinksZones: boolean;
+  /** Persona links: relations suggested by the steps two personas share in the maps. */
+  plinksSuggest: boolean;
+  /** Persona links: the kind of the next relation drawn. */
+  plinksType: Id | null;
 
   /** Changes the mission map shown, as one undo step (or merged into the last with the same `coalesce`). */
   apply: (fn: (map: Blueprint) => Blueprint, opts?: { coalesce?: string }) => void;
@@ -103,6 +114,9 @@ interface State extends DocState {
   /** Hides or shows the screens under `id`. */
   setFolded: (id: Id, folded: boolean) => void;
   setAllFolded: (ids: Id[]) => void;
+  /** Changes the persona links page shown. */
+  applyPersonaLinks: (fn: (links: PersonaLinks) => PersonaLinks, opts?: { coalesce?: string }) => void;
+  setPlinks: (patch: Partial<Pick<State, 'plinksView' | 'plinksCenter' | 'plinksHidden' | 'plinksZones' | 'plinksSuggest' | 'plinksType'>>) => void;
   /** Shows another document of the project. */
   setDoc: (docId: Id) => void;
   setSheetPreview: (docId: Id | null) => void;
@@ -177,6 +191,11 @@ export function activeFlow(s: DocState): Flow | undefined {
 /** The sitemap shown, if the document is one. */
 export function activeSitemap(s: DocState): Sitemap | undefined {
   return sitemapOf(s.project, s.docId)?.sitemap;
+}
+
+/** The persona links page shown, if the document is one. */
+export function activePersonaLinks(s: DocState): PersonaLinks | undefined {
+  return personaLinksOf(s.project, s.docId)?.links;
 }
 
 /** Box styles of the document shown. */
@@ -295,6 +314,12 @@ export const useStore = create<State>((set, get) => ({
   sitemapView: 'tree',
   sitemapFilter: 'all',
   folded: {},
+  plinksView: 'network',
+  plinksCenter: null,
+  plinksHidden: [],
+  plinksZones: true,
+  plinksSuggest: false,
+  plinksType: null,
 
   apply: (fn, opts) => {
     const { docId, applyProject } = get();
@@ -316,6 +341,11 @@ export const useStore = create<State>((set, get) => ({
     const { docId, applyProject } = get();
     applyProject((project) => updateSitemap(project, docId, fn), opts);
   },
+  applyPersonaLinks: (fn, opts) => {
+    const { docId, applyProject } = get();
+    applyProject((project) => updatePersonaLinks(project, docId, fn), opts);
+  },
+  setPlinks: (patch) => set(patch),
   setSitemapView: (sitemapView) => set({ sitemapView }),
   setSitemapFilter: (sitemapFilter) => set({ sitemapFilter }),
   setFolded: (id, folded) => {
@@ -331,7 +361,7 @@ export const useStore = create<State>((set, get) => ({
   setDoc: (docId) => {
     const s = get();
     if (docId === s.docId || !findDoc(s.project, docId)) return;
-    set({ docId, sel: null, tool: 'select', linkFrom: null, pendingFocus: null, presentStep: null, sheetPreview: null, tagFilter: [], sitemapFilter: 'all' });
+    set({ docId, sel: null, tool: 'select', linkFrom: null, pendingFocus: null, presentStep: null, sheetPreview: null, tagFilter: [], sitemapFilter: 'all', plinksCenter: null });
   },
   // The sheet preview and the comments panel share the side of the window.
   setSheetPreview: (sheetPreview) => set(sheetPreview ? { sheetPreview, commentsOpen: false } : { sheetPreview }),

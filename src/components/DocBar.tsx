@@ -3,10 +3,10 @@
 
 import { useRef, useState } from 'react';
 import { useStore, useT } from '../store';
-import { addSitemap, docLabel, removeDocument } from '../actions';
+import { addPersonaLinks, addSitemap, docLabel, removeDocument } from '../actions';
 import { renameDoc } from '../model/project';
 import type { ProjectDoc } from '../model/types';
-import { CloseIcon, FlowIcon, MapIcon, PencilIcon, PersonIcon, PlusIcon, SitemapIcon } from './Icons';
+import { CloseIcon, FlowIcon, MapIcon, PencilIcon, PersonIcon, PersonLinksIcon, PlusIcon, SitemapIcon } from './Icons';
 import { cls } from './cls';
 import { ToolMenu } from './ToolControls';
 import { baselineOf, targetsOf } from '../model/states';
@@ -44,7 +44,7 @@ export function DocBar() {
                 onClick={() => setDoc(doc.id)}
                 onDoubleClick={() => renamable && setEditing(doc.id)}
               >
-                {doc.kind === 'mission-map' ? <MapIcon /> : doc.kind === 'flow' ? <FlowIcon /> : doc.kind === 'sitemap' ? <SitemapIcon /> : <PersonIcon />}
+                {doc.kind === 'mission-map' ? <MapIcon /> : doc.kind === 'flow' ? <FlowIcon /> : doc.kind === 'sitemap' ? <SitemapIcon /> : doc.kind === 'persona-links' ? <PersonLinksIcon /> : <PersonIcon />}
                 {label}
                 {baselineOf(project, doc.id) ? (
                   <span className="state-badge state-badge-target">{t('state.target')}</span>
@@ -84,6 +84,7 @@ export function DocBar() {
                 [<PersonIcon key="i" />, t('doc.add'), () => setNewSheet({ personaId: null })],
                 [<FlowIcon key="i" />, t('doc.addFlow'), () => setNewFlowOpen(true)],
                 [<SitemapIcon key="i" />, t('doc.addSitemap'), addSitemap],
+                [<PersonLinksIcon key="i" />, t('doc.addPersonaLinks'), addPersonaLinks],
               ] as const
             ).map(([icon, label, run]) => (
               <button
@@ -122,8 +123,8 @@ function RenameField({ doc, done }: { doc: ProjectDoc; done: () => void }) {
     <input
       className="doc-tab-input"
       autoFocus
-      aria-label={t(doc.kind === 'flow' ? 'flow.name' : doc.kind === 'sitemap' ? 'sitemap.name' : 'doc.mapName')}
-      placeholder={t(doc.kind === 'flow' ? 'flow.default' : doc.kind === 'sitemap' ? 'sitemap.default' : 'doc.missionMap')}
+      aria-label={t(doc.kind === 'flow' ? 'flow.name' : doc.kind === 'sitemap' ? 'sitemap.name' : doc.kind === 'persona-links' ? 'plinks.name' : 'doc.mapName')}
+      placeholder={t(doc.kind === 'flow' ? 'flow.default' : doc.kind === 'sitemap' ? 'sitemap.default' : doc.kind === 'persona-links' ? 'plinks.default' : 'doc.missionMap')}
       value={value}
       size={Math.max(8, value.length + 1)}
       onFocus={(e) => e.target.select()}

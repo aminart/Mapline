@@ -10,6 +10,7 @@
 import type { Flow, FlowDoc, FlowSource, Id, PersonaSheetDoc, Project } from './types';
 import { activityKeyOf, normalizePhases } from './ops';
 import { addDoc, linkedPersona, missionMapOf, updateFlow } from './project';
+import { rehomeNodes } from './personaLinks';
 
 /** The flows detailing a phase, a step or an activity of the map `docId`. */
 export function flowsDetailing(project: Project, docId: Id, kind: FlowSource['kind'], id: Id): FlowDoc[] {
@@ -88,8 +89,10 @@ export function personaFlows(project: Project, personaId: Id): FlowDoc[] {
  * its persona keeps the name, role and colour it showed until then.
  */
 export function withLinksKept(project: Project, change: (project: Project) => Project): Project {
-  const next = change(project);
-  if (next === project) return project;
+  const changed0 = change(project);
+  if (changed0 === project) return project;
+  // A persona whose map is gone stays on the persona links pages as its sheet.
+  const next = rehomeNodes(project, changed0);
   const personaIds = new Set(next.docs.flatMap((d) => (d.kind === 'mission-map' ? d.map.personas.map((p) => p.id) : [])));
   const known = (id: Id | null | undefined) => !id || personaIds.has(id);
   let changed = false;

@@ -1,0 +1,552 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Persona links: the counts and legend, then the page of personas, zones and relations. */
+
+.plinks-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 4px 24px;
+  width: max-content;
+  min-width: 640px;
+}
+.plinks-doc.is-exporting .no-export {
+  display: none;
+}
+.plinks-doc.is-exporting .is-faded {
+  opacity: 1 !important;
+}
+
+/* Counts and legend */
+
+.plinks-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.plinks-total {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.plinks-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+.plinks-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+}
+.plinks-legend-item:hover {
+  background: var(--surface-2);
+}
+.plinks-legend-item.is-off {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.plinks-legend-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.plinks-centered {
+  margin-left: auto;
+  color: var(--muted);
+}
+.plinks-sample {
+  flex: none;
+  overflow: visible;
+}
+
+/* The page */
+
+.plinks-page {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background-image: radial-gradient(var(--dots) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+.plinks-doc.is-exporting .plinks-page {
+  background-image: none;
+}
+.plinks-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.plinks-empty strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+/* Zones */
+
+.plinks-zone {
+  position: absolute;
+  z-index: 1;
+  border: 1.5px dashed var(--dash);
+  border-radius: 14px;
+  background: rgba(var(--shade), 0.025);
+}
+.plinks-zone.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--sel-ring);
+}
+.plinks-zone-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 0 6px;
+}
+.plinks-zone-bar .grip {
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.plinks-zone:hover .grip,
+.plinks-zone.is-selected .grip {
+  opacity: 1;
+}
+.plinks-zone-title {
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.plinks-zone-title:hover,
+.plinks-zone-title:focus {
+  border-color: var(--line);
+  background: var(--surface);
+  outline: none;
+}
+.plinks-zone-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  border-right: 2px solid var(--dash);
+  border-bottom: 2px solid var(--dash);
+  border-bottom-right-radius: 8px;
+  opacity: 0;
+}
+.plinks-zone:hover .plinks-zone-resize,
+.plinks-zone.is-selected .plinks-zone-resize {
+  opacity: 1;
+}
+
+/* Circles */
+
+.plinks-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.plinks-rings ellipse {
+  fill: none;
+  stroke: var(--dash-soft);
+  stroke-dasharray: 3 5;
+}
+.plinks-rings text {
+  fill: var(--placeholder);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Relations: shown at full strength, those of the chosen persona forward. */
+
+.plinks-doc .links g {
+  opacity: 1;
+  transition: opacity 0.15s;
+}
+.plinks-doc .links g.is-faded,
+.plinks-doc .link-label.is-faded {
+  opacity: 0.15;
+}
+.plinks-doc .link-label {
+  opacity: 1;
+  color: var(--ink-2);
+  font-weight: 500;
+  z-index: 5;
+}
+.plinks-doc .link-label.is-selected {
+  box-shadow: 0 0 0 3px var(--sel-ring);
+}
+.plinks-suggest {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.plinks-suggest path {
+  fill: none;
+  stroke: var(--dash);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+  stroke-linecap: round;
+}
+.plinks-suggest path.is-faded {
+  opacity: 0.2;
+}
+.plinks-suggestion {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  padding: 2px 9px;
+  border: 1px dashed var(--dash);
+  border-radius: 10px;
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.plinks-suggestion:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.plinks-suggestion.is-faded {
+  opacity: 0.2;
+}
+
+/* Personas */
+
+.plinks-node {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent-p);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(var(--shade), 0.06);
+  cursor: grab;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+.plinks-node:hover {
+  border-color: var(--dash);
+  border-left-color: var(--accent-p);
+}
+.plinks-node:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.plinks-node.is-selected {
+  border-color: var(--accent);
+  border-left-color: var(--accent-p);
+  box-shadow: 0 0 0 3px var(--sel-ring);
+}
+.plinks-node.is-link-from {
+  border-style: dashed;
+  border-color: var(--accent);
+  border-left-style: solid;
+  border-left-color: var(--accent-p);
+}
+.plinks-node.is-center {
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2);
+}
+.plinks-node.is-faded {
+  opacity: 0.25;
+}
+.plinks-node.is-dragging {
+  cursor: grabbing;
+  z-index: 8;
+  box-shadow: 0 6px 18px rgba(var(--shade), 0.18);
+}
+.plinks-doc.is-linking .plinks-node {
+  cursor: crosshair;
+}
+.plinks-avatar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 32px;
+  text-align: center;
+}
+.plinks-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.plinks-avatar-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  line-height: 20px;
+}
+.plinks-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.plinks-name,
+.plinks-role {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.plinks-name {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.plinks-role {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.plinks-count {
+  align-self: flex-start;
+  margin-top: 6px;
+  color: var(--placeholder);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The bubble next to the chosen persona or relation */
+
+.plinks-pop {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(var(--shade), 0.16), 0 1px 3px rgba(var(--shade), 0.08);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.plinks-pop-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.plinks-pop-head strong {
+  color: var(--ink);
+  font-size: 13.5px;
+}
+.plinks-pop-title {
+  margin-top: 4px;
+  color: var(--placeholder);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.plinks-pop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plinks-pop-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 3px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.plinks-pop-row:hover {
+  background: var(--surface-2);
+}
+.plinks-pop-link b {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* Toolbar */
+
+.plinks-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 260px;
+  max-width: 440px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.plinks-menu .tool-kind {
+  margin-top: 4px;
+}
+.plinks-menu-persona {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+.plinks-menu-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.plinks-new {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.plinks-new .text-field {
+  flex: 1;
+  min-width: 0;
+}
+.plinks-types {
+  min-width: 520px;
+  max-width: 600px;
+}
+.plinks-type-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 8px;
+}
+.plinks-type-row.is-on {
+  background: var(--accent-soft);
+}
+.plinks-type-row .text-field {
+  flex: 1;
+  min-width: 0;
+}
+.plinks-type-pick {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.plinks-type-row.is-on .plinks-type-pick {
+  border-color: var(--accent);
+}
+.plinks-type-row .icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.plinks-type-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plinks-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.plinks-check:hover {
+  background: var(--surface-2);
+}
+.plinks-check input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+.plinks-check .plinks-sample {
+  margin-top: 3px;
+}
+.plinks-check-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.plinks-check-hint {
+  display: block;
+  max-width: 300px;
+}
+.plinks-sep {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.plinks-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  max-width: 200px;
+  padding: 0 9px 0 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plinks-label-field {
+  width: 170px;
+}
+.plinks-strength {
+  display: block;
+  width: 16px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.plinks-hint-on {
+  color: var(--accent-ink);
+  font-weight: 500;
+}

@@ -128,7 +128,7 @@ export async function clippedFields(page: Page, root: string): Promise<string[]>
 }
 
 /** Adds a document to the open project from the tab bar's « Ajouter » menu (opens its dialog, if any). */
-export async function addDocument(page: Page, label: 'Nouvelle map' | 'Nouvelle fiche persona' | 'Nouveau flow' | 'Nouvelle arborescence') {
+export async function addDocument(page: Page, label: 'Nouvelle map' | 'Nouvelle fiche persona' | 'Nouveau flow' | 'Nouvelle arborescence' | 'Nouveaux liens personas') {
   await page.locator('.docbar').getByRole('button', { name: 'Ajouter', exact: true }).click();
   await page.getByRole('menuitem', { name: label }).click();
 }

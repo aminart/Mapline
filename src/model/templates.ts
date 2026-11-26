@@ -1,8 +1,9 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Blueprint, FlowDoc, Id, Persona, PersonaSheet, PersonaSheetDoc, Project, SitemapDoc } from './types';
+import type { Blueprint, FlowDoc, Id, Persona, PersonaLinksDoc, PersonaRef, PersonaSheet, PersonaSheetDoc, Project, SitemapDoc } from './types';
 import { emptySitemap } from './sitemap';
+import { emptyPersonaLinks } from './personaLinks';
 import { templateFlow } from './flow';
 import { PROJECT_VERSION, projectFromMap } from './project';
 import { newBlock } from './sheet';
@@ -158,4 +159,9 @@ export function createSitemapDoc(name = ''): SitemapDoc {
 /** A new project holding one sitemap. */
 export function createSitemapProject(lang: Lang): Project {
   return { version: PROJECT_VERSION, title: translate(lang, 'sitemap.title.new'), docs: [createSitemapDoc()] };
+}
+
+/** A new persona links page, the personas `refs` already placed on it. */
+export function createPersonaLinksDoc(lang: Lang, refs: PersonaRef[], name = ''): PersonaLinksDoc {
+  return { id: uid(), kind: 'persona-links', name, links: emptyPersonaLinks(lang, refs) };
 }
