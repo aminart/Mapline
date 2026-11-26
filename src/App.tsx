@@ -24,6 +24,7 @@ import { ChevronDown, ChevronRight, FitIcon } from './components/Icons';
 import { NewSheetDialog } from './components/NewSheetDialog';
 import { Board } from './components/Board';
 import { NewFlowDialog, NewMapDialog, NewProjectDialog, StartScreen } from './components/Templates';
+import { WhatsNew } from './components/WhatsNew';
 import { BusyOverlay } from './components/BusyOverlay';
 import { CommentsPanel } from './components/CommentsPanel';
 import { ExportDialog } from './components/ExportDialog';
@@ -254,6 +255,7 @@ export function App() {
   return (
     <div className={cls('app', presenting && 'is-presenting', previewing && 'has-preview')}>
       {!presenting && <TopBar />}
+      {!presenting && <WhatsNew />}
       {activeId && !presenting && <DocBar />}
       {activeId && !presenting && (kind === 'persona' ? <SheetToolbar /> : kind === 'flow' ? <FlowToolbar /> : kind === 'sitemap' ? <SitemapToolbar /> : kind === 'persona-links' ? <PersonaLinksToolbar /> : <FormatToolbar />)}
       {activeId && !presenting && (kind === 'mission-map' || kind === 'flow') && <StateBar />}
