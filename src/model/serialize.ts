@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaSheet, Project, ProjectDoc, SceneFormat, Screen, ScreenExtraKind, ScreenLink, ScreenStatus, SheetBlock, Sitemap, TextRow } from './types';
+import type { BlockView, Blueprint, Flow, FlowNode, FlowNodeKind, FlowSource, Id, LinkSide, LinkStyle, PersonaLinks, PersonaNode, PersonaSheet, Relation, RelationDash, RelationDir, RelationType, Project, ProjectDoc, SceneFormat, Screen, ScreenExtraKind, ScreenLink, ScreenStatus, SheetBlock, Sitemap, TextRow } from './types';
 import { normalizePhases, SCENE_FORMATS, uid } from './ops';
 import { PROJECT_VERSION } from './project';
 
@@ -66,6 +66,8 @@ function parseDoc(raw: unknown): ProjectDoc {
       return { ...base, kind: 'flow', flow: parseFlow(raw.flow), ...baseline };
     case 'sitemap':
       return { ...base, kind: 'sitemap', sitemap: parseSitemap(raw.sitemap) };
+    case 'persona-links':
+      return { ...base, kind: 'persona-links', links: parsePersonaLinks(raw.links) };
     default:
       // A kind of document this version doesn't know: made by a newer app.
       throw new ProjectFileError('newer');
@@ -310,4 +312,51 @@ function parseSitemap(input: unknown): Sitemap {
       ];
     });
   return { roots: screens(input.roots, 0, false), globals: screens(input.globals, 0, true) };
+}
+
+const DIRS: RelationDir[] = ['to', 'both', 'none'];
+const DASHES: RelationDash[] = ['solid', 'dashed', 'dotted', 'dashdot'];
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
+
+/** Persona links; relations between personas that aren't on the page, or of no known kind, are dropped. */
+function parsePersonaLinks(input: unknown): PersonaLinks {
+  if (!isObject(input)) throw new ProjectFileError('invalid');
+  const list = (v: unknown) => (Array.isArray(v) ? v : []).filter(isObject);
+  const seen = new Set<string>();
+  const nodes: PersonaNode[] = list(input.nodes).flatMap((n) => {
+    const ref = isObject(n.ref) ? n.ref : null;
+    if (!ref || (ref.kind !== 'persona' && ref.kind !== 'sheet') || typeof ref.id !== 'string' || !ref.id) return [];
+    const key = `${ref.kind}:${ref.id}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ id: id(n.id), ref: { kind: ref.kind, id: ref.id }, x: num(n.x), y: num(n.y) }];
+  });
+  const types: RelationType[] = list(input.types).map((t) => ({
+    id: id(t.id),
+    name: str(t.name),
+    color: typeof t.color === 'string' && /^#[0-9a-f]{6}$/i.test(t.color) ? t.color.toUpperCase() : '#3A3F4A',
+    dash: DASHES.includes(t.dash as RelationDash) ? (t.dash as RelationDash) : 'solid',
+    dir: DIRS.includes(t.dir as RelationDir) ? (t.dir as RelationDir) : 'to',
+  }));
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const typeIds = new Set(types.map((t) => t.id));
+  const relations: Relation[] = list(input.relations).flatMap((r) => {
+    if (typeof r.from !== 'string' || typeof r.to !== 'string' || r.from === r.to || !nodeIds.has(r.from) || !nodeIds.has(r.to)) return [];
+    if (typeof r.type !== 'string' || !typeIds.has(r.type)) return [];
+    const strength = r.strength === 1 || r.strength === 3 ? r.strength : undefined;
+    const label = str(r.label);
+    return [
+      {
+        id: id(r.id),
+        from: r.from,
+        to: r.to,
+        type: r.type,
+        dir: DIRS.includes(r.dir as RelationDir) ? (r.dir as RelationDir) : 'to',
+        ...(label ? { label } : {}),
+        ...(strength ? { strength } : {}),
+      },
+    ];
+  });
+  const zones = list(input.zones).map((z) => ({ id: id(z.id), title: str(z.title), x: num(z.x), y: num(z.y), w: Math.max(160, num(z.w)), h: Math.max(80, num(z.h)) }));
+  return { nodes, zones, relations, types };
 }

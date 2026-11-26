@@ -363,8 +363,72 @@ export interface SitemapDoc {
   sitemap: Sitemap;
 }
 
+/** A persona on a persona links page: one of a mission map's personas, or a sheet that has no map. */
+export type PersonaRef = { kind: 'persona'; id: Id } | { kind: 'sheet'; id: Id };
+
+/** A persona placed on the page: its card's top left corner, in pixels. */
+export interface PersonaNode {
+  id: Id;
+  ref: PersonaRef;
+  x: number;
+  y: number;
+}
+
+/** A named rectangle grouping personas ("Clinic", "Family"); its personas move with it. */
+export interface PersonaZone {
+  id: Id;
+  title: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Which way a relation goes: from → to, both ways, or no arrow. */
+export type RelationDir = 'to' | 'both' | 'none';
+export type RelationDash = 'solid' | 'dashed' | 'dotted' | 'dashdot';
+
+/** A kind of relation ("Manages", "Tension"): its line, and the way a new one goes. */
+export interface RelationType {
+  id: Id;
+  name: string;
+  /** #RRGGBB. */
+  color: string;
+  dash: RelationDash;
+  dir: RelationDir;
+}
+
+/** A link between two personas of the page (node ids). */
+export interface Relation {
+  id: Id;
+  from: Id;
+  to: Id;
+  /** A RelationType id. */
+  type: Id;
+  dir: RelationDir;
+  label?: string;
+  /** 1 (weak) to 3 (strong); 2 when unset. */
+  strength?: 1 | 2 | 3;
+}
+
+/** The personas of a project and how they relate to one another. */
+export interface PersonaLinks {
+  nodes: PersonaNode[];
+  zones: PersonaZone[];
+  relations: Relation[];
+  types: RelationType[];
+}
+
+export interface PersonaLinksDoc {
+  id: Id;
+  kind: 'persona-links';
+  /** Shown on the document's tab; the translated default when empty. */
+  name: string;
+  links: PersonaLinks;
+}
+
 /** A document of a project. */
-export type ProjectDoc = MissionMapDoc | PersonaSheetDoc | FlowDoc | SitemapDoc;
+export type ProjectDoc = MissionMapDoc | PersonaSheetDoc | FlowDoc | SitemapDoc | PersonaLinksDoc;
 export type DocKind = ProjectDoc['kind'];
 
 /** What a .mapline file holds: a titled set of documents. */

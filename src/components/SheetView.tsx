@@ -17,8 +17,9 @@ import { FitText } from './FitText';
 import { focusSoon, useFocusKey } from './useFocusKey';
 import { TagEditor } from './CardExtras';
 import { startDrag, useDropTarget, type DropPoint } from './dnd';
-import { CameraIcon, ChevronRight, CloseIcon, FlowIcon, GripIcon, PlusIcon } from './Icons';
+import { CameraIcon, ChevronRight, CloseIcon, FlowIcon, GripIcon, PersonLinksIcon, PlusIcon } from './Icons';
 import { personaFlows } from '../model/links';
+import { sheetRelations } from '../model/personaLinks';
 import { cls } from './cls';
 
 const VIEWS: BlockView[] = ['list', 'gauges', 'tags', 'text'];
@@ -52,6 +53,41 @@ function PersonaFlows({ sheet }: { sheet: PersonaSheet }) {
         <button key={f.id} className="sheet-flow" title={t('links.open', { name: docLabel(project, f.id) })} onClick={() => setDoc(f.id)}>
           <FlowIcon size={12} />
           <span className="sheet-flow-name">{f.name || t('flow.default')}</span>
+          <ChevronRight size={11} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The relations of the sheet's persona on the project's persona links pages; each opens its page on it. */
+function PersonaRelations() {
+  const t = useT();
+  const project = useStore((s) => s.project);
+  const docId = useStore((s) => s.docId);
+  const setDoc = useStore((s) => s.setDoc);
+  const select = useStore((s) => s.select);
+  const rows = sheetRelations(project, docId);
+  if (rows.length === 0) return null;
+  const arrow = (dir: string, outgoing: boolean) => (dir === 'none' ? '—' : dir === 'both' ? '↔' : outgoing ? '→' : '←');
+  return (
+    <div className="sheet-flows sheet-relations">
+      <span className="sheet-flows-title">{t('sheet.links')}</span>
+      {rows.map(({ docId: page, relation, other, outgoing, type }) => (
+        <button
+          key={`${page}:${relation.id}`}
+          className="sheet-flow"
+          title={t('plinks.openIn', { name: docLabel(project, page) })}
+          onClick={() => {
+            setDoc(page);
+            select(`prel:${relation.id}`);
+          }}
+        >
+          <PersonLinksIcon size={12} />
+          <span className="sheet-flow-name">
+            {type?.name || t('plinks.untitledType')} {arrow(relation.dir, outgoing)} {other.name || t('doc.unnamed')}
+            {relation.label ? ` · ${relation.label}` : ''}
+          </span>
           <ChevronRight size={11} />
         </button>
       ))}
@@ -239,6 +275,7 @@ function Identity({ sheet }: { sheet: PersonaSheet }) {
         colors={sheet.tagColors}
       />
       <PersonaFlows sheet={sheet} />
+      <PersonaRelations />
     </section>
   );
 }

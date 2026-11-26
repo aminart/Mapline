@@ -241,10 +241,11 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
   let boardWidth = 0;
   let layout: BoardLayout = { width: 0, height: 0, stripRight: 0, steps: [], objectiveBottom: 0, contentBottom: 0, objective: '', phases: [] };
   let thaw = () => {};
+  let above: { x: number; y: number; w: number; h: number }[] = [];
   try {
     await nextFrame();
     // Maps and flows: every text kept whole, whatever the engine that draws the picture.
-    if (board.classList.contains('flow-doc') || board.classList.contains('board') || board.classList.contains('sitemap-doc')) thaw = freezeTexts(board);
+    if (board.classList.contains('flow-doc') || board.classList.contains('board') || board.classList.contains('sitemap-doc') || board.classList.contains('plinks-doc')) thaw = freezeTexts(board);
     canvas = await toCanvas(board, {
       pixelRatio: opts.scale,
       // Only flat exports are laid on white: elsewhere the rounded corners stay clear.
@@ -256,6 +257,11 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
     origin = layoutOffset(board);
     boardWidth = board.offsetWidth;
     layout = measureLayout(board);
+    // Boxes that stay over the arrows, as on screen (persona links' cards).
+    above = Array.from(board.querySelectorAll<HTMLElement>('[data-export-above]')).map((el) => {
+      const o = layoutOffset(el);
+      return { x: o.x - origin.x, y: o.y - origin.y, w: el.offsetWidth, h: el.offsetHeight };
+    });
     const svgParent = board.querySelector<SVGSVGElement>('svg.links')?.parentElement;
     if (svgParent) {
       layer = layoutOffset(svgParent);
@@ -287,6 +293,14 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
   const lines = Array.from(board.querySelectorAll<SVGPathElement>('svg.links .link-line'));
   if (layer && lines.length > 0) {
     const scale = canvas.width / boardWidth;
+    // The picture before the arrows, to put back the boxes that stay over them.
+    let before: HTMLCanvasElement | null = null;
+    if (above.length) {
+      before = document.createElement('canvas');
+      before.width = canvas.width;
+      before.height = canvas.height;
+      before.getContext('2d')?.drawImage(canvas, 0, 0);
+    }
     ctx.scale(scale, scale);
     ctx.translate(layer.x - origin.x, layer.y - origin.y);
     ctx.lineCap = 'round';
@@ -303,27 +317,40 @@ export async function renderBoardCanvas(board: HTMLElement, opts: RenderOptions)
       }
       ctx.setLineDash(dash);
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.75;
+      // Persona links: lines of their own width, with a head at the end, at both ends or none.
+      ctx.lineWidth = Number(line.dataset.width) || 1.75;
       ctx.stroke(path);
       ctx.setLineDash([]);
 
       const total = line.getTotalLength();
-      const tip = line.getPointAtLength(total);
-      const back = line.getPointAtLength(Math.max(0, total - 1));
-      const angle = Math.atan2(tip.y - back.y, tip.x - back.x);
-      ctx.save();
-      ctx.translate(tip.x, tip.y);
-      ctx.rotate(angle);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-HEAD_LENGTH, -HEAD_HALF_WIDTH);
-      ctx.lineTo(-HEAD_LENGTH, HEAD_HALF_WIDTH);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.restore();
+      const head = (at: number, toward: number) => {
+        const tip = line.getPointAtLength(at);
+        const back = line.getPointAtLength(toward);
+        const angle = Math.atan2(tip.y - back.y, tip.x - back.x);
+        ctx.save();
+        ctx.translate(tip.x, tip.y);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-HEAD_LENGTH, -HEAD_HALF_WIDTH);
+        ctx.lineTo(-HEAD_LENGTH, HEAD_HALF_WIDTH);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      };
+      const heads = line.dataset.head ?? 'end';
+      if (heads !== 'none') head(total, Math.max(0, total - 1));
+      if (heads === 'both') head(0, Math.min(total, 1));
     }
     for (const label of labels) drawLabel(ctx, label);
+    if (before) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      for (const r of above) {
+        const [x, y, w, h] = [r.x * scale, r.y * scale, r.w * scale, r.h * scale].map(Math.round);
+        ctx.drawImage(before, x, y, w, h, x, y, w, h);
+      }
+    }
   }
   return { canvas, layout };
 }

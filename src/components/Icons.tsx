@@ -314,3 +314,39 @@ export const FitIcon = ({ size }: P) => (
     <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" />
   </Svg>
 );
+/** Three people linked to one another: persona links. */
+export const PersonLinksIcon = ({ size = 14 }: P) => (
+  <Svg size={size}>
+    <circle cx="5" cy="6" r="2.5" />
+    <circle cx="19" cy="7" r="2.5" />
+    <circle cx="11" cy="18" r="2.5" />
+    <path d="M7.5 6.3l9 .5M6.2 8.3l3.6 7.5M17.6 9.2l-5.2 6.6" />
+  </Svg>
+);
+/** Circles around a dot: a view centred on one persona. */
+export const CirclesIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="2.5" />
+    <circle cx="12" cy="12" r="8.5" />
+  </Svg>
+);
+/** A dashed rectangle: a zone. */
+export const ZoneIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <rect x="3" y="5" width="18" height="14" rx="2.5" strokeDasharray="3 2.5" />
+    <path d="M6.5 9h5" />
+  </Svg>
+);
+/** A target: centre on this. */
+export const CenterIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+  </Svg>
+);
+/** Two arrows opposite ways: reverse. */
+export const SwapIcon = ({ size = 15 }: P) => (
+  <Svg size={size}>
+    <path d="M4 8h15l-3-3M20 16H5l3 3" />
+  </Svg>
+);

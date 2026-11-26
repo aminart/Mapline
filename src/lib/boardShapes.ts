@@ -115,7 +115,17 @@ export function boardShapes(board: HTMLElement): Shape[] {
       points.push({ x: (screen.x - origin.left) / zoom, y: (screen.y - origin.top) / zoom });
     }
     const color = parseColor(line.getAttribute('stroke') ?? getComputedStyle(line).stroke) ?? { hex: '3A3F4A', alpha: 1 };
-    shapes.push({ kind: 'line', points: simplify(points), color, dash: Boolean(line.getAttribute('stroke-dasharray')), width: 1.75, head: true });
+    // Persona links: their own width, and a head only where the relation goes.
+    const heads = line.dataset.head ?? 'end';
+    const simple = simplify(points);
+    const width = Number(line.dataset.width) || 1.75;
+    const dash = Boolean(line.getAttribute('stroke-dasharray'));
+    if (heads === 'both') {
+      // Two arrows from the middle, each with its head.
+      const half = Math.floor(points.length / 2);
+      shapes.push({ kind: 'line', points: simplify(points.slice(0, half + 1).reverse()), color, dash, width, head: true });
+      shapes.push({ kind: 'line', points: simplify(points.slice(half)), color, dash, width, head: true });
+    } else shapes.push({ kind: 'line', points: simple, color, dash, width, head: heads !== 'none' });
   }
   return shapes;
 }

@@ -780,7 +780,7 @@ test('adds any kind of document from one « Ajouter » menu', async ({ page }) =
   await startProject(page);
   await expect(page.locator('.docbar .doc-add')).toHaveCount(0);
   await page.locator('.docbar').getByRole('button', { name: 'Ajouter', exact: true }).click();
-  await expect(page.getByRole('menuitem')).toHaveText(['Nouvelle map', 'Nouvelle fiche persona', 'Nouveau flow', 'Nouvelle arborescence']);
+  await expect(page.getByRole('menuitem')).toHaveText(['Nouvelle map', 'Nouvelle fiche persona', 'Nouveau flow', 'Nouvelle arborescence', 'Nouveaux liens personas']);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menuitem')).toHaveCount(0);
   await addDocument(page, 'Nouvelle arborescence');

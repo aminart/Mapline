@@ -1,0 +1,629 @@
+{
+ "version": 2,
+ "title": "Clinique du Parc",
+ "docs": [
+  {
+   "id": "map1",
+   "kind": "mission-map",
+   "name": "Parcours de soin",
+   "map": {
+    "objective": "Soigner Paul au quotidien",
+    "phases": [
+     {
+      "id": "ph1",
+      "title": "Avant",
+      "span": 2
+     },
+     {
+      "id": "ph2",
+      "title": "Pendant",
+      "span": 3
+     },
+     {
+      "id": "ph3",
+      "title": "Après",
+      "span": 2
+     }
+    ],
+    "steps": [
+     {
+      "id": "s0",
+      "title": "Prendre RDV",
+      "slots": [
+       "s0-0"
+      ]
+     },
+     {
+      "id": "s1",
+      "title": "Confirmer",
+      "slots": [
+       "s1-0"
+      ]
+     },
+     {
+      "id": "s2",
+      "title": "Consultation",
+      "slots": [
+       "s2-0"
+      ]
+     },
+     {
+      "id": "s3",
+      "title": "Annonce",
+      "slots": [
+       "s3-0"
+      ]
+     },
+     {
+      "id": "s4",
+      "title": "Bilan",
+      "slots": [
+       "s4-0"
+      ]
+     },
+     {
+      "id": "s5",
+      "title": "Retirer les médicaments",
+      "slots": [
+       "s5-0"
+      ]
+     },
+     {
+      "id": "s6",
+      "title": "Suivi à domicile",
+      "slots": [
+       "s6-0"
+      ]
+     }
+    ],
+    "personas": [
+     {
+      "id": "marc",
+      "name": "Marc Dubois",
+      "role": "Directeur de la clinique",
+      "color": 4
+     },
+     {
+      "id": "ines",
+      "name": "Inès Bakri",
+      "role": "Secrétaire médicale",
+      "color": 5
+     },
+     {
+      "id": "claire",
+      "name": "Dr Claire Morel",
+      "role": "Médecin généraliste",
+      "color": 0
+     },
+     {
+      "id": "sophie",
+      "name": "Sophie Laurent",
+      "role": "Infirmière coordinatrice",
+      "color": 2
+     },
+     {
+      "id": "paul",
+      "name": "Paul Garnier",
+      "role": "Patient diabétique, 72 ans",
+      "color": 1
+     },
+     {
+      "id": "lea",
+      "name": "Léa Garnier",
+      "role": "Fille et aidante de Paul",
+      "color": 3
+     },
+     {
+      "id": "nadia",
+      "name": "Nadia Benali",
+      "role": "Pharmacienne",
+      "color": 5
+     },
+     {
+      "id": "thomas",
+      "name": "Thomas Petit",
+      "role": "Interne en médecine",
+      "color": 0
+     }
+    ],
+    "activities": {
+     "paul:s0-0": {
+      "id": "paul0",
+      "text": "Appelle la clinique"
+     },
+     "ines:s0-0": {
+      "id": "ines0",
+      "text": "Trouve un créneau"
+     },
+     "lea:s0-0": {
+      "id": "lea0",
+      "text": "Appelle pour son père"
+     },
+     "paul:s1-0": {
+      "id": "paul1",
+      "text": "Reçoit un SMS"
+     },
+     "ines:s1-0": {
+      "id": "ines1",
+      "text": "Envoie le rappel"
+     },
+     "paul:s2-0": {
+      "id": "paul2",
+      "text": "Consulte"
+     },
+     "claire:s2-0": {
+      "id": "claire2",
+      "text": "Examine Paul"
+     },
+     "lea:s2-0": {
+      "id": "lea2",
+      "text": "Accompagne Paul"
+     },
+     "thomas:s2-0": {
+      "id": "thomas2",
+      "text": "Assiste"
+     },
+     "claire:s3-0": {
+      "id": "claire3",
+      "text": "Annonce le diagnostic"
+     },
+     "paul:s3-0": {
+      "id": "paul3",
+      "text": "Écoute"
+     },
+     "lea:s3-0": {
+      "id": "lea3",
+      "text": "Pose des questions"
+     },
+     "claire:s4-0": {
+      "id": "claire4",
+      "text": "Fait le bilan"
+     },
+     "sophie:s4-0": {
+      "id": "sophie4",
+      "text": "Prépare le suivi"
+     },
+     "paul:s4-0": {
+      "id": "paul4",
+      "text": "Fait ses analyses"
+     },
+     "paul:s5-0": {
+      "id": "paul5",
+      "text": "Va à la pharmacie"
+     },
+     "nadia:s5-0": {
+      "id": "nadia5",
+      "text": "Délivre l’ordonnance"
+     },
+     "lea:s5-0": {
+      "id": "lea5",
+      "text": "Récupère les boîtes"
+     },
+     "sophie:s6-0": {
+      "id": "sophie6",
+      "text": "Passe à domicile"
+     },
+     "paul:s6-0": {
+      "id": "paul6",
+      "text": "Mesure sa glycémie"
+     }
+    }
+   }
+  },
+  {
+   "id": "map2",
+   "kind": "mission-map",
+   "name": "Remboursement",
+   "map": {
+    "objective": "Être remboursé",
+    "steps": [
+     {
+      "id": "r0",
+      "title": "Demande",
+      "slots": [
+       "r0-0"
+      ]
+     },
+     {
+      "id": "r1",
+      "title": "Relance",
+      "slots": [
+       "r1-0"
+      ]
+     }
+    ],
+    "personas": [
+     {
+      "id": "paul",
+      "name": "Paul Garnier",
+      "role": "Patient diabétique, 72 ans",
+      "color": 1
+     },
+     {
+      "id": "karim",
+      "name": "Karim Haddad",
+      "role": "Conseiller mutuelle",
+      "color": 2
+     }
+    ],
+    "activities": {
+     "paul:r0-0": {
+      "id": "x1",
+      "text": "Envoie sa feuille de soins"
+     },
+     "karim:r0-0": {
+      "id": "x2",
+      "text": "Traite la demande"
+     },
+     "paul:r1-0": {
+      "id": "x3",
+      "text": "Relance"
+     },
+     "karim:r1-0": {
+      "id": "x4",
+      "text": "Répond"
+     }
+    }
+   }
+  },
+  {
+   "id": "flow1",
+   "kind": "flow",
+   "name": "Prise de RDV en ligne",
+   "flow": {
+    "nodes": [
+     {
+      "id": "n1",
+      "kind": "start",
+      "col": 0,
+      "row": 0,
+      "text": "Début"
+     },
+     {
+      "id": "n2",
+      "kind": "activity",
+      "col": 1,
+      "row": 0,
+      "text": "Choisir un créneau",
+      "personaIds": [
+       "paul",
+       "lea"
+      ]
+     }
+    ],
+    "links": [
+     {
+      "id": "l1",
+      "from": "n1",
+      "to": "n2"
+     }
+    ],
+    "personaId": "paul",
+    "styles": {}
+   }
+  },
+  {
+   "id": "sheet-paul",
+   "kind": "persona",
+   "name": "",
+   "sheet": {
+    "name": "",
+    "role": "",
+    "color": 0,
+    "photo": null,
+    "fields": [],
+    "quote": "",
+    "tags": [],
+    "blocks": [],
+    "styles": {},
+    "link": {
+     "docId": "map1",
+     "personaId": "paul"
+    },
+    "sync": true
+   }
+  },
+  {
+   "id": "sheet-lea",
+   "kind": "persona",
+   "name": "",
+   "sheet": {
+    "name": "",
+    "role": "",
+    "color": 0,
+    "photo": null,
+    "fields": [],
+    "quote": "",
+    "tags": [],
+    "blocks": [],
+    "styles": {},
+    "link": {
+     "docId": "map1",
+     "personaId": "lea"
+    },
+    "sync": true
+   }
+  },
+  {
+   "id": "sheet-julie",
+   "kind": "persona",
+   "name": "",
+   "sheet": {
+    "name": "Julie Roche",
+    "role": "Kinésithérapeute",
+    "color": 3,
+    "photo": null,
+    "fields": [],
+    "quote": "",
+    "tags": [],
+    "blocks": [],
+    "styles": {},
+    "link": null,
+    "sync": false
+   }
+  },
+  {
+   "id": "links1",
+   "kind": "persona-links",
+   "name": "",
+   "links": {
+    "nodes": [
+     {
+      "id": "n-marc",
+      "ref": {
+       "kind": "persona",
+       "id": "marc"
+      },
+      "x": 260,
+      "y": 76
+     },
+     {
+      "id": "n-ines",
+      "ref": {
+       "kind": "persona",
+       "id": "ines"
+      },
+      "x": 70,
+      "y": 186
+     },
+     {
+      "id": "n-claire",
+      "ref": {
+       "kind": "persona",
+       "id": "claire"
+      },
+      "x": 470,
+      "y": 186
+     },
+     {
+      "id": "n-sophie",
+      "ref": {
+       "kind": "persona",
+       "id": "sophie"
+      },
+      "x": 260,
+      "y": 296
+     },
+     {
+      "id": "n-paul",
+      "ref": {
+       "kind": "persona",
+       "id": "paul"
+      },
+      "x": 100,
+      "y": 470
+     },
+     {
+      "id": "n-lea",
+      "ref": {
+       "kind": "persona",
+       "id": "lea"
+      },
+      "x": 440,
+      "y": 470
+     },
+     {
+      "id": "n-karim",
+      "ref": {
+       "kind": "persona",
+       "id": "karim"
+      },
+      "x": 800,
+      "y": 150
+     },
+     {
+      "id": "n-nadia",
+      "ref": {
+       "kind": "persona",
+       "id": "nadia"
+      },
+      "x": 800,
+      "y": 390
+     }
+    ],
+    "zones": [
+     {
+      "id": "z1",
+      "title": "Clinique du Parc",
+      "x": 40,
+      "y": 30,
+      "w": 660,
+      "h": 346
+     },
+     {
+      "id": "z2",
+      "title": "Entourage du patient",
+      "x": 40,
+      "y": 410,
+      "w": 660,
+      "h": 150
+     },
+     {
+      "id": "z3",
+      "title": "Partenaires",
+      "x": 760,
+      "y": 30,
+      "w": 280,
+      "h": 530
+     }
+    ],
+    "relations": [
+     {
+      "id": "r0",
+      "from": "n-marc",
+      "to": "n-ines",
+      "type": "manages",
+      "dir": "to"
+     },
+     {
+      "id": "r1",
+      "from": "n-marc",
+      "to": "n-sophie",
+      "type": "manages",
+      "dir": "to"
+     },
+     {
+      "id": "r2",
+      "from": "n-claire",
+      "to": "n-sophie",
+      "type": "works",
+      "dir": "none",
+      "label": "Suivi des chroniques",
+      "strength": 3
+     },
+     {
+      "id": "r3",
+      "from": "n-claire",
+      "to": "n-ines",
+      "type": "works",
+      "dir": "none",
+      "label": "Gère son agenda"
+     },
+     {
+      "id": "r4",
+      "from": "n-paul",
+      "to": "n-ines",
+      "type": "asks",
+      "dir": "to",
+      "label": "Prend ses RDV"
+     },
+     {
+      "id": "r5",
+      "from": "n-lea",
+      "to": "n-ines",
+      "type": "asks",
+      "dir": "to",
+      "label": "Appelle pour son père"
+     },
+     {
+      "id": "r6",
+      "from": "n-lea",
+      "to": "n-ines",
+      "type": "tension",
+      "dir": "none",
+      "label": "Ligne toujours occupée"
+     },
+     {
+      "id": "r7",
+      "from": "n-lea",
+      "to": "n-paul",
+      "type": "influences",
+      "dir": "to",
+      "label": "Décide avec lui",
+      "strength": 3
+     },
+     {
+      "id": "r8",
+      "from": "n-paul",
+      "to": "n-claire",
+      "type": "asks",
+      "dir": "to",
+      "label": "Consultations"
+     },
+     {
+      "id": "r9",
+      "from": "n-sophie",
+      "to": "n-lea",
+      "type": "works",
+      "dir": "none",
+      "label": "Coordonne les soins",
+      "strength": 1
+     },
+     {
+      "id": "r10",
+      "from": "n-paul",
+      "to": "n-karim",
+      "type": "asks",
+      "dir": "to",
+      "label": "Remboursements",
+      "strength": 1
+     },
+     {
+      "id": "r11",
+      "from": "n-paul",
+      "to": "n-karim",
+      "type": "tension",
+      "dir": "none",
+      "label": "Délais trop longs",
+      "strength": 1
+     },
+     {
+      "id": "r12",
+      "from": "n-karim",
+      "to": "n-marc",
+      "type": "works",
+      "dir": "none",
+      "label": "Tiers payant",
+      "strength": 1
+     },
+     {
+      "id": "r13",
+      "from": "n-nadia",
+      "to": "n-claire",
+      "type": "works",
+      "dir": "none",
+      "label": "Ordonnances",
+      "strength": 1
+     }
+    ],
+    "types": [
+     {
+      "id": "manages",
+      "name": "Encadre",
+      "color": "#2F55D4",
+      "dash": "solid",
+      "dir": "to"
+     },
+     {
+      "id": "works",
+      "name": "Collabore avec",
+      "color": "#3A3F4A",
+      "dash": "solid",
+      "dir": "none"
+     },
+     {
+      "id": "asks",
+      "name": "Sollicite",
+      "color": "#0F766E",
+      "dash": "dashed",
+      "dir": "to"
+     },
+     {
+      "id": "influences",
+      "name": "Influence",
+      "color": "#7E22CE",
+      "dash": "dotted",
+      "dir": "to"
+     },
+     {
+      "id": "tension",
+      "name": "Tension",
+      "color": "#C2410C",
+      "dash": "dashdot",
+      "dir": "none"
+     }
+    ]
+   }
+  }
+ ]
+}

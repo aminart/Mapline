@@ -1,7 +1,7 @@
 // Mapline Copyright (C) 2026 Albane Minart
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { Blueprint, BoxStyle, Flow, FlowDoc, Id, MissionMapDoc, Persona, PersonaSheet, PersonaSheetDoc, Project, ProjectDoc, Sitemap, SitemapDoc } from './types';
+import type { Blueprint, BoxStyle, Flow, FlowDoc, Id, MissionMapDoc, Persona, PersonaLinks, PersonaLinksDoc, PersonaSheet, PersonaSheetDoc, Project, ProjectDoc, Sitemap, SitemapDoc } from './types';
 import { dropLinksTo } from './sitemap';
 import { setPersona, uid } from './ops';
 
@@ -273,4 +273,17 @@ export function updateSitemap(project: Project, docId: Id, fn: (sitemap: Sitemap
   const sitemap = fn(doc.sitemap);
   if (sitemap === doc.sitemap) return project;
   return { ...project, docs: project.docs.map((d) => (d.id === docId ? { ...doc, sitemap } : d)) };
+}
+
+export function personaLinksOf(project: Project, docId: Id): PersonaLinksDoc | undefined {
+  const doc = findDoc(project, docId);
+  return doc?.kind === 'persona-links' ? doc : undefined;
+}
+
+export function updatePersonaLinks(project: Project, docId: Id, fn: (links: PersonaLinks) => PersonaLinks): Project {
+  const doc = personaLinksOf(project, docId);
+  if (!doc) return project;
+  const links = fn(doc.links);
+  if (links === doc.links) return project;
+  return { ...project, docs: project.docs.map((d) => (d.id === docId ? { ...doc, links } : d)) };
 }
