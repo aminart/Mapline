@@ -35,8 +35,8 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
       {
         title: { fr: 'Liens personas', en: 'Persona links' },
         text: {
-          fr: 'Nouveau type de document (bouton « Ajouter »). Reliez vos personas par des liens typés, avec un sens et une force. Vues Réseau et Cercles.',
-          en: 'New document type (“Add” button). Connect your personas with typed links, with a direction and a strength. Network and Circles views.',
+          fr: 'Nouveau type de document (bouton « Ajouter »). Reliez vos personas par des liens. Vues Réseau et Cercles.',
+          en: 'New document type (“Add” button). Connect your personas with typed links. Network and Circles views.',
         },
       },
       {
