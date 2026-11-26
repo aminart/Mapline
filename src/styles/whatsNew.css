@@ -1,0 +1,132 @@
+/* Mapline Copyright (C) 2026 Albane Minart
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Nouveautés après une mise à jour : bandeau sous la barre du haut, liste en dessous. */
+.whats-new {
+  position: relative;
+  z-index: 25;
+  flex-shrink: 0;
+}
+.whats-new-band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 16px 0 28px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.whats-new-tag {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.whats-new-summary {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.whats-new-band .whats-new-more {
+  flex-shrink: 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.whats-new-band .icon-btn,
+.whats-new-head .icon-btn {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.whats-new-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(20, 24, 40, 0.18);
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.whats-new-card.is-under-band {
+  left: 28px;
+}
+.whats-new-card.is-under-help {
+  right: 16px;
+}
+.whats-new-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.whats-new-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+}
+.whats-new-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.whats-new-body h3 {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.whats-new-body ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.whats-new-body li {
+  display: grid;
+  grid-template-columns: 8px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.whats-new-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.whats-new-body strong {
+  font-weight: 600;
+}
+.whats-new-body p {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.whats-new-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
